@@ -2,53 +2,69 @@
 --[[
 	PromptController — client side of the "hold E" prompts.
 	- Translates prompt text from the prompt's LocKey attribute.
-	- At night, shows the "open door" prompt only on the player's own house
-	  (the server still validates the request).
+	- Shows each prompt only to its audience (the server still validates
+	  every use):
+	    "Owner"  the occupant of that house tonight (open door)
+	    "Human"  human form (hide)
+	    "Wolf"   wolf / pup form (search)
+	  The server marks usable prompts with the "Active" attribute; this script
+	  switches Enabled locally for prompts that are not meant for this player.
 ]]
 
-local CollectionService = game:GetService("CollectionService")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ClientState = require(script.Parent.ClientState)
+
 local PromptController = {}
 
-local myHouseId = 0
 local watched: { [ProximityPrompt]: boolean } = {}
 
--- The server enables every closed door's prompt at night ("Active"). Locally,
--- only the prompt of the player's own house stays visible.
-local function filterDoorPrompt(prompt: ProximityPrompt)
-	local houseId = prompt:GetAttribute("HouseId")
-	if type(houseId) ~= "number" then
+local function isForMe(prompt: ProximityPrompt, audience: string): boolean
+	if audience == "Owner" then
+		return prompt:GetAttribute("HouseId") == ClientState.HouseId
+	elseif audience == "Human" then
+		return ClientState.Form == "Human" and not ClientState.Hidden
+	elseif audience == "Wolf" then
+		return ClientState.Form ~= "Human"
+	end
+	return true
+end
+
+local function filter(prompt: ProximityPrompt)
+	local audience = prompt:GetAttribute("Audience")
+	if type(audience) ~= "string" then
 		return
 	end
-	local want = prompt:GetAttribute("Active") == true and houseId == myHouseId
+	local want = prompt:GetAttribute("Active") == true and isForMe(prompt, audience)
 	if prompt.Enabled ~= want then
 		prompt.Enabled = want
 	end
 end
 
-local function watchDoor(door: Instance)
-	local prompt = door:FindFirstChild("OpenPrompt", true)
-	if prompt and prompt:IsA("ProximityPrompt") then
-		if not watched[prompt] then
-			watched[prompt] = true
-			local function refresh()
-				filterDoorPrompt(prompt)
-			end
-			prompt:GetPropertyChangedSignal("Enabled"):Connect(refresh)
-			prompt:GetAttributeChangedSignal("Active"):Connect(refresh)
-		end
-		filterDoorPrompt(prompt)
+local function watch(instance: Instance)
+	if not instance:IsA("ProximityPrompt") or watched[instance] then
+		return
 	end
+	watched[instance] = true
+	local function refresh()
+		filter(instance)
+	end
+	instance:GetPropertyChangedSignal("Enabled"):Connect(refresh)
+	instance:GetAttributeChangedSignal("Active"):Connect(refresh)
+	instance:GetAttributeChangedSignal("Audience"):Connect(refresh)
+	instance.Destroying:Connect(function()
+		watched[instance] = nil
+	end)
+	filter(instance)
 end
 
-local function refreshDoors()
-	for _, door in CollectionService:GetTagged("Door") do
-		watchDoor(door)
+local function refreshAll()
+	for prompt in watched do
+		filter(prompt)
 	end
 end
 
@@ -61,14 +77,16 @@ function PromptController.Start()
 	end)
 
 	Remotes.get("HouseAssigned").OnClientEvent:Connect(function(houseId: any)
-		myHouseId = if type(houseId) == "number" then houseId else 0
-		refreshDoors()
+		ClientState.set("HouseId", if type(houseId) == "number" then houseId else 0)
 	end)
+	ClientState.Changed:Connect(refreshAll)
 
-	CollectionService:GetInstanceAddedSignal("Door"):Connect(function(door: Instance)
-		task.defer(watchDoor, door)
+	workspace.DescendantAdded:Connect(function(instance: Instance)
+		task.defer(watch, instance)
 	end)
-	refreshDoors()
+	for _, instance in workspace:GetDescendants() do
+		watch(instance)
+	end
 end
 
 return PromptController

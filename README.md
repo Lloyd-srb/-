@@ -31,7 +31,8 @@ or the MCP "run code" tool):
 2. `build/BuildVillage.luau` — whole map under `Workspace.Map`
 3. `build/BuildLighting.luau` — Lighting + Day preset
 4. `build/BuildUI.luau` — ScreenGuis in StarterGui (HUD, vote screen)
-5. `build/BuildLocalization.luau` — en/th `LocalizationTable`
+5. `build/BuildWolfRig.luau` — werewolf + pup rigs and animation KeyframeSequences in ServerStorage
+6. `build/BuildLocalization.luau` — en/th `LocalizationTable`
 
 All builders are idempotent: they delete what they built before and rebuild it.
 
@@ -50,9 +51,10 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `src/ServerScriptService/Logic/` | Pure server rules: role assignment, voting, win conditions, rewards, loot, wolf pup |
 | `src/ReplicatedStorage/Shared/Remotes.luau` | The list of RemoteEvents (who may receive what) |
 | `src/ServerScriptService/Main.server.luau` | Server bootstrap (the only Script) |
-| `src/ServerScriptService/Services/` | Server services: match, round, houses/doors, vote, lighting, net |
+| `src/ReplicatedStorage/Shared/WolfAnimData.luau` | Werewolf animations as data (keyframe builder + client fallback animator) |
+| `src/ServerScriptService/Services/` | Server services: match, round, houses/doors, vote, wolf, combat, hiding, movement, lighting, net |
 | `src/StarterPlayer/StarterPlayerScripts/Main.client.luau` | Client bootstrap (the only LocalScript) |
-| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, vote screen, one-way windows, prompts |
+| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, vote screen, one-way windows, prompts, wolf controls, highlights, rig animation, hiding camera |
 | `docs/TEST_CHECKLISTS.md` | What to click and what should happen, per milestone (Thai) |
 | `build/` | Builder scripts that create the map, lighting, localization table |
 | `tests/` | Offline tests for the rules and for the map contract |
@@ -74,7 +76,8 @@ tools/check.sh                   # both, plus a luau-lsp type check if available
 
 `tests/Simulation.spec.luau` runs the real server scripts on a small fake
 engine (`tools/lib/FakeEngine.luau`: fake players, remotes, prompts) and plays
-whole matches: roles, night warp, doors, meeting, vote, exile, win. It checks
+whole matches: roles, night warp, doors, meeting, vote, exile, win, and the
+wolf side (`tests/WolfSimulation.spec.luau`): attacks, pup, abilities, hiding. It checks
 logic and ordering only — nothing visual, no client, no physics.
 
 `out/WolfVillage.rbxl` opens in Roblox Studio and contains the generated map

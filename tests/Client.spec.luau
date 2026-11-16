@@ -23,6 +23,7 @@ test("Hud has everything HudController looks up", function()
 		{ "TopBar", "PhaseLabel" },
 		{ "TopBar", "TimerLabel" },
 		{ "RoleLabel" },
+		{ "PackLabel" },
 		{ "Announcement" },
 		{ "SubAnnouncement" },
 	} do
@@ -78,7 +79,7 @@ test("every remote the scripts use is declared in Remotes.Names", function()
 end)
 
 test("every text key written in code exists in Strings", function()
-	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud" }
+	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud", "Ability" }
 	local checked = 0
 	for _, instance in game:GetDescendants() do
 		if instance:IsA("LuaSourceContainer") and instance.Name ~= "Strings" then

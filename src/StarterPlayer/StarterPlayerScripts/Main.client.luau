@@ -12,7 +12,16 @@ local Controllers = script.Parent:WaitForChild("Controllers")
 
 type Controller = { Start: () -> () }
 
-local names = { "HudController", "VoteController", "WindowController", "PromptController" }
+local names = {
+	"HudController",
+	"VoteController",
+	"WindowController",
+	"PromptController",
+	"WolfController",
+	"HighlightController",
+	"ShellAnimator",
+	"HideController",
+}
 
 -- Each controller starts in its own thread: one waiting for missing UI must
 -- not stop the others.

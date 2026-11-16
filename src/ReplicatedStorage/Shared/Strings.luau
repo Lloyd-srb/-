@@ -36,6 +36,13 @@ local Strings: { [string]: Entry } = {
 	-- HUD
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
+	["Hud.Pack"] = { en = "Pack: {names}", th = "ฝูง: {names}" },
+
+	-- Ability buttons (GDD §8)
+	["Ability.Attack"] = { en = "Attack", th = "โจมตี" },
+	["Ability.Sniff"] = { en = "Sniff", th = "ดมกลิ่น" },
+	["Ability.Sprint"] = { en = "Sprint", th = "วิ่ง 4 ขา" },
+	["Ability.Howl"] = { en = "Howl", th = "หอน" },
 
 	-- Morning announcement in red (GDD §6.1)
 	["Morning.Safe"] = { en = "You're safe... for now...", th = "พวกแกปลอดภัย... แค่ตอนนี้..." },

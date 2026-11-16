@@ -319,6 +319,7 @@ local function register(model: Instance)
 		DebugPrompt = nil,
 	}
 	house.OpenPrompt:SetAttribute("HouseId", id)
+	house.OpenPrompt:SetAttribute("Audience", "Owner") -- shown to the occupant only
 	house.OpenPrompt.Triggered:Connect(function(player: Player)
 		onOpenPrompt(player, house)
 	end)

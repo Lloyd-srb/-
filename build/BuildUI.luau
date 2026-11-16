@@ -120,6 +120,21 @@ local function buildHud()
 	role.Visible = false
 	textStroke(role, 2)
 
+	-- Wolf side only: who is in the pack (filled in by the client).
+	local pack = label(
+		"PackLabel",
+		hud,
+		UDim2.new(0, 280, 0, 26),
+		UDim2.new(0, 16, 0, 84),
+		Vector2.new(0, 0),
+		BODY_FONT,
+		16
+	)
+	pack.TextXAlignment = Enum.TextXAlignment.Left
+	pack.TextColor3 = rgb(255, 120, 120)
+	pack.Visible = false
+	textStroke(pack, 2)
+
 	local announcement = label(
 		"Announcement",
 		hud,
