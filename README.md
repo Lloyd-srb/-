@@ -32,6 +32,7 @@ or the MCP "run code" tool):
 3. `build/BuildLighting.luau` — Lighting + Day preset
 4. `build/BuildUI.luau` — ScreenGuis in StarterGui (HUD, vote screen)
 5. `build/BuildWolfRig.luau` — werewolf + pup rigs and animation KeyframeSequences in ServerStorage
+   - optional: `build/BuildWolfMesh.luau` — swaps in the owner's imported wolf mesh (see `docs/OWNER_TODO.md` 4b)
 6. `build/BuildLocalization.luau` — en/th `LocalizationTable`
 
 All builders are idempotent: they delete what they built before and rebuild it.
@@ -56,7 +57,10 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `src/StarterPlayer/StarterPlayerScripts/Main.client.luau` | Client bootstrap (the only LocalScript) |
 | `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, vote screen, one-way windows, prompts, wolf controls, highlights, rig animation, hiding camera |
 | `docs/TEST_CHECKLISTS.md` | What to click and what should happen, per milestone (Thai) |
-| `build/` | Builder scripts that create the map, lighting, localization table |
+| `build/` | Builder scripts that create the map, lighting, UI, wolf rigs, localization table |
+| `assets/wolf/` | Source FBX of the owner's wolf model (Meshy "Moonfang Stalker", Mixamo-style rig) |
+| `src/ReplicatedStorage/Shared/BoneRetarget.luau` | Plays the wolf animation data on an imported skinned mesh |
+| `tools/wolfmesh/` | FBX inspection, skeleton fixture export and pose preview renders for the wolf mesh |
 | `tests/` | Offline tests for the rules and for the map contract |
 | `tools/` | Offline tooling (optional, see below) |
 
@@ -80,8 +84,10 @@ whole matches: roles, night warp, doors, meeting, vote, exile, win, and the
 wolf side (`tests/WolfSimulation.spec.luau`): attacks, pup, abilities, hiding. It checks
 logic and ordering only — nothing visual, no client, no physics.
 
-`out/WolfVillage.rbxl` opens in Roblox Studio and contains the generated map
-and every script in `src/`. It is a convenience preview; `out/` is not committed.
+`out/WolfVillage.rbxl` opens in Roblox Studio and contains the generated map,
+every script in `src/`, and the builder scripts as ModuleScripts under
+`ServerStorage.Builders` (run one from the command bar with
+`require(game.ServerStorage.Builders.<Name>)`). It is a convenience preview; `out/` is not committed.
 
 ## Milestones
 

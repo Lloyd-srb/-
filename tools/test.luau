@@ -114,6 +114,9 @@ for _, spec in specs do
 				return FakeEngine.start(Harness.load("src"), options)
 			end,
 			task = require("@lune/task"),
+			readJson = function(path: string)
+				return require("@lune/serde").decode("json", fs.readFile(path))
+			end,
 		}),
 	})
 	local ok, err = pcall(chunk)

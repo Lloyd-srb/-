@@ -4,39 +4,95 @@
 
 	This is the fallback animator used until the owner publishes the
 	KeyframeSequences (Config.Animations ids are 0): it plays the same data
-	(Shared.WolfAnimData) by posing the rig's Motor6Ds locally each frame.
+	(Shared.WolfAnimData) by posing the rig locally each frame.
 	  - Attack / Maul / Howl are started by the server (shell attributes
 	    "Anim" + "AnimAt").
 	  - Idle / Walk / Run follow the character's actual speed.
+
+	Two kinds of rig are supported:
+	  - the block rig (build/BuildWolfRig.luau): one Motor6D per joint;
+	  - an imported skinned mesh (build/BuildWolfMesh.luau): Bones, driven
+	    through Shared.BoneRetarget.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local BoneRetarget = require(ReplicatedStorage.Shared.BoneRetarget)
 local Config = require(ReplicatedStorage.Shared.Config)
 local WolfAnimData = require(ReplicatedStorage.Shared.WolfAnimData)
 
 local BLEND_RATE = 14 -- higher = snappier transitions between animations
 local MOVING_SPEED = 1
 
-type Joint = { Motor: Motor6D, Base: CFrame, Current: CFrame }
-type Rig = { Scale: number, Joints: { [string]: Joint } }
+type Rig = {
+	Scale: number,
+	Current: { [string]: CFrame }, -- blended pose per joint
+	Motors: { [string]: { Motor: Motor6D, Base: CFrame } }?, -- block rig
+	Bones: { [string]: Bone }?, -- skinned mesh
+	Prepared: BoneRetarget.Prepared?,
+}
 
 local ShellAnimator = {}
 
 local rigs: { [Instance]: Rig } = {}
 
+-- Reads the skeleton of an imported mesh into rig space (the shell's Root part).
+local function readSkeleton(shell: Model, root: BasePart): ({ BoneRetarget.BoneDef }, { [string]: Bone })
+	local defs: { BoneRetarget.BoneDef } = {}
+	local bones: { [string]: Bone } = {}
+	-- GetDescendants lists parents before their children.
+	for _, instance in shell:GetDescendants() do
+		if instance:IsA("Bone") and not bones[instance.Name] then
+			local parent = instance.Parent
+			local def: BoneRetarget.BoneDef
+			if parent and parent:IsA("Bone") then
+				def = { Name = instance.Name, Parent = parent.Name, RestLocal = instance.CFrame }
+			else
+				local holder = if parent and parent:IsA("BasePart") then parent.CFrame else root.CFrame
+				def = { Name = instance.Name, Parent = nil, RestLocal = root.CFrame:ToObjectSpace(holder * instance.CFrame) }
+			end
+			table.insert(defs, def)
+			bones[instance.Name] = instance
+		end
+	end
+	return defs, bones
+end
+
 local function register(shell: Instance)
-	if rigs[shell] then
+	if rigs[shell] or not shell:IsA("Model") then
 		return
 	end
 	local scale = shell:GetAttribute("Scale")
-	local rig: Rig = { Scale = if type(scale) == "number" then scale else 1, Joints = {} }
+	local rig: Rig = { Scale = if type(scale) == "number" then scale else 1, Current = {} }
+
+	local motors = {}
+	local found = false
 	for _, motor in shell:GetDescendants() do
 		if motor:IsA("Motor6D") and table.find(WolfAnimData.Joints, motor.Name) then
-			rig.Joints[motor.Name] = { Motor = motor, Base = motor.C0, Current = CFrame.new() }
+			motors[motor.Name] = { Motor = motor, Base = motor.C0 }
+			found = true
 		end
+	end
+
+	if found then
+		rig.Motors = motors
+	else
+		local root = shell.PrimaryPart
+		if not root then
+			return
+		end
+		local defs, bones = readSkeleton(shell, root)
+		if #defs == 0 then
+			return
+		end
+		local prepared = BoneRetarget.prepare(defs, Config.WolfRig.Mesh)
+		if #prepared.Missing > 0 then
+			warn("[ShellAnimator] wolf mesh is missing bones: " .. table.concat(prepared.Missing, ", "))
+		end
+		rig.Bones = bones
+		rig.Prepared = prepared
 	end
 	rigs[shell] = rig
 end
@@ -74,10 +130,23 @@ local function step(deltaTime: number)
 	local blend = 1 - math.exp(-deltaTime * BLEND_RATE)
 	for shell, rig in rigs do
 		local animation, t = currentAnimation(shell)
-		for name, joint in rig.Joints do
-			local target = WolfAnimData.pose(animation, name, t, rig.Scale)
-			joint.Current = joint.Current:Lerp(target, blend)
-			joint.Motor.C0 = joint.Base * joint.Current
+		for _, joint in WolfAnimData.Joints do
+			local target = WolfAnimData.pose(animation, joint, t, rig.Scale)
+			rig.Current[joint] = (rig.Current[joint] or CFrame.new()):Lerp(target, blend)
+		end
+
+		if rig.Motors then
+			for joint, entry in rig.Motors do
+				entry.Motor.C0 = entry.Base * rig.Current[joint]
+			end
+		elseif rig.Bones and rig.Prepared then
+			local transforms = BoneRetarget.solve(rig.Prepared, rig.Current)
+			for name, bone in rig.Bones do
+				local transform = transforms[name]
+				if transform then
+					bone.Transform = transform
+				end
+			end
 		end
 	end
 end

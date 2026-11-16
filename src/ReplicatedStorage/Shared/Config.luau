@@ -226,6 +226,81 @@ Config.WolfRig = {
 	Eye = Color3.fromRGB(255, 221, 51), -- glowing yellow (Neon)
 	Nose = Color3.fromRGB(30, 30, 34),
 	RunSpeedThreshold = 24, -- faster than this = four-legged run animation
+	Height = 9, -- studs from the ground to the ears (block rig and imported mesh)
+
+	--[[
+		Optional imported wolf model (owner's "Moonfang Stalker" mesh from Meshy,
+		Mixamo-style skeleton). When it has been imported into Studio,
+		build/BuildWolfMesh.luau turns it into the rigs used at night; otherwise
+		the block rig from build/BuildWolfRig.luau is used.
+
+		Joints / Followers come from analysing the model's skin weights: besides
+		the Mixamo bones, the auto-rigger left extra "Bone_0xx" bones that carry
+		the claws, mane, snout and tail. Each follows the body part it belongs to.
+	]]
+	Mesh = {
+		ImportName = "WolfMesh", -- ServerStorage.Imports.WolfMesh (the imported model)
+		Joints = {
+			Torso = "Hips",
+			Chest = "Spine1",
+			Head = "Head",
+			LeftUpperArm = "LeftArm",
+			LeftLowerArm = "LeftForeArm",
+			RightUpperArm = "RightArm",
+			RightLowerArm = "RightForeArm",
+			LeftUpperLeg = "LeftUpLeg",
+			LeftLowerLeg = "LeftLeg",
+			RightUpperLeg = "RightUpLeg",
+			RightLowerLeg = "RightLeg",
+		},
+		-- The model stands in a T-pose: these arms are turned to hang down first.
+		ArmJoints = {
+			LeftUpperArm = "LeftLowerArm",
+			RightUpperArm = "RightLowerArm",
+		},
+		Followers = {
+			-- mane / upper back and chest fur
+			Bone_013 = "Spine2",
+			Bone_003 = "Spine2",
+			Bone_002 = "Spine2",
+			Bone_005 = "Spine2",
+			Bone_004 = "Spine2",
+			Bone_007 = "Spine2",
+			Bone_006 = "Spine2",
+			Bone_009 = "Spine2",
+			Bone_008 = "Spine2",
+			-- back of the head, snout and jaw
+			Bone_012 = "Head",
+			Bone_028 = "Head",
+			Bone_027 = "Head",
+			Bone_026 = "Head",
+			-- right arm, hand and claws
+			Bone_031 = "RightArm",
+			Bone_030 = "RightForeArm",
+			Bone_029 = "RightForeArm",
+			Bone_036 = "RightHand",
+			Bone_035 = "RightHand",
+			Bone_038 = "RightHand",
+			Bone_037 = "RightHand",
+			-- left arm, hand and claws
+			Bone_034 = "LeftArm",
+			Bone_033 = "LeftForeArm",
+			Bone_032 = "LeftForeArm",
+			Bone_040 = "LeftHand",
+			Bone_039 = "LeftHand",
+			Bone_042 = "LeftHand",
+			Bone_041 = "LeftHand",
+			-- tail (the rigger hung it under the head)
+			Bone_022 = "Hips",
+			-- toe claws (the rigger hung them under the hands)
+			Bone_043 = "LeftToeBase",
+			Bone_044 = "RightToeBase",
+		},
+		-- Feet stay flat while the legs swing.
+		Level = { "LeftFoot", "RightFoot" },
+		-- Used to find which way the imported model faces: { foot, toe } pairs.
+		Feet = { { "LeftFoot", "LeftToeBase" }, { "RightFoot", "RightToeBase" } },
+	},
 }
 
 --------------------------------------------------------------------------------

@@ -20,6 +20,28 @@ for _, builder in BUILDERS do
 	Harness.runBuilder(loaded, builder)
 end
 
+-- Ship the builder scripts inside the place too, so they can be run from
+-- Studio's command bar without any tooling:
+--     require(game.ServerStorage.Builders.BuildWolfMesh)
+local builders = roblox.Instance.new("Folder")
+builders.Name = "Builders"
+builders.Parent = loaded.game:GetService("ServerStorage")
+for _, entry in fs.readDir("build") do
+	local name = entry:match("^(.+)%.luau$")
+	if name then
+		local source = fs.readFile("build/" .. entry)
+		-- A ModuleScript must return exactly one value.
+		local lastLine = source:gsub("%s+$", ""):match("([^\n]*)$") or ""
+		if not lastLine:match("^return") then
+			source ..= "\nreturn true\n"
+		end
+		local module = roblox.Instance.new("ModuleScript")
+		module.Name = name
+		module.Source = source
+		module.Parent = builders
+	end
+end
+
 if not fs.isDir("out") then
 	fs.writeDir("out")
 end
