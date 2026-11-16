@@ -27,6 +27,16 @@ local Strings: { [string]: Entry } = {
 	["Phase.MeetingForced"] = { en = "Time is up. The village must meet.", th = "หมดเวลาแล้ว ทั้งหมู่บ้านต้องประชุม" },
 	["Phase.MeetingUnlocked"] = { en = "The meeting bell can now be rung.", th = "ตอนนี้กดเรียกประชุมที่โต๊ะได้แล้ว" },
 
+	["Phase.MeetingCountdown"] = { en = "Meeting soon", th = "ใกล้ถึงเวลาประชุม" },
+	["Phase.Meeting"] = { en = "Village meeting", th = "ประชุมหมู่บ้าน" },
+	["Phase.FullMoonWarning"] = { en = "Nightfall", th = "ใกล้ค่ำ" },
+	["Phase.GameOver"] = { en = "Game over", th = "จบเกม" },
+	["Phase.Waiting"] = { en = "Waiting for players {count:int}/{needed:int}", th = "รอผู้เล่น {count:int}/{needed:int}" },
+
+	-- HUD
+	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
+	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
+
 	-- Morning announcement in red (GDD §6.1)
 	["Morning.Safe"] = { en = "You're safe... for now...", th = "พวกแกปลอดภัย... แค่ตอนนี้..." },
 	-- DRAFT: wolf taunts shown when someone died last night.
@@ -153,6 +163,7 @@ local Strings: { [string]: Entry } = {
 	["Prompt.Reinforce"] = { en = "Reinforce door", th = "เสริมประตู" },
 	["Prompt.OpenCrate"] = { en = "Open crate", th = "เปิดกล่อง" },
 	["Prompt.PickUp"] = { en = "Pick up", th = "เก็บ" },
+	["Prompt.DebugHitDoor"] = { en = "[Debug] Hit door", th = "[Debug] ตีประตู" },
 
 	-- Chat channels (GDD §6.2, §12)
 	["Chat.General"] = { en = "General", th = "แชทรวม" },

@@ -34,6 +34,7 @@ export type PhaseState = {
 local PhaseMachine = {}
 
 local Timers = Config.Timers
+local MIN_PHASE_SECONDS = 0.05 -- floor for debug-scaled timers
 
 local function make(phase: PhaseName, day: number, night: number, duration: number, forced: boolean?): PhaseState
 	return {
@@ -96,7 +97,7 @@ end
 -- Applies Config.Debug.TimerScale (Studio only) to a duration.
 function PhaseMachine.scaledDuration(state: PhaseState): number
 	local scale = if Config.Debug.Enabled then Config.Debug.TimerScale else 1
-	return math.max(1, state.Duration * scale)
+	return math.max(MIN_PHASE_SECONDS, state.Duration * scale)
 end
 
 return PhaseMachine

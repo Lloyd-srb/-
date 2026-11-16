@@ -1,0 +1,60 @@
+--!strict
+--[[
+	Remotes — the single list of RemoteEvents. The server creates them once
+	(Remotes.createAll); clients wait for them (Remotes.get).
+
+	Server -> one client only (secret):  RoleAssigned, HouseAssigned, VoteMine
+	Server -> everyone (public):         PhaseChanged, Announcement, RosterChanged,
+	                                     VoteOpened, VoteCounts, VoteClosed, GameOver
+	Client -> server (intents):          RequestSync, VoteSelect, VoteConfirm
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local FOLDER_NAME = "Remotes"
+
+local Remotes = {}
+
+Remotes.Names = {
+	-- server -> client
+	"PhaseChanged",
+	"Announcement",
+	"RosterChanged",
+	"RoleAssigned",
+	"HouseAssigned",
+	"VoteOpened",
+	"VoteCounts",
+	"VoteMine",
+	"VoteClosed",
+	"GameOver",
+	-- client -> server
+	"RequestSync",
+	"VoteSelect",
+	"VoteConfirm",
+}
+
+function Remotes.createAll()
+	assert(RunService:IsServer(), "Remotes.createAll is server-only")
+	local folder = ReplicatedStorage:FindFirstChild(FOLDER_NAME)
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = FOLDER_NAME
+		folder.Parent = ReplicatedStorage
+	end
+	for _, name in Remotes.Names do
+		if not folder:FindFirstChild(name) then
+			local remote = Instance.new("RemoteEvent")
+			remote.Name = name
+			remote.Parent = folder
+		end
+	end
+end
+
+function Remotes.get(name: string): RemoteEvent
+	assert(table.find(Remotes.Names, name), `unknown remote "{name}"`)
+	local folder = ReplicatedStorage:WaitForChild(FOLDER_NAME)
+	return folder:WaitForChild(name) :: RemoteEvent
+end
+
+return Remotes

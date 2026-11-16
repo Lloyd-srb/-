@@ -1,0 +1,350 @@
+--!strict
+--[[
+	MatchService — who is in the match and what happened to them.
+	Owns the roster (roles, alive / dead), character setup, deaths, exile,
+	players leaving and the win check. Roles are only ever sent to their owner.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local Rng = require(ReplicatedStorage.Shared.Rng)
+local Signal = require(ReplicatedStorage.Shared.Signal)
+
+local Logic = script.Parent.Parent.Logic
+local RoleAssignment = require(Logic.RoleAssignment)
+local Roster = require(Logic.Roster)
+local WinConditions = require(Logic.WinConditions)
+local WolfPack = require(Logic.WolfPack)
+
+local Net = require(script.Parent.Net)
+
+local BOT_ID_BASE = -1000 -- Studio test clients already use small negative UserIds
+
+local MatchService = {}
+
+MatchService.Roster = Roster.new()
+MatchService.ModeId = Config.DefaultMode
+MatchService.Started = false
+MatchService.Winner = nil :: string?
+MatchService.DeathsThisNight = 0
+
+MatchService.MatchStarted = Signal.new() -- ()
+MatchService.MemberDied = Signal.new() -- (member, cause)
+MatchService.GameOver = Signal.new() -- (winner)
+MatchService.SyncRequested = Signal.new() -- (player) a client asks for the current state
+
+local rng = Rng.wrap(Random.new())
+local nightsStarted = 0
+local isNight = false
+
+--------------------------------------------------------------------------------
+-- Queries
+--------------------------------------------------------------------------------
+
+function MatchService.Mode(): Config.ModeDef
+	return Config.Modes[MatchService.ModeId]
+end
+
+function MatchService.PlayerCount(): number
+	return #Players:GetPlayers()
+end
+
+function MatchService.RequiredPlayers(): number
+	if Config.Debug.Enabled then
+		return math.min(Config.Debug.MinPlayers, MatchService.Mode().Players)
+	end
+	return MatchService.Mode().Players
+end
+
+function MatchService.MemberOf(player: Player): Roster.Member?
+	return MatchService.Roster.Members[player.UserId]
+end
+
+function MatchService.PlayerOf(id: number): Player?
+	return Players:GetPlayerByUserId(id)
+end
+
+function MatchService.IsAlive(player: Player): boolean
+	local member = MatchService.MemberOf(player)
+	return member ~= nil and member.Alive
+end
+
+-- The member's character while it exists in the world (nil once removed).
+function MatchService.CharacterOf(id: number): Model?
+	local player = MatchService.PlayerOf(id)
+	local character = player and player.Character
+	if character and character.Parent ~= nil then
+		return character
+	end
+	return nil
+end
+
+function MatchService.RootOf(id: number): BasePart?
+	local character = MatchService.CharacterOf(id)
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		return root
+	end
+	return nil
+end
+
+function MatchService.HumanoidOf(id: number): Humanoid?
+	local character = MatchService.CharacterOf(id)
+	return if character then character:FindFirstChildOfClass("Humanoid") else nil
+end
+
+--------------------------------------------------------------------------------
+-- Replication (public data only: never roles)
+--------------------------------------------------------------------------------
+
+local function publicRoster(): { any }
+	local list = {}
+	for _, member in Roster.list(MatchService.Roster) do
+		table.insert(list, {
+			Id = member.Id,
+			Name = member.Name,
+			Alive = member.Alive,
+			IsBot = member.IsBot,
+		})
+	end
+	return list
+end
+
+local function broadcastRoster()
+	Net.fireAll("RosterChanged", publicRoster())
+end
+
+local function sendRole(player: Player)
+	local member = MatchService.MemberOf(player)
+	if member then
+		Net.fire(player, "RoleAssigned", if member.IsPup then "Pup" else member.Role)
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Characters
+--------------------------------------------------------------------------------
+
+local function setupCharacter(character: Model)
+	local humanoid = character:WaitForChild("Humanoid", 10)
+	if humanoid and humanoid:IsA("Humanoid") then
+		humanoid.WalkSpeed = Config.Human.WalkSpeed
+		humanoid.MaxHealth = Config.Human.MaxHealth
+		humanoid.Health = Config.Human.MaxHealth
+		humanoid.BreakJointsOnDeath = false
+	end
+	-- No passive healing: a pup must always need exactly 2 hits (GDD §8.2).
+	local regen = character:WaitForChild("Health", 5)
+	if regen then
+		regen:Destroy()
+	end
+end
+
+local function readMode(player: Player)
+	local ok, joinData = pcall(function()
+		return player:GetJoinData()
+	end)
+	local teleportData = if ok and joinData then joinData.TeleportData else nil
+	if type(teleportData) == "table" then
+		local mode = (teleportData :: any).Mode
+		if type(mode) == "string" and Config.Modes[mode] ~= nil then
+			MatchService.ModeId = mode
+		end
+	end
+end
+
+local function onPlayerAdded(player: Player)
+	if not MatchService.Started then
+		readMode(player) -- no TeleportData (Studio) keeps Config.DefaultMode
+	end
+	player.CharacterAdded:Connect(setupCharacter)
+	-- Late joiners spectate: only players present at the start get a body.
+	if not MatchService.Started then
+		player:LoadCharacterAsync()
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Winning
+--------------------------------------------------------------------------------
+
+local function finish(winner: string)
+	if MatchService.Winner then
+		return
+	end
+	MatchService.Winner = winner
+	MatchService.GameOver:Fire(winner)
+	Net.fireAll("GameOver", { Winner = winner, EndingKey = "Ending." .. winner })
+end
+
+function MatchService.CheckWin()
+	if MatchService.Winner or not MatchService.Started then
+		return
+	end
+	local winner = WinConditions.evaluate(Roster.snapshot(MatchService.Roster))
+	if winner then
+		finish(winner)
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Deaths
+--------------------------------------------------------------------------------
+
+-- Records a death. Does not decide what happens to the body (callers do).
+function MatchService.Kill(id: number, cause: Roster.DeathCause, killerId: number?): boolean
+	if not Roster.recordDeath(MatchService.Roster, id, cause, nightsStarted, killerId) then
+		return false
+	end
+	if isNight then
+		MatchService.DeathsThisNight += 1
+	end
+	MatchService.MemberDied:Fire(MatchService.Roster.Members[id], cause)
+	broadcastRoster()
+	return true
+end
+
+-- Voted out: dies without the role being revealed (GDD §6.2).
+function MatchService.Exile(id: number)
+	local member = MatchService.Roster.Members[id]
+	if not member or not member.Alive then
+		return
+	end
+	local exiledRole = if member.IsPup then "Pup" else member.Role
+	MatchService.Kill(id, "Exile")
+
+	-- Body handling for the dead becomes "ghosts" in milestone 6.
+	local character = MatchService.CharacterOf(id)
+	if character then
+		character:Destroy()
+	end
+
+	local winner = WinConditions.onExile(exiledRole)
+	if winner then
+		finish(winner)
+	else
+		MatchService.CheckWin()
+	end
+end
+
+local function onPlayerRemoving(player: Player)
+	local member = MatchService.MemberOf(player)
+	if not MatchService.Started or not member or not member.Alive or MatchService.Winner then
+		return
+	end
+	local wasMainWolf = member.Faction == "Wolf" and not member.IsPup
+	MatchService.Kill(member.Id, "Left")
+	if wasMainWolf then
+		local winner = WinConditions.onWolfLeft(Roster.pup(MatchService.Roster) ~= nil)
+		if winner then
+			finish(winner)
+			return
+		end
+	end
+	MatchService.CheckWin()
+end
+
+--------------------------------------------------------------------------------
+-- Round hooks (called by RoundService)
+--------------------------------------------------------------------------------
+
+-- Builds the roster from the players in the server and hands out roles.
+function MatchService.BeginMatch()
+	local roster = MatchService.Roster
+	local mode = MatchService.Mode()
+	-- Ownership and real picks arrive with the role screen / profiles (milestones 4, 9).
+	local usable = RoleAssignment.usableRoles({}, Config.PlayerLevel.StartLevel)
+	local candidates: { RoleAssignment.Candidate } = {}
+
+	local function join(id: number, name: string, isBot: boolean)
+		Roster.add(roster, id, name, isBot)
+		table.insert(candidates, {
+			Id = id,
+			Picks = RoleAssignment.defaultPicks(usable, rng),
+			Usable = usable,
+		})
+	end
+
+	local firstPlayerId: number? = nil
+	for _, player in Players:GetPlayers() do
+		firstPlayerId = firstPlayerId or player.UserId
+		join(player.UserId, player.DisplayName, false)
+	end
+	if Config.Debug.Enabled and Config.Debug.FillWithBots then
+		for seat = #candidates + 1, mode.Players do
+			join(BOT_ID_BASE - seat, "Bot " .. seat, true)
+		end
+	end
+
+	local forced: { [number]: Config.RoleId }? = nil
+	if Config.Debug.Enabled and Config.Debug.ForceRole then
+		local targetId = Config.Debug.ForceRoleUserId or firstPlayerId
+		if targetId then
+			forced = { [targetId] = Config.Debug.ForceRole }
+		end
+	end
+
+	Roster.setRoles(roster, RoleAssignment.assign(candidates, mode, rng, forced))
+	MatchService.Started = true
+
+	for _, player in Players:GetPlayers() do
+		sendRole(player)
+	end
+	broadcastRoster()
+	MatchService.MatchStarted:Fire()
+end
+
+-- Returns the pup that just grew into the wolf, if that happens tonight.
+function MatchService.BeginNight(night: number): Roster.Member?
+	nightsStarted = night
+	isNight = true
+	MatchService.DeathsThisNight = 0
+	if WolfPack.shouldPromote(night, MatchService.Roster.MainWolfLostAtNight) then
+		local promoted = Roster.promotePup(MatchService.Roster)
+		if promoted then
+			local player = MatchService.PlayerOf(promoted.Id)
+			if player then
+				sendRole(player)
+			end
+		end
+		return promoted
+	end
+	return nil
+end
+
+function MatchService.EndNight()
+	isNight = false
+	Roster.creditNightSurvived(MatchService.Roster)
+end
+
+--------------------------------------------------------------------------------
+
+function MatchService.Init()
+	Players.CharacterAutoLoads = false -- the match decides who has a body
+end
+
+function MatchService.Start()
+	Net.on("RequestSync", function(player: Player)
+		if MatchService.Started then
+			sendRole(player)
+			Net.fire(player, "RosterChanged", publicRoster())
+			if MatchService.Winner then
+				Net.fire(player, "GameOver", {
+					Winner = MatchService.Winner,
+					EndingKey = "Ending." .. MatchService.Winner,
+				})
+			end
+		end
+		MatchService.SyncRequested:Fire(player)
+	end, 4, 10)
+
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	for _, player in Players:GetPlayers() do
+		task.spawn(onPlayerAdded, player)
+	end
+end
+
+return MatchService

@@ -53,6 +53,8 @@ export type ModeDef = {
 export type DebugConfig = {
 	Enabled: boolean,
 	MinPlayers: number,
+	FillWithBots: boolean,
+	DoorHitPrompt: boolean,
 	ForceRole: RoleId?,
 	ForceRoleUserId: number?,
 	TimerScale: number,
@@ -146,6 +148,10 @@ Config.Vote = {
 	DefaultWeight = 1,
 	ChiefWeight = 2, -- [GDD]
 	AllowSelfVote = false, -- [ASSUMED]
+	ConfirmIsFinal = true, -- [ASSUMED] a confirmed vote cannot be changed
+	CallHold = 1, -- [ASSUMED] seconds holding E on the meeting bell
+	PendingColor = Color3.fromRGB(150, 150, 150), -- [GDD] gray silhouette
+	ConfirmedColor = Color3.fromRGB(80, 160, 255), -- [GDD] blue silhouette
 }
 
 --------------------------------------------------------------------------------
@@ -213,6 +219,8 @@ Config.Door = {
 	HitCooldown = 1, -- same swing cooldown as the wolf attack
 	HitRange = 8, -- [ASSUMED]
 	OpenHold = 0.5, -- [ASSUMED] owner / killer hold-E to open
+	OpenTweenTime = 0.4,
+	UsableByDay = false, -- [ASSUMED] houses stay shut during the day
 }
 
 --------------------------------------------------------------------------------
@@ -539,6 +547,8 @@ Config.Products = {
 Config.Debug = {
 	Enabled = RunService:IsStudio(),
 	MinPlayers = 1, -- start a match with fewer players than the mode needs
+	FillWithBots = true, -- fill the empty seats with idle bots (no body) so votes / win checks work
+	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf
 	ForceRole = nil, -- e.g. "Wolf" to always get that role
 	ForceRoleUserId = nil, -- nil = the first player in the server
 	TimerScale = 1, -- e.g. 0.1 makes every timer 10x shorter

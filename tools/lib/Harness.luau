@@ -13,6 +13,7 @@
 local fs = require("@lune/fs")
 local luau = require("@lune/luau")
 local roblox = require("@lune/roblox")
+local task = require("@lune/task")
 
 local Harness = {}
 
@@ -75,11 +76,14 @@ export type Game = {
 	require: (module: any) -> any,
 	env: (script: any, extra: { [string]: any }?) -> { [string]: any },
 	scripts: { any },
+	-- Extra globals given to every module / script loaded afterwards.
+	globals: { [string]: any },
 }
 
 function Harness.load(srcDir: string): Game
 	local game = roblox.Instance.new("DataModel")
 	local scripts = {}
+	local globals: { [string]: any } = {}
 
 	local function container(parts: { string }): any
 		local current = game:GetService(parts[1])
@@ -119,12 +123,16 @@ function Harness.load(srcDir: string): Game
 			game = game,
 			workspace = game:GetService("Workspace"),
 			require = requireModule,
+			task = task,
 		}
 		for key, value in roblox :: any do
 			-- Datatypes and Instance/Enum start with an upper-case letter.
 			if type(key) == "string" and key:match("^%u") then
 				env[key] = value
 			end
+		end
+		for key, value in globals do
+			env[key] = value
 		end
 		if extra then
 			for key, value in extra do
@@ -147,7 +155,7 @@ function Harness.load(srcDir: string): Game
 		return value
 	end
 
-	return { game = game, require = requireModule, env = makeEnv, scripts = scripts }
+	return { game = game, require = requireModule, env = makeEnv, scripts = scripts, globals = globals }
 end
 
 -- Runs a builder script (build/*.luau) against the loaded DataModel.

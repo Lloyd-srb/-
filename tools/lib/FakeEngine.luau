@@ -1,0 +1,328 @@
+--[[
+	FakeEngine (Lune) — just enough of the Roblox engine to run the real server
+	scripts (ServerScriptService.Main and its services) outside Studio:
+	fake players with characters, RemoteEvents, ProximityPrompts, tags, tweens.
+
+	It does NOT simulate physics, replication, UI or the client. Its purpose is
+	to catch logic and ordering mistakes in the round flow before Studio does.
+]]
+
+local fs = require("@lune/fs")
+local luau = require("@lune/luau")
+local roblox = require("@lune/roblox")
+local task = require("@lune/task")
+
+local Harness = require("./Harness")
+
+local FakeEngine = {}
+
+-- State of the simulation that is currently running (one at a time).
+local sim: any = nil
+
+local function newSignal()
+	local handlers = {}
+	local signal = {}
+	function signal:Connect(handler)
+		table.insert(handlers, handler)
+		return {
+			Disconnect = function()
+				local index = table.find(handlers, handler)
+				if index then
+					table.remove(handlers, index)
+				end
+			end,
+		}
+	end
+	function signal:Fire(...)
+		for _, handler in table.clone(handlers) do
+			task.spawn(handler, ...)
+		end
+	end
+	return signal
+end
+
+-- Lune hands out a new userdata per reference, so signals are stored by a
+-- stable string key instead of by instance.
+local function signalFor(key: string)
+	local signal = sim.signals[key]
+	if not signal then
+		signal = newSignal()
+		sim.signals[key] = signal
+	end
+	return signal
+end
+
+local function promptKey(prompt: any): string
+	local id = prompt:GetAttribute("SimId")
+	if not id then
+		sim.promptCount += 1
+		id = sim.promptCount
+		prompt:SetAttribute("SimId", id)
+	end
+	return "Prompt:" .. id
+end
+
+local function players(): { any }
+	local list = {}
+	for _, child in sim.game:GetService("Players"):GetChildren() do
+		if child.ClassName == "Player" then
+			table.insert(list, child)
+		end
+	end
+	return list
+end
+
+local installed = false
+local function install()
+	if installed then
+		return
+	end
+	installed = true
+
+	roblox.implementMethod("RunService", "IsServer", function()
+		return true
+	end)
+	roblox.implementMethod("Instance", "WaitForChild", function(self, name)
+		return self:FindFirstChild(name)
+	end)
+	roblox.implementMethod("Workspace", "GetServerTimeNow", function()
+		return os.clock()
+	end)
+	roblox.implementMethod("CollectionService", "GetTagged", function(_, tag)
+		local found = {}
+		for _, instance in sim.game:GetDescendants() do
+			if instance:HasTag(tag) then
+				table.insert(found, instance)
+			end
+		end
+		return found
+	end)
+	roblox.implementMethod("TweenService", "Create", function(_, instance, _info, goal)
+		return {
+			Play = function()
+				for property, value in goal do
+					instance[property] = value
+				end
+			end,
+		}
+	end)
+	roblox.implementMethod("Model", "PivotTo", function(self, cframe)
+		local root = self:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.CFrame = cframe
+		end
+	end)
+
+	roblox.implementProperty("Players", "PlayerAdded", function()
+		return signalFor("PlayerAdded")
+	end)
+	roblox.implementProperty("Players", "PlayerRemoving", function()
+		return signalFor("PlayerRemoving")
+	end)
+	roblox.implementMethod("Players", "GetPlayers", function()
+		return players()
+	end)
+	roblox.implementMethod("Players", "GetPlayerByUserId", function(_, userId)
+		for _, player in players() do
+			if player.UserId == userId then
+				return player
+			end
+		end
+		return nil
+	end)
+
+	roblox.implementProperty("Player", "CharacterAdded", function(self)
+		return signalFor("CharacterAdded:" .. self.UserId)
+	end)
+	roblox.implementMethod("Player", "GetJoinData", function()
+		return {}
+	end)
+	roblox.implementMethod("Player", "LoadCharacterAsync", function(self)
+		local character = roblox.Instance.new("Model")
+		character.Name = self.Name
+		local humanoid = roblox.Instance.new("Humanoid")
+		humanoid.WalkSpeed = 16
+		humanoid.JumpPower = 50
+		humanoid.JumpHeight = 7.2
+		humanoid.Parent = character
+		local root = roblox.Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.CFrame = roblox.CFrame.new(0, 3, 20) -- the plaza spawn
+		root.Parent = character
+		local regen = roblox.Instance.new("Script")
+		regen.Name = "Health"
+		regen.Parent = character
+		character.Parent = sim.game:GetService("Workspace")
+		self.Character = character
+		signalFor("CharacterAdded:" .. self.UserId):Fire(character)
+	end)
+
+	roblox.implementProperty("RemoteEvent", "OnServerEvent", function(self)
+		return signalFor("Remote:" .. self.Name)
+	end)
+	-- Servers from earlier simulations may still be winding down: only record
+	-- what the current simulation's own remotes send.
+	local function isCurrent(remote): boolean
+		return remote:IsDescendantOf(sim.game)
+	end
+	roblox.implementMethod("RemoteEvent", "FireClient", function(self, player, ...)
+		if isCurrent(self) then
+			table.insert(sim.log, { Remote = self.Name, To = player.UserId, Args = { ... } })
+		end
+	end)
+	roblox.implementMethod("RemoteEvent", "FireAllClients", function(self, ...)
+		if isCurrent(self) then
+			table.insert(sim.log, { Remote = self.Name, To = "all", Args = { ... } })
+		end
+	end)
+
+	roblox.implementProperty("ProximityPrompt", "Triggered", function(self)
+		return signalFor(promptKey(self))
+	end)
+end
+
+local function fakeRandom()
+	local object = {}
+	function object:NextInteger(min, max)
+		return math.random(min, max)
+	end
+	function object:NextNumber()
+		return math.random()
+	end
+	return object
+end
+
+export type Options = {
+	Players: { { Id: number, Name: string } },
+	Debug: { [string]: any }?,
+	Builders: { string }?,
+}
+
+--[[
+	Builds the map, adds the players, then runs ServerScriptService.Main.
+	Returns a handle to drive and inspect the running server.
+]]
+function FakeEngine.start(loaded: Harness.Game, options: Options)
+	install()
+	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0 }
+	local game = loaded.game
+
+	loaded.globals.Random = { new = fakeRandom }
+	loaded.globals.TweenInfo = {
+		new = function(...)
+			return { ... }
+		end,
+	}
+	loaded.globals.warn = function(...)
+		print("[warn]", ...)
+	end
+
+	for _, builder in options.Builders or { "build/BuildVillage.luau", "build/BuildLighting.luau" } do
+		Harness.runBuilder(loaded, builder)
+	end
+
+	local Config = loaded.require(game.ReplicatedStorage.Shared.Config)
+	Config.Debug.Enabled = true
+	for key, value in options.Debug or {} do
+		Config.Debug[key] = value
+	end
+
+	local server = { Config = Config, game = game, require = loaded.require }
+
+	function server.addPlayer(id: number, name: string)
+		local player = roblox.Instance.new("Player")
+		player.Name = name
+		player.DisplayName = name
+		player.UserId = id
+		player.Parent = game:GetService("Players")
+		signalFor("PlayerAdded"):Fire(player)
+		return player
+	end
+
+	function server.player(id: number)
+		return game:GetService("Players"):GetPlayerByUserId(id)
+	end
+
+	function server.removePlayer(id: number)
+		local player = server.player(id)
+		signalFor("PlayerRemoving"):Fire(player)
+		player.Parent = nil
+	end
+
+	-- Client -> server remote call.
+	function server.fireServer(remoteName: string, playerId: number, ...)
+		signalFor("Remote:" .. remoteName):Fire(server.player(playerId), ...)
+	end
+
+	-- A player finishes holding a ProximityPrompt (only if it is enabled).
+	function server.trigger(prompt: any, playerId: number): boolean
+		if not prompt.Enabled then
+			return false
+		end
+		signalFor(promptKey(prompt)):Fire(server.player(playerId))
+		return true
+	end
+
+	-- Everything the server sent on a remote. `to` = a UserId, "all", or nil for both.
+	function server.sent(remoteName: string, to: (number | string)?): { { any } }
+		local list = {}
+		for _, entry in sim.log do
+			if entry.Remote == remoteName and (to == nil or entry.To == to) then
+				table.insert(list, entry.Args)
+			end
+		end
+		return list
+	end
+
+	function server.last(remoteName: string, to: (number | string)?): { any }?
+		local list = server.sent(remoteName, to)
+		return list[#list]
+	end
+
+	function server.root(id: number)
+		local character = server.player(id).Character
+		return character and character:FindFirstChild("HumanoidRootPart")
+	end
+
+	function server.humanoid(id: number)
+		local character = server.player(id).Character
+		return character and character:FindFirstChildOfClass("Humanoid")
+	end
+
+	-- Polls until predicate() is truthy. Errors after `timeout` seconds.
+	function server.waitFor(what: string, predicate: () -> any, timeout: number?): any
+		local deadline = os.clock() + (timeout or 5)
+		while os.clock() < deadline do
+			local value = predicate()
+			if value then
+				return value
+			end
+			task.wait(0.005)
+		end
+		error("timed out waiting for " .. what, 2)
+	end
+
+	function server.phase(): string
+		local last = server.last("PhaseChanged", "all")
+		return if last then last[1].Phase else "None"
+	end
+
+	function server.waitForPhase(phase: string, timeout: number?)
+		server.waitFor("phase " .. phase, function()
+			return server.phase() == phase
+		end, timeout)
+	end
+
+	for _, entry in options.Players do
+		server.addPlayer(entry.Id, entry.Name)
+	end
+
+	local main = game.ServerScriptService.Main
+	luau.load(main.Source, { debugName = "ServerScriptService.Main", environment = loaded.env(main) })()
+
+	return server
+end
+
+FakeEngine.readFile = fs.readFile
+
+return FakeEngine

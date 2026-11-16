@@ -4,13 +4,14 @@
 
 	Loads src/ into an in-memory DataModel and runs every tests/*.spec.luau.
 	Spec files get: game, workspace, require, test(name, fn), expect(value),
-	runBuilder(path).
+	runBuilder(path), startServer(options).
 ]]
 
 local fs = require("@lune/fs")
 local luau = require("@lune/luau")
 local process = require("@lune/process")
 
+local FakeEngine = require("./lib/FakeEngine")
 local Harness = require("./lib/Harness")
 
 local passed, failed = 0, 0
@@ -107,6 +108,12 @@ for _, spec in specs do
 			runBuilder = function(path: string)
 				return Harness.runBuilder(loaded, path)
 			end,
+			-- Runs the real server scripts on a fake engine (see FakeEngine).
+			-- Every call gets its own DataModel, so one spec can run several matches.
+			startServer = function(options)
+				return FakeEngine.start(Harness.load("src"), options)
+			end,
+			task = require("@lune/task"),
 		}),
 	})
 	local ok, err = pcall(chunk)

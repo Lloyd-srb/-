@@ -1,0 +1,28 @@
+--!strict
+--[[
+	Client bootstrap: the only LocalScript. Starts every controller, then asks
+	the server for the current state (covers events fired before we listened).
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Controllers = script.Parent:WaitForChild("Controllers")
+
+type Controller = { Start: () -> () }
+
+local names = { "HudController", "VoteController", "WindowController", "PromptController" }
+
+-- Each controller starts in its own thread: one waiting for missing UI must
+-- not stop the others.
+for _, name in names do
+	task.spawn(function()
+		local controller = (require :: any)(Controllers:WaitForChild(name)) :: Controller
+		xpcall(controller.Start, function(err)
+			warn(`[Main] {name} failed to start: {err}`)
+		end)
+	end)
+end
+
+Remotes.get("RequestSync"):FireServer()
