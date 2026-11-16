@@ -5,11 +5,12 @@
 
 	Server -> one client only (secret):  RoleAssigned, HouseAssigned, VoteMine,
 	                                     FormChanged, PackChanged, Highlight,
-	                                     AbilityState, HideChanged
+	                                     AbilityState, HideChanged, RoleOptions,
+	                                     RolePicksAck
 	Server -> everyone (public):         PhaseChanged, Announcement, RosterChanged,
 	                                     VoteOpened, VoteCounts, VoteClosed, GameOver
 	Client -> server (intents):          RequestSync, VoteSelect, VoteConfirm,
-	                                     WolfAttack, WolfAbility, HideExit
+	                                     WolfAttack, WolfAbility, HideExit, RolePicks
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,6 +37,8 @@ Remotes.Names = {
 	"Highlight", -- allowed viewers only: who to outline
 	"AbilityState", -- own cooldowns
 	"HideChanged", -- own hiding spot
+	"RoleOptions", -- own usable roles for the role-selection screen
+	"RolePicksAck", -- own accepted picks
 	-- client -> server
 	"RequestSync",
 	"VoteSelect",
@@ -43,6 +46,7 @@ Remotes.Names = {
 	"WolfAttack",
 	"WolfAbility",
 	"HideExit",
+	"RolePicks",
 }
 
 function Remotes.createAll()

@@ -130,6 +130,5 @@ for _, failure in failures do
 	print("FAIL  " .. failure)
 end
 print(`\n{passed} passed, {failed} failed ({#specs} spec files)`)
-if failed > 0 then
-	process.exit(1)
-end
+-- Always exit explicitly: simulated matches may still have timers running.
+process.exit(if failed > 0 then 1 else 0)

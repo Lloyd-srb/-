@@ -7,6 +7,7 @@
 local function start(scale, debug)
 	debug = debug or {}
 	debug.TimerScale = scale
+	debug.UnlockAllRoles = false -- starter roles only: no Killer / Fool by chance
 	debug.MinPlayers = 3
 	debug.FillWithBots = true
 	debug.ForceRole = debug.ForceRole or "Wolf"

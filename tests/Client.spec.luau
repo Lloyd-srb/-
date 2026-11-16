@@ -52,6 +52,22 @@ test("VoteUI has everything VoteController looks up", function()
 	expect(silhouette:FindFirstChild("Head") ~= nil and silhouette:FindFirstChild("Body") ~= nil).toBe(true)
 end)
 
+test("RoleSelectUI has everything RoleSelectController looks up", function()
+	local gui = StarterGui:FindFirstChild("RoleSelectUI")
+	expect(gui ~= nil and gui.Enabled == false).toBe(true)
+	for _, name in { "Title", "Counter", "Hint", "StatusLabel" } do
+		expect(path(gui, { "Panel", name }):IsA("TextLabel")).toBe(true)
+	end
+	expect(path(gui, { "Panel", "Grid" }) ~= nil).toBe(true)
+	expect(path(gui, { "Panel", "ConfirmButton" }):IsA("TextButton")).toBe(true)
+	local card = path(gui, { "Templates", "RoleCard" })
+	expect(card:IsA("GuiButton")).toBe(true)
+	for _, name in { "NameLabel", "DescLabel", "LockLabel" } do
+		expect(card:FindFirstChild(name):IsA("TextLabel")).toBe(true)
+	end
+	expect(card:FindFirstChildOfClass("UIStroke") ~= nil).toBe(true)
+end)
+
 test("every remote the scripts use is declared in Remotes.Names", function()
 	local used = {}
 	for _, instance in game:GetDescendants() do
@@ -79,7 +95,7 @@ test("every remote the scripts use is declared in Remotes.Names", function()
 end)
 
 test("every text key written in code exists in Strings", function()
-	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud", "Ability" }
+	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud", "Ability", "RoleSelect", "Picker" }
 	local checked = 0
 	for _, instance in game:GetDescendants() do
 		if instance:IsA("LuaSourceContainer") and instance.Name ~= "Strings" then

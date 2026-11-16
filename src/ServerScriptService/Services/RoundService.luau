@@ -31,6 +31,7 @@ local duration = 0 -- real seconds (debug-scaled)
 local endsAt = 0 -- server time, for client countdowns
 local meetingCaller: string? = nil
 local meetingRequested = false
+local advanceRequested = false
 
 local function timerScale(): number
 	return if Config.Debug.Enabled then Config.Debug.TimerScale else 1
@@ -94,14 +95,23 @@ local function enter(state: PhaseMachine.PhaseState)
 	announcePhase(state)
 end
 
+-- Ends the current phase early, as if its timer had run out (used when every
+-- player has confirmed their roles).
+function RoundService.Advance()
+	advanceRequested = true
+end
+
 -- Waits for the phase to finish. Returns why it ended.
 local function waitPhase(): string
+	advanceRequested = false
 	while os.clock() - startedAt < duration do
 		if MatchService.Winner then
 			return "GameOver"
 		elseif meetingRequested then
 			meetingRequested = false
 			return "MeetingCalled"
+		elseif advanceRequested then
+			break
 		end
 		task.wait(POLL)
 	end
@@ -165,7 +175,8 @@ function RoundService.Start()
 			Net.fire(player, "PhaseChanged", payload())
 		end
 	end)
-	task.spawn(run)
+	-- Deferred so every service has connected to the phase signals first.
+	task.defer(run)
 end
 
 return RoundService

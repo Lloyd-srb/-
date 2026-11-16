@@ -11,8 +11,10 @@ type Service = { Init: () -> (), Start: () -> () }
 
 local ordered: { Service } = {
 	require(Services.Net),
+	require(Services.ProfileService),
 	require(Services.MatchService),
 	require(Services.RoundService),
+	require(Services.RoleSelectService),
 	require(Services.MoveService),
 	require(Services.CombatService),
 	require(Services.HouseService),

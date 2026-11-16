@@ -20,6 +20,7 @@ local WolfPack = require(Logic.WolfPack)
 
 local BotBody = require(script.Parent.BotBody)
 local Net = require(script.Parent.Net)
+local ProfileService = require(script.Parent.ProfileService)
 
 local BOT_ID_BASE = -1000 -- Studio test clients already use small negative UserIds
 
@@ -41,6 +42,7 @@ local rng = Rng.wrap(Random.new())
 local nightsStarted = 0
 local isNight = false
 local botBodies: { [number]: Model } = {} -- debug bots have no Player
+local picks: { [number]: { Config.RoleId } } = {} -- confirmed on the role screen
 
 --------------------------------------------------------------------------------
 -- Queries
@@ -199,7 +201,7 @@ local function readMode(player: Player)
 end
 
 local function onPlayerAdded(player: Player)
-	if not MatchService.Started then
+	if not MatchService.Started and not (Config.Debug.Enabled and Config.Debug.Mode) then
 		readMode(player) -- no TeleportData (Studio) keeps Config.DefaultMode
 	end
 	player.CharacterAdded:Connect(setupCharacter)
@@ -306,6 +308,27 @@ local function onPlayerRemoving(player: Player)
 end
 
 --------------------------------------------------------------------------------
+-- Role picks (validated by RoleSelectService)
+--------------------------------------------------------------------------------
+
+function MatchService.SetPicks(userId: number, chosen: { Config.RoleId })
+	picks[userId] = chosen
+end
+
+function MatchService.PicksOf(userId: number): { Config.RoleId }?
+	return picks[userId]
+end
+
+function MatchService.AllPicked(): boolean
+	for _, player in Players:GetPlayers() do
+		if not picks[player.UserId] then
+			return false
+		end
+	end
+	return true
+end
+
+--------------------------------------------------------------------------------
 -- Round hooks (called by RoundService)
 --------------------------------------------------------------------------------
 
@@ -313,15 +336,15 @@ end
 function MatchService.BeginMatch()
 	local roster = MatchService.Roster
 	local mode = MatchService.Mode()
-	-- Ownership and real picks arrive with the role screen / profiles (milestones 4, 9).
-	local usable = RoleAssignment.usableRoles({}, Config.PlayerLevel.StartLevel)
+	local starterRoles = RoleAssignment.usableRoles({}, Config.PlayerLevel.StartLevel)
 	local candidates: { RoleAssignment.Candidate } = {}
 
-	local function join(id: number, name: string, isBot: boolean)
+	-- Players who did not confirm in time get random picks from what they own.
+	local function join(id: number, name: string, isBot: boolean, usable: { [Config.RoleId]: boolean })
 		Roster.add(roster, id, name, isBot)
 		table.insert(candidates, {
 			Id = id,
-			Picks = RoleAssignment.defaultPicks(usable, rng),
+			Picks = picks[id] or RoleAssignment.defaultPicks(usable, rng),
 			Usable = usable,
 		})
 	end
@@ -329,7 +352,7 @@ function MatchService.BeginMatch()
 	local firstPlayerId: number? = nil
 	for _, player in Players:GetPlayers() do
 		firstPlayerId = firstPlayerId or player.UserId
-		join(player.UserId, player.DisplayName, false)
+		join(player.UserId, player.DisplayName, false, ProfileService.UsableRoles(player))
 		if player.Character then
 			markBody(player.Character, player.UserId)
 		end
@@ -337,7 +360,7 @@ function MatchService.BeginMatch()
 	if Config.Debug.Enabled and Config.Debug.FillWithBots then
 		for seat = #candidates + 1, mode.Players do
 			local id = BOT_ID_BASE - seat
-			join(id, "Bot " .. seat, true)
+			join(id, "Bot " .. seat, true, starterRoles)
 			if Config.Debug.BotBodies then
 				local body = BotBody.create("Bot " .. seat, seat, mode.Players)
 				markBody(body, id)
@@ -392,6 +415,9 @@ end
 
 function MatchService.Init()
 	Players.CharacterAutoLoads = false -- the match decides who has a body
+	if Config.Debug.Enabled and Config.Debug.Mode and Config.Modes[Config.Debug.Mode] then
+		MatchService.ModeId = Config.Debug.Mode
+	end
 end
 
 function MatchService.Start()

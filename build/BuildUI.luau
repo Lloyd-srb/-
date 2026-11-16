@@ -306,6 +306,102 @@ local function buildVoteUI()
 	buildSilhouetteTemplate(templates)
 end
 
+--------------------------------------------------------------------------------
+-- RoleSelectUI (GDD §4: pick 3 owned roles before day 1)
+--------------------------------------------------------------------------------
+
+local function buildRoleSelectUI()
+	local gui = screenGui("RoleSelectUI", 6)
+	gui.Enabled = false
+
+	local panel = frame(
+		"Panel",
+		gui,
+		UDim2.new(0.86, 0, 0.84, 0),
+		UDim2.new(0.5, 0, 0.53, 0),
+		Vector2.new(0.5, 0.5),
+		Colors.Panel,
+		0.05
+	)
+	corner(panel, 18)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(1080, 680)
+	limit.Parent = panel
+
+	label("Title", panel, UDim2.new(0.6, 0, 0, 44), UDim2.new(0, 24, 0, 10), Vector2.new(0, 0), TITLE_FONT, 34).TextXAlignment =
+		Enum.TextXAlignment.Left
+	label("Counter", panel, UDim2.new(0.3, 0, 0, 44), UDim2.new(1, -24, 0, 10), Vector2.new(1, 0), TITLE_FONT, 28).TextXAlignment =
+		Enum.TextXAlignment.Right
+	local hint = label("Hint", panel, UDim2.new(1, -48, 0, 24), UDim2.new(0, 24, 0, 54), Vector2.new(0, 0), BODY_FONT, 16)
+	hint.TextXAlignment = Enum.TextXAlignment.Left
+	hint.TextColor3 = Colors.SubText
+
+	local grid = Instance.new("ScrollingFrame")
+	grid.Name = "Grid"
+	grid.Size = UDim2.new(1, -32, 1, -164)
+	grid.Position = UDim2.new(0.5, 0, 0, 86)
+	grid.AnchorPoint = Vector2.new(0.5, 0)
+	grid.BackgroundTransparency = 1
+	grid.BorderSizePixel = 0
+	grid.ScrollBarThickness = 6
+	grid.CanvasSize = UDim2.new(0, 0, 0, 0)
+	grid.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	grid.Parent = panel
+	local gridLayout = Instance.new("UIGridLayout")
+	gridLayout.CellSize = UDim2.new(0, 196, 0, 150)
+	gridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+	gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	gridLayout.Parent = grid
+
+	local confirm = Instance.new("TextButton")
+	confirm.Name = "ConfirmButton"
+	confirm.Size = UDim2.new(0, 220, 0, 52)
+	confirm.Position = UDim2.new(0.5, 0, 1, -14)
+	confirm.AnchorPoint = Vector2.new(0.5, 1)
+	confirm.BackgroundColor3 = Colors.Accent
+	confirm.BorderSizePixel = 0
+	confirm.FontFace = TITLE_FONT
+	confirm.Text = "Confirm"
+	confirm.TextColor3 = Colors.Text
+	confirm.TextScaled = true
+	confirm.Parent = panel
+	corner(confirm, 14)
+	maxTextSize(confirm, 28)
+
+	local status = label("StatusLabel", panel, UDim2.new(1, -40, 0, 40), UDim2.new(0.5, 0, 1, -20), Vector2.new(0.5, 1), BODY_FONT, 22)
+	status.Visible = false
+
+	local templates = Instance.new("Folder")
+	templates.Name = "Templates"
+	templates.Parent = gui
+
+	local card = Instance.new("TextButton")
+	card.Name = "RoleCard"
+	card.Size = UDim2.new(0, 196, 0, 150)
+	card.BackgroundColor3 = Colors.PanelLight
+	card.BorderSizePixel = 0
+	card.Text = ""
+	card.Visible = false
+	card.Parent = templates
+	corner(card, 12)
+	local selection = Instance.new("UIStroke")
+	selection.Name = "Selection"
+	selection.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	selection.Thickness = 4
+	selection.Color = Colors.Accent
+	selection.Enabled = false
+	selection.Parent = card
+	label("NameLabel", card, UDim2.new(1, -16, 0, 30), UDim2.new(0.5, 0, 0, 8), Vector2.new(0.5, 0), TITLE_FONT, 24)
+	local desc = label("DescLabel", card, UDim2.new(1, -16, 1, -72), UDim2.new(0.5, 0, 0, 40), Vector2.new(0.5, 0), BODY_FONT, 14)
+	desc.TextColor3 = Colors.SubText
+	desc.TextYAlignment = Enum.TextYAlignment.Top
+	local lock = label("LockLabel", card, UDim2.new(1, -16, 0, 24), UDim2.new(0.5, 0, 1, -6), Vector2.new(0.5, 1), BODY_FONT, 16)
+	lock.TextColor3 = rgb(255, 170, 90)
+	lock.Visible = false
+end
+
 buildHud()
 buildVoteUI()
+buildRoleSelectUI()
 print("[BuildUI] done")

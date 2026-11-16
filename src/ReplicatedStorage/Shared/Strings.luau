@@ -33,6 +33,16 @@ local Strings: { [string]: Entry } = {
 	["Phase.GameOver"] = { en = "Game over", th = "จบเกม" },
 	["Phase.Waiting"] = { en = "Waiting for players {count:int}/{needed:int}", th = "รอผู้เล่น {count:int}/{needed:int}" },
 
+	-- Role-selection screen (GDD §4)
+	["RoleSelect.Count"] = { en = "{count:int}/{max:int} chosen", th = "เลือกแล้ว {count:int}/{max:int}" },
+	["RoleSelect.Locked"] = { en = "Level {level:int}", th = "ต้องเลเวล {level:int}" },
+	["RoleSelect.NotOwned"] = { en = "Not owned", th = "ยังไม่มีบทนี้" },
+	["RoleSelect.Waiting"] = { en = "Waiting for the other players...", th = "รอผู้เล่นคนอื่น..." },
+	["RoleSelect.Hint"] = {
+		en = "You get one of your 3 picks. The wolf is chosen at random.",
+		th = "คุณจะได้ 1 ใน 3 บทที่เลือก ส่วนหมาป่าสุ่มจากทุกคน",
+	},
+
 	-- HUD
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },

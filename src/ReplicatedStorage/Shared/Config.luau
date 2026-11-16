@@ -55,6 +55,8 @@ export type DebugConfig = {
 	MinPlayers: number,
 	FillWithBots: boolean,
 	BotBodies: boolean,
+	UnlockAllRoles: boolean,
+	Mode: ModeId?,
 	DoorHitPrompt: boolean,
 	ForceRole: RoleId?,
 	ForceRoleUserId: number?,
@@ -87,6 +89,7 @@ Config.DefaultMode = "Casual" :: ModeId
 Config.RoleSelect = {
 	PickCount = 3, -- [GDD] each player picks 3 owned roles
 	Duration = 30, -- [ASSUMED] seconds on the role-selection screen
+	EndWhenAllPicked = true, -- [ASSUMED] start as soon as every player has confirmed
 	StarterRoles = { "Villager", "Sheriff", "Doctor" } :: { RoleId }, -- [GDD] free for new players
 }
 
@@ -654,6 +657,8 @@ Config.Debug = {
 	MinPlayers = 1, -- start a match with fewer players than the mode needs
 	FillWithBots = true, -- fill the empty seats with idle bots so votes / win checks work
 	BotBodies = true, -- bots get a simple dummy body the wolf can chase and attack
+	UnlockAllRoles = true, -- every role is owned and level gates are ignored
+	Mode = nil, -- "Turbo" to test the 6-player mode (no TeleportData in Studio)
 	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf
 	ForceRole = nil, -- e.g. "Wolf" to always get that role
 	ForceRoleUserId = nil, -- nil = the first player in the server

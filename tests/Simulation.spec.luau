@@ -9,6 +9,7 @@ local SCALE = 0.004 -- 180 s -> 0.72 s
 
 local function start(debug)
 	debug.TimerScale = SCALE
+	debug.UnlockAllRoles = false -- starter roles only: no Killer / Fool by chance
 	debug.MinPlayers = 3
 	debug.FillWithBots = true
 	return startServer({
