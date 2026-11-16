@@ -223,6 +223,7 @@ function Roster.promotePup(roster: Roster): Member?
 	local pup = Roster.pup(roster)
 	if pup then
 		pup.IsPup = false
+		pup.Role = "Wolf"
 		roster.MainWolfLostAtNight = nil
 	end
 	return pup

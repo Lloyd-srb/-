@@ -155,6 +155,7 @@ test("roster: pup conversion, wolf loss and promotion", function()
 
 	local promoted = Roster.promotePup(r)
 	expect(promoted.Id).toBe(2)
+	expect(promoted.Role).toBe("Wolf")
 	expect(Roster.mainWolf(r).Id).toBe(2)
 	expect(Roster.pup(r)).toBeNil()
 	expect(r.MainWolfLostAtNight).toBeNil()
