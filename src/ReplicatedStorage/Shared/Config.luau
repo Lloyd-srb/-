@@ -54,6 +54,7 @@ export type DebugConfig = {
 	Enabled: boolean,
 	MinPlayers: number,
 	FillWithBots: boolean,
+	BotBodies: boolean,
 	DoorHitPrompt: boolean,
 	ForceRole: RoleId?,
 	ForceRoleUserId: number?,
@@ -163,6 +164,8 @@ Config.Human = {
 	MaxHealth = 100, -- wolf = 1 hit, pup = 2 hits
 	HideHold = 1, -- [ASSUMED] seconds holding E to hide under a bed / in a wardrobe
 	InteractDistance = 10, -- [ASSUMED] studs, ProximityPrompt MaxActivationDistance
+	JumpPower = 50, -- Roblox defaults, restored after a freeze
+	JumpHeight = 7.2,
 }
 
 --------------------------------------------------------------------------------
@@ -174,6 +177,8 @@ Config.Wolf = {
 	AttackDamage = 100, -- [GDD] one hit kills
 	AttackCooldown = 1, -- [GDD]
 	AttackRange = 7, -- [ASSUMED] studs
+	AttackMinDot = 0, -- [ASSUMED] target must be in the front half (dot of look and direction)
+	ForestScanInterval = 0.5, -- seconds between "who is in the forest" updates (§6.4)
 	SearchHold = 1, -- [GDD §6.4] hold E on a bed / wardrobe to search it
 	Sniff = {
 		Duration = 3, -- [GDD]
@@ -207,6 +212,31 @@ Config.Pup = {
 		Cooldown = 30, -- [default]
 	},
 	PromotionNights = 2, -- [GDD] becomes a full wolf on the 2nd night after the wolf is gone
+}
+
+--------------------------------------------------------------------------------
+-- Werewolf look (art defaults). The rig is built by build/BuildWolfRig.luau.
+--------------------------------------------------------------------------------
+
+Config.WolfRig = {
+	Fur = Color3.fromRGB(112, 114, 122),
+	FurDark = Color3.fromRGB(76, 78, 88),
+	Belly = Color3.fromRGB(150, 152, 160),
+	Claw = Color3.fromRGB(235, 232, 220),
+	Eye = Color3.fromRGB(255, 221, 51), -- glowing yellow (Neon)
+	Nose = Color3.fromRGB(30, 30, 34),
+	RunSpeedThreshold = 24, -- faster than this = four-legged run animation
+}
+
+--------------------------------------------------------------------------------
+-- Hiding (§6.4)
+--------------------------------------------------------------------------------
+
+Config.Hiding = {
+	-- Hidden players' bodies are parked here, far from the map, so nobody
+	-- (including exploiters) can tell which spot they are hiding in.
+	HoldingHeight = 2000,
+	HoldingSpacing = 30,
 }
 
 --------------------------------------------------------------------------------
@@ -547,7 +577,8 @@ Config.Products = {
 Config.Debug = {
 	Enabled = RunService:IsStudio(),
 	MinPlayers = 1, -- start a match with fewer players than the mode needs
-	FillWithBots = true, -- fill the empty seats with idle bots (no body) so votes / win checks work
+	FillWithBots = true, -- fill the empty seats with idle bots so votes / win checks work
+	BotBodies = true, -- bots get a simple dummy body the wolf can chase and attack
 	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf
 	ForceRole = nil, -- e.g. "Wolf" to always get that role
 	ForceRoleUserId = nil, -- nil = the first player in the server

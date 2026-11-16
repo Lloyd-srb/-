@@ -13,7 +13,7 @@ local fs = require("@lune/fs")
 local Harness = require("./lib/Harness")
 local roblox = Harness.roblox
 
-local BUILDERS = { "build/BuildVillage.luau", "build/BuildLighting.luau", "build/BuildUI.luau", "build/BuildSettings.luau" }
+local BUILDERS = { "build/BuildVillage.luau", "build/BuildLighting.luau", "build/BuildUI.luau", "build/BuildSettings.luau", "build/BuildWolfRig.luau" }
 
 local loaded = Harness.load("src")
 for _, builder in BUILDERS do
