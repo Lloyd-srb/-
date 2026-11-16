@@ -24,10 +24,12 @@ local Roster = require(Logic.Roster)
 local VoteTally = require(Logic.VoteTally)
 
 local MatchService = require(script.Parent.MatchService)
+local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
 
+local FREEZE_KEY = "Meeting"
 local CLEAR_SELECTION = 0 -- VoteSelect(0) removes an unconfirmed selection
 
 local VoteService = {}
@@ -36,7 +38,6 @@ local rng = Rng.wrap(Random.new())
 local isOpen = false
 local ballots: { [number]: VoteTally.Ballot } = {}
 local bellPrompt: ProximityPrompt? = nil
-local frozen: { [Humanoid]: { WalkSpeed: number, JumpPower: number, JumpHeight: number } } = {}
 
 --------------------------------------------------------------------------------
 -- Helpers
@@ -72,31 +73,6 @@ local function candidates(): { any }
 	return list
 end
 
-local function freeze(humanoid: Humanoid)
-	if frozen[humanoid] then
-		return
-	end
-	frozen[humanoid] = {
-		WalkSpeed = humanoid.WalkSpeed,
-		JumpPower = humanoid.JumpPower,
-		JumpHeight = humanoid.JumpHeight,
-	}
-	humanoid.WalkSpeed = 0
-	humanoid.JumpPower = 0
-	humanoid.JumpHeight = 0
-end
-
-local function unfreezeAll()
-	for humanoid, saved in frozen do
-		if humanoid.Parent then
-			humanoid.WalkSpeed = saved.WalkSpeed
-			humanoid.JumpPower = saved.JumpPower
-			humanoid.JumpHeight = saved.JumpHeight
-		end
-	end
-	table.clear(frozen)
-end
-
 local function meetingSpot(index: number): Attachment?
 	local map = workspace:FindFirstChild("Map")
 	local markers = map and map:FindFirstChild("Markers")
@@ -119,11 +95,9 @@ local function openMeeting()
 		local spot = meetingSpot((seat - 1) % Config.Map.HouseCount + 1)
 		if character and spot then
 			character:PivotTo(Zones.worldCFrame(spot))
-			local humanoid = character:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				freeze(humanoid)
-			end
 		end
+		-- Nobody can walk during the meeting (GDD §6.2).
+		MoveService.SetModifier(member.Id, FREEZE_KEY, { Override = 0, NoJump = true })
 	end
 
 	Net.fireAll("VoteOpened", { Candidates = candidates() })
@@ -135,7 +109,7 @@ local function closeMeeting()
 		return
 	end
 	isOpen = false
-	unfreezeAll()
+	MoveService.ClearModifierForAll(FREEZE_KEY)
 	if MatchService.Winner then
 		Net.fireAll("VoteClosed", { Resolution = "Cancelled" })
 		return

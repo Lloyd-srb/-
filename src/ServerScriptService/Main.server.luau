@@ -13,8 +13,12 @@ local ordered: { Service } = {
 	require(Services.Net),
 	require(Services.MatchService),
 	require(Services.RoundService),
+	require(Services.MoveService),
+	require(Services.CombatService),
 	require(Services.HouseService),
+	require(Services.HidingService),
 	require(Services.VoteService),
+	require(Services.WolfService),
 	require(Services.LightingService),
 }
 

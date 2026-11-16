@@ -18,6 +18,7 @@ local Roster = require(Logic.Roster)
 local WinConditions = require(Logic.WinConditions)
 local WolfPack = require(Logic.WolfPack)
 
+local BotBody = require(script.Parent.BotBody)
 local Net = require(script.Parent.Net)
 
 local BOT_ID_BASE = -1000 -- Studio test clients already use small negative UserIds
@@ -32,12 +33,14 @@ MatchService.DeathsThisNight = 0
 
 MatchService.MatchStarted = Signal.new() -- ()
 MatchService.MemberDied = Signal.new() -- (member, cause)
+MatchService.MemberConverted = Signal.new() -- (member) a villager became the wolf pup
 MatchService.GameOver = Signal.new() -- (winner)
 MatchService.SyncRequested = Signal.new() -- (player) a client asks for the current state
 
 local rng = Rng.wrap(Random.new())
 local nightsStarted = 0
 local isNight = false
+local botBodies: { [number]: Model } = {} -- debug bots have no Player
 
 --------------------------------------------------------------------------------
 -- Queries
@@ -71,12 +74,28 @@ function MatchService.IsAlive(player: Player): boolean
 	return member ~= nil and member.Alive
 end
 
--- The member's character while it exists in the world (nil once removed).
+function MatchService.IsNight(): boolean
+	return isNight
+end
+
+-- The member's body, alive or dead (a corpse stays in the world).
+function MatchService.BodyOf(id: number): Model?
+	local body: Model? = botBodies[id]
+	if not body then
+		local player = MatchService.PlayerOf(id)
+		body = if player then player.Character else nil
+	end
+	if body and body.Parent ~= nil then
+		return body
+	end
+	return nil
+end
+
+-- The member's living, controllable character (nil once removed or a corpse).
 function MatchService.CharacterOf(id: number): Model?
-	local player = MatchService.PlayerOf(id)
-	local character = player and player.Character
-	if character and character.Parent ~= nil then
-		return character
+	local body = MatchService.BodyOf(id)
+	if body and not body:GetAttribute("Corpse") then
+		return body
 	end
 	return nil
 end
@@ -121,6 +140,30 @@ local function sendRole(player: Player)
 	if member then
 		Net.fire(player, "RoleAssigned", if member.IsPup then "Pup" else member.Role)
 	end
+end
+
+-- Tells every wolf-side player who their pack is. Nobody else receives this.
+function MatchService.SendPack()
+	local ids: { number } = {}
+	local packPlayers: { Player } = {}
+	for _, member in Roster.alive(MatchService.Roster) do
+		if Roster.isWolfSide(member) then
+			table.insert(ids, member.Id)
+			local player = MatchService.PlayerOf(member.Id)
+			if player then
+				table.insert(packPlayers, player)
+			end
+		end
+	end
+	for _, player in packPlayers do
+		Net.fire(player, "PackChanged", ids)
+	end
+end
+
+-- Lets clients find a member's body (for highlights). UserIds are not secret.
+local function markBody(body: Model, id: number)
+	body:SetAttribute("MemberId", id)
+	body:AddTag("MemberBody")
 end
 
 --------------------------------------------------------------------------------
@@ -229,6 +272,22 @@ function MatchService.Exile(id: number)
 	end
 end
 
+-- The wolf's first night victim joins the wolf side instead of dying (GDD §8.2).
+function MatchService.ConvertToPup(id: number, wolfId: number?): boolean
+	if not Roster.convertToPup(MatchService.Roster, id, wolfId) then
+		return false
+	end
+	local member = MatchService.Roster.Members[id]
+	local player = MatchService.PlayerOf(id)
+	if player then
+		sendRole(player)
+	end
+	MatchService.MemberConverted:Fire(member)
+	MatchService.SendPack()
+	MatchService.CheckWin()
+	return true
+end
+
 local function onPlayerRemoving(player: Player)
 	local member = MatchService.MemberOf(player)
 	if not MatchService.Started or not member or not member.Alive or MatchService.Winner then
@@ -271,10 +330,19 @@ function MatchService.BeginMatch()
 	for _, player in Players:GetPlayers() do
 		firstPlayerId = firstPlayerId or player.UserId
 		join(player.UserId, player.DisplayName, false)
+		if player.Character then
+			markBody(player.Character, player.UserId)
+		end
 	end
 	if Config.Debug.Enabled and Config.Debug.FillWithBots then
 		for seat = #candidates + 1, mode.Players do
-			join(BOT_ID_BASE - seat, "Bot " .. seat, true)
+			local id = BOT_ID_BASE - seat
+			join(id, "Bot " .. seat, true)
+			if Config.Debug.BotBodies then
+				local body = BotBody.create("Bot " .. seat, seat, mode.Players)
+				markBody(body, id)
+				botBodies[id] = body
+			end
 		end
 	end
 
@@ -308,6 +376,7 @@ function MatchService.BeginNight(night: number): Roster.Member?
 			if player then
 				sendRole(player)
 			end
+			MatchService.SendPack()
 		end
 		return promoted
 	end
@@ -329,6 +398,10 @@ function MatchService.Start()
 	Net.on("RequestSync", function(player: Player)
 		if MatchService.Started then
 			sendRole(player)
+			local member = MatchService.MemberOf(player)
+			if member and member.Alive and Roster.isWolfSide(member) then
+				MatchService.SendPack()
+			end
 			Net.fire(player, "RosterChanged", publicRoster())
 			if MatchService.Winner then
 				Net.fire(player, "GameOver", {

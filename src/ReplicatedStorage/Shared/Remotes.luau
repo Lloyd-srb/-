@@ -3,10 +3,13 @@
 	Remotes — the single list of RemoteEvents. The server creates them once
 	(Remotes.createAll); clients wait for them (Remotes.get).
 
-	Server -> one client only (secret):  RoleAssigned, HouseAssigned, VoteMine
+	Server -> one client only (secret):  RoleAssigned, HouseAssigned, VoteMine,
+	                                     FormChanged, PackChanged, Highlight,
+	                                     AbilityState, HideChanged
 	Server -> everyone (public):         PhaseChanged, Announcement, RosterChanged,
 	                                     VoteOpened, VoteCounts, VoteClosed, GameOver
-	Client -> server (intents):          RequestSync, VoteSelect, VoteConfirm
+	Client -> server (intents):          RequestSync, VoteSelect, VoteConfirm,
+	                                     WolfAttack, WolfAbility, HideExit
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,10 +31,18 @@ Remotes.Names = {
 	"VoteMine",
 	"VoteClosed",
 	"GameOver",
+	"FormChanged", -- "Human" | "Wolf" | "Pup" (own form)
+	"PackChanged", -- wolf side only: ids of the pack
+	"Highlight", -- allowed viewers only: who to outline
+	"AbilityState", -- own cooldowns
+	"HideChanged", -- own hiding spot
 	-- client -> server
 	"RequestSync",
 	"VoteSelect",
 	"VoteConfirm",
+	"WolfAttack",
+	"WolfAbility",
+	"HideExit",
 }
 
 function Remotes.createAll()

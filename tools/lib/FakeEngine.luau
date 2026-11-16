@@ -106,6 +106,10 @@ local function install()
 			end,
 		}
 	end)
+	-- Line of sight is clear unless a test blocks it (sim.blockRays).
+	roblox.implementMethod("Workspace", "Raycast", function()
+		return if sim.blockRays then { Instance = "wall" } else nil
+	end)
 	roblox.implementMethod("Model", "PivotTo", function(self, cframe)
 		local root = self:FindFirstChild("HumanoidRootPart")
 		if root then
@@ -213,11 +217,16 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 			return { ... }
 		end,
 	}
+	loaded.globals.RaycastParams = {
+		new = function()
+			return {}
+		end,
+	}
 	loaded.globals.warn = function(...)
 		print("[warn]", ...)
 	end
 
-	for _, builder in options.Builders or { "build/BuildVillage.luau", "build/BuildLighting.luau" } do
+	for _, builder in options.Builders or { "build/BuildVillage.luau", "build/BuildLighting.luau", "build/BuildWolfRig.luau" } do
 		Harness.runBuilder(loaded, builder)
 	end
 
@@ -300,6 +309,11 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 			task.wait(0.005)
 		end
 		error("timed out waiting for " .. what, 2)
+	end
+
+	-- Walls between attacker and target (true = every line of sight is blocked).
+	function server.blockSight(blocked: boolean)
+		sim.blockRays = blocked
 	end
 
 	function server.phase(): string

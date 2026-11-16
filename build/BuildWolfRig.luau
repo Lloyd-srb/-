@@ -54,7 +54,8 @@ local SPECS: { PartSpec } = {
 }
 
 -- Left / right pairs: `side` is -1 for left, +1 for right.
-for prefix, side in { Left = -1, Right = 1 } do
+local SIDES: { [string]: number } = { Left = -1, Right = 1 }
+for prefix, side in SIDES do
 	local function add(name: string, size: Vector3, center: Vector3, color: string, parent: string, pivot: Vector3?)
 		local function mirrored(point: Vector3): Vector3
 			return V(point.X * side, point.Y, point.Z)

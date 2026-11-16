@@ -149,6 +149,29 @@ function HouseService.DamageDoor(houseId: number, amount: number): boolean
 	return broke
 end
 
+-- A wolf swings at whatever is in front of it: finds the closest closed door
+-- within reach and damages it. Returns the house id that was hit, if any.
+function HouseService.HitDoorNear(position: Vector3, look: Vector3, range: number, amount: number): number?
+	local bestId: number? = nil
+	local bestDistance = range
+	for id, house in houses do
+		if house.State.State == "Closed" then
+			local offset = house.Door.CFrame.Position - position
+			local flat = Vector3.new(offset.X, 0, offset.Z)
+			local distance = flat.Magnitude
+			local facing = distance < 1 or flat.Unit:Dot(look) >= 0
+			if distance <= bestDistance and facing then
+				bestId = id
+				bestDistance = distance
+			end
+		end
+	end
+	if bestId then
+		HouseService.DamageDoor(bestId, amount)
+	end
+	return bestId
+end
+
 -- Engineer ability (milestone 4).
 function HouseService.ReinforceDoor(houseId: number): boolean
 	local house = houses[houseId]
