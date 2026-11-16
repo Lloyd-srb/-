@@ -1,0 +1,13 @@
+# Offline build output (rebuildable with tools/build_place.luau)
+out/
+sourcemap.json
+
+# Roblox Studio
+*.rbxl.lock
+*.rbxlx.lock
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

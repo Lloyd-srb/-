@@ -1,0 +1,189 @@
+--!strict
+--[[
+	RoleAssignment — pure role-assignment rules (GDD §2, §4).
+
+	1. The wolf is random; nobody can choose it.
+	2. Everyone else gets one of the 3 roles they picked. No duplicates except Villager.
+	3. Special roles are capped by the mode's special slots (Casual 6, Turbo 5).
+	   Killer and Fool are their own factions: they do not use a special slot,
+	   they replace a villager (so they only exist in modes that have villagers).
+	4. When all of a player's picks are gone:
+	     a) a random other role they own that is still free, else
+	     b) Villager (in modes that allow villagers), else
+	     c) a random leftover special role, even if not owned
+	        (Turbo: everybody except the wolf must have a role).
+]]
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local Rng = require(ReplicatedStorage.Shared.Rng)
+
+type RoleId = Config.RoleId
+type ModeDef = Config.ModeDef
+
+export type Candidate = {
+	Id: number, -- UserId
+	Picks: { RoleId }, -- validated picks (see validatePicks)
+	Usable: { [RoleId]: boolean }, -- owned AND level requirement met
+}
+
+local RoleAssignment = {}
+
+-- Roles a player may pick: owned and level gate passed (§4.6).
+function RoleAssignment.usableRoles(owned: { [RoleId]: boolean }, level: number): { [RoleId]: boolean }
+	local usable: { [RoleId]: boolean } = {}
+	for _, roleId in Config.RoleOrder do
+		local def = Config.Roles[roleId]
+		if (def.Free or owned[roleId]) and level >= def.RequiredLevel then
+			usable[roleId] = true
+		end
+	end
+	return usable
+end
+
+-- Server-side validation of a client's picks.
+function RoleAssignment.validatePicks(picks: { RoleId }, usable: { [RoleId]: boolean }): (boolean, string?)
+	if #picks ~= Config.RoleSelect.PickCount then
+		return false, "WrongPickCount"
+	end
+	local seen: { [RoleId]: boolean } = {}
+	for _, roleId in picks do
+		if roleId == "Wolf" or Config.Roles[roleId] == nil then
+			return false, "UnknownRole"
+		elseif not usable[roleId] then
+			return false, "RoleNotUsable"
+		elseif seen[roleId] then
+			return false, "DuplicatePick"
+		end
+		seen[roleId] = true
+	end
+	return true, nil
+end
+
+-- Picks used when a player did not confirm in time: random usable roles.
+function RoleAssignment.defaultPicks(usable: { [RoleId]: boolean }, rng: Rng.Rng): { RoleId }
+	local pool: { RoleId } = {}
+	for _, roleId in Config.RoleOrder do
+		if usable[roleId] then
+			table.insert(pool, roleId)
+		end
+	end
+	pool = Rng.shuffle(pool, rng)
+	local picks: { RoleId } = {}
+	for i = 1, math.min(Config.RoleSelect.PickCount, #pool) do
+		picks[i] = pool[i]
+	end
+	return picks
+end
+
+--[[
+	Assigns a role to every candidate.
+	`forced` (Studio debug only) maps UserId -> role and is applied first.
+]]
+function RoleAssignment.assign(
+	candidates: { Candidate },
+	mode: ModeDef,
+	rng: Rng.Rng,
+	forced: { [number]: RoleId }?
+): { [number]: RoleId }
+	local result: { [number]: RoleId } = {}
+	local taken: { [RoleId]: boolean } = {}
+	local wolves = 0
+	local specialUsed = 0
+
+	local function isFree(roleId: RoleId): boolean
+		local def = Config.Roles[roleId]
+		if def.Kind == "Special" then
+			return not taken[roleId] and specialUsed < mode.SpecialSlots
+		elseif def.Kind == "Filler" then
+			return mode.AllowVillager
+		elseif def.Kind == "Solo" then
+			return mode.AllowSolo and not taken[roleId]
+		end
+		return false -- Wolf is never picked
+	end
+
+	local function give(id: number, roleId: RoleId)
+		local def = Config.Roles[roleId]
+		result[id] = roleId
+		if def.Kind == "Wolf" then
+			wolves += 1
+		elseif def.Kind == "Special" then
+			taken[roleId] = true
+			specialUsed += 1
+		elseif def.Kind == "Solo" then
+			taken[roleId] = true
+		end
+	end
+
+	local order = Rng.shuffle(candidates, rng)
+
+	if forced then
+		for _, candidate in order do
+			local roleId = forced[candidate.Id]
+			if roleId then
+				give(candidate.Id, roleId)
+			end
+		end
+	end
+
+	-- 1) Wolves first, at random.
+	for _, candidate in order do
+		if wolves >= mode.Wolves then
+			break
+		end
+		if result[candidate.Id] == nil then
+			give(candidate.Id, "Wolf")
+		end
+	end
+
+	-- 2) One of the three picks.
+	local unplaced: { Candidate } = {}
+	for _, candidate in order do
+		if result[candidate.Id] ~= nil then
+			continue
+		end
+		local options: { RoleId } = {}
+		for _, roleId in candidate.Picks do
+			if isFree(roleId) then
+				table.insert(options, roleId)
+			end
+		end
+		if #options > 0 then
+			give(candidate.Id, Rng.pick(options, rng))
+		else
+			table.insert(unplaced, candidate)
+		end
+	end
+
+	-- 3) Fallbacks for players whose picks were all taken.
+	for _, candidate in unplaced do
+		local owned: { RoleId } = {}
+		local leftoverSpecial: { RoleId } = {}
+		for _, roleId in Config.RoleOrder do
+			if roleId ~= "Villager" and isFree(roleId) then
+				if candidate.Usable[roleId] then
+					table.insert(owned, roleId)
+				end
+				if Config.Roles[roleId].Kind == "Special" then
+					table.insert(leftoverSpecial, roleId)
+				end
+			end
+		end
+
+		if #owned > 0 then
+			give(candidate.Id, Rng.pick(owned, rng))
+		elseif isFree("Villager") then
+			give(candidate.Id, "Villager")
+		elseif #leftoverSpecial > 0 then
+			give(candidate.Id, Rng.pick(leftoverSpecial, rng))
+		else
+			give(candidate.Id, "Villager") -- only reachable with debug player counts
+		end
+	end
+
+	return result
+end
+
+return RoleAssignment
