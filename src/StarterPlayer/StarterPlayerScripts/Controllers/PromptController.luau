@@ -27,9 +27,21 @@ local function isForMe(prompt: ProximityPrompt, audience: string): boolean
 	if audience == "Owner" then
 		return prompt:GetAttribute("HouseId") == ClientState.HouseId
 	elseif audience == "Human" then
-		return ClientState.Form == "Human" and not ClientState.Hidden
+		return ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden
 	elseif audience == "Wolf" then
 		return ClientState.Form ~= "Human"
+	elseif audience:sub(1, 5) == "Task:" then
+		-- Only the steps this player's own task still needs.
+		local task = ClientState.Task
+		local target = prompt:GetAttribute("TargetId")
+		return task ~= nil
+			and task.Kind == audience:sub(6)
+			and not task.Complete
+			and task.Targets[target] == true
+			and not task.Done[target]
+			and ClientState.Form == "Human"
+			and ClientState.Alive
+			and not ClientState.Hidden
 	elseif audience:sub(1, 5) == "Role:" then
 		-- e.g. "Role:Doctor": only that role, in human form, alive, not hiding
 		return ClientState.Role == audience:sub(6)

@@ -25,6 +25,7 @@ test("Hud has everything HudController looks up", function()
 		{ "RoleLabel" },
 		{ "PackLabel" },
 		{ "Toast" },
+		{ "TaskLabel" },
 		{ "Announcement" },
 		{ "SubAnnouncement" },
 	} do

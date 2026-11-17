@@ -1,0 +1,90 @@
+--!strict
+--[[
+	ItemController — using items (GDD §11). Each item is a Tool in the Backpack
+	(made by the server), so the hotbar works on PC, mobile and console.
+	Activating a tool only sends "use item X, aimed here"; the server decides.
+	The hotbar is hidden while in wolf form, hiding, or dead.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+
+local Config = require(ReplicatedStorage.Shared.Config)
+local Loc = require(ReplicatedStorage.Shared.Loc)
+local Remotes = require(ReplicatedStorage.Shared.Remotes)
+
+local Aim = require(script.Parent.Aim)
+local ClientState = require(script.Parent.ClientState)
+
+local AIMED: { [string]: number } = {
+	Gun = Config.Items.Gun.Range,
+	Axe = Config.Items.Axe.ThrowRange,
+}
+
+local ItemController = {}
+
+local localPlayer = Players.LocalPlayer
+local hooked: { [Tool]: boolean } = {}
+
+local function hook(tool: Instance)
+	if not tool:IsA("Tool") or hooked[tool] then
+		return
+	end
+	local kind = tool:GetAttribute("Kind")
+	local itemId = tool:GetAttribute("ItemId")
+	if type(kind) ~= "string" or type(itemId) ~= "string" then
+		return
+	end
+	hooked[tool] = true
+	-- Local display only: the server finds items by ItemId, not by name.
+	tool.Name = Loc.format("Item." .. kind .. ".Name")
+	tool.ToolTip = Loc.format("Item." .. kind .. ".Desc")
+	tool.Activated:Connect(function()
+		local range = AIMED[kind]
+		local aim = if range then Aim.direction(range) else nil
+		Remotes.get("ItemUse"):FireServer(itemId, aim)
+	end)
+	tool.Destroying:Connect(function()
+		hooked[tool] = nil
+	end)
+end
+
+local function watch(container: Instance)
+	container.ChildAdded:Connect(hook)
+	for _, child in container:GetChildren() do
+		hook(child)
+	end
+end
+
+local function refreshHotbar()
+	local usable = ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden
+	pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.Backpack, usable)
+	if not usable then
+		local character = localPlayer.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid:UnequipTools()
+		end
+	end
+end
+
+function ItemController.Start()
+	local backpack = localPlayer:WaitForChild("Backpack")
+	watch(backpack)
+	localPlayer.CharacterAdded:Connect(function(character: Model)
+		watch(character) -- an equipped tool moves into the character
+		local newBackpack = localPlayer:WaitForChild("Backpack")
+		if newBackpack ~= backpack then
+			backpack = newBackpack
+			watch(newBackpack)
+		end
+	end)
+	if localPlayer.Character then
+		watch(localPlayer.Character)
+	end
+	ClientState.Changed:Connect(refreshHotbar)
+	refreshHotbar()
+end
+
+return ItemController

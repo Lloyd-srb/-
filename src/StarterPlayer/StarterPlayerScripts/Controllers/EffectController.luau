@@ -10,6 +10,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -60,6 +61,34 @@ local function tracer(from: Vector3, to: Vector3)
 	beam.Parent = workspace
 	task.delay(TRACER_SECONDS, function()
 		beam:Destroy()
+	end)
+end
+
+-- A spinning axe flying from the thrower to where it landed.
+local function flyingAxe(from: Vector3, to: Vector3, speed: number)
+	local distance = (to - from).Magnitude
+	if distance < 0.1 then
+		return
+	end
+	local axe = Instance.new("Part")
+	axe.Name = "ThrownAxe"
+	axe.Anchored = true
+	axe.CanCollide = false
+	axe.CanQuery = false
+	axe.CanTouch = false
+	axe.Size = Vector3.new(0.4, 2.4, 0.4)
+	axe.Color = Color3.fromRGB(150, 105, 60)
+	axe.Parent = workspace
+	local duration = distance / speed
+	local started = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.Heartbeat:Connect(function()
+		local alpha = math.min(1, (os.clock() - started) / duration)
+		axe.CFrame = CFrame.new(from:Lerp(to, alpha)) * CFrame.Angles(alpha * 20, 0, 0)
+		if alpha >= 1 then
+			connection:Disconnect()
+			axe:Destroy()
+		end
 	end)
 end
 
@@ -120,6 +149,14 @@ local function onEffect(data: any)
 		showToast(Loc.format("Effect.Blocked"))
 	elseif data.Kind == "Blessed" and type(data.Name) == "string" then
 		showToast(Loc.format("Effect.Blessed", { name = data.Name }))
+	elseif data.Kind == "Throw" and typeof(data.From) == "Vector3" and typeof(data.To) == "Vector3" then
+		flyingAxe(data.From, data.To, if type(data.Speed) == "number" then data.Speed else 90)
+	elseif data.Kind == "Gained" and type(data.Item) == "string" and Loc.has("Item." .. data.Item .. ".Name") then
+		showToast(Loc.format("Effect.Gained", { item = Loc.format("Item." .. data.Item .. ".Name") }))
+	elseif data.Kind == "TaskComplete" then
+		showToast(Loc.format("Task.Complete", { coins = data.Coins }))
+	elseif data.Kind == "CrossInfo" then
+		showToast(Loc.format("Effect.CrossInfo"))
 	end
 end
 

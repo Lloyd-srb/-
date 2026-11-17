@@ -135,6 +135,21 @@ local function buildHud()
 	pack.Visible = false
 	textStroke(pack, 2)
 
+	-- Own task of the day (top left, under the role).
+	local taskLabel = label(
+		"TaskLabel",
+		hud,
+		UDim2.new(0, 320, 0, 26),
+		UDim2.new(0, 16, 0, 112),
+		Vector2.new(0, 0),
+		BODY_FONT,
+		16
+	)
+	taskLabel.TextXAlignment = Enum.TextXAlignment.Left
+	taskLabel.TextColor3 = rgb(190, 235, 160)
+	taskLabel.Visible = false
+	textStroke(taskLabel, 2)
+
 	-- Short private feedback ("You blessed ...", "Blocked!").
 	local toast = label(
 		"Toast",

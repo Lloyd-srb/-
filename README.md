@@ -53,10 +53,11 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `src/ReplicatedStorage/Shared/Remotes.luau` | The list of RemoteEvents (who may receive what) |
 | `src/ServerScriptService/Main.server.luau` | Server bootstrap (the only Script) |
 | `src/ReplicatedStorage/Shared/WolfAnimData.luau` | Werewolf animations as data (keyframe builder + client fallback animator) |
-| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), houses/doors, vote, wolf, combat, hiding, movement, profiles (stub), lighting, net |
+| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), inventory + crates, tasks, houses/doors, vote, wolf, combat, hiding, movement, profiles (stub), lighting, net |
 | `src/StarterPlayer/StarterPlayerScripts/Main.client.luau` | Client bootstrap (the only LocalScript) |
-| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, role select, vote screen, role / wolf controls, effects, one-way windows, prompts, highlights, rig animation, hiding camera |
+| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, role select, vote screen, role / wolf controls, items, tasks, effects, one-way windows, prompts, highlights, rig animation, hiding camera |
 | `docs/TEST_CHECKLISTS.md` | What to click and what should happen, per milestone (Thai) |
+| `docs/BUGS.md` | Bugs found and fixed, risks that need Studio to check (Thai) |
 | `build/` | Builder scripts that create the map, lighting, UI, wolf rigs, localization table |
 | `assets/wolf/` | Source FBX of the owner's wolf model (Meshy "Moonfang Stalker", Mixamo-style rig) |
 | `src/ReplicatedStorage/Shared/BoneRetarget.luau` | Plays the wolf animation data on an imported skinned mesh |

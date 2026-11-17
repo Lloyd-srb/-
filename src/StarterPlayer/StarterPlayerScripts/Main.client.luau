@@ -23,6 +23,8 @@ local names = {
 	"WolfController",
 	"RoleController",
 	"EffectController",
+	"TaskController",
+	"ItemController",
 	"HighlightController",
 	"ShellAnimator",
 	"HideController",

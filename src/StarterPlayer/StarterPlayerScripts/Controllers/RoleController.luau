@@ -17,12 +17,12 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local Aim = require(script.Parent.Aim)
 local ClientState = require(script.Parent.ClientState)
 
 type Action = {
@@ -57,38 +57,6 @@ local roster: { { Id: number, Name: string, Alive: boolean } } = {}
 local pickerGui: ScreenGui
 local pickerList: Instance
 local optionTemplate: TextButton
-
---------------------------------------------------------------------------------
--- Aiming (Sheriff)
---------------------------------------------------------------------------------
-
--- Direction from the character towards what the player is pointing at.
-local function aimDirection(input: InputObject?): Vector3?
-	local camera = workspace.CurrentCamera
-	local character = localPlayer.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not camera or not (root and root:IsA("BasePart")) then
-		return nil
-	end
-	local screenPoint: Vector2
-	local isMouse = input ~= nil
-		and (input.UserInputType == Enum.UserInputType.Keyboard or input.UserInputType == Enum.UserInputType.MouseButton1)
-	if isMouse and UserInputService.MouseEnabled then
-		screenPoint = UserInputService:GetMouseLocation()
-	else
-		screenPoint = camera.ViewportSize / 2 -- touch / gamepad: the middle of the screen
-	end
-	local ray = camera:ViewportPointToRay(screenPoint.X, screenPoint.Y)
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
-	params.FilterDescendantsInstances = { character :: Instance }
-	local range = Config.Abilities.Sheriff.Range
-	local hit = workspace:Raycast(ray.Origin, ray.Direction * (range * 2), params)
-	local target = if hit then hit.Position else ray.Origin + ray.Direction * range
-	local muzzle = root.Position + Vector3.new(0, Config.Abilities.Sheriff.MuzzleHeight, 0)
-	local direction = target - muzzle
-	return if direction.Magnitude > 1e-3 then direction.Unit else nil
-end
 
 --------------------------------------------------------------------------------
 -- Picker (Monk)
@@ -142,11 +110,11 @@ local function title(action: Action): string
 	return text
 end
 
-local function activate(action: Action, input: InputObject)
+local function activate(action: Action)
 	if action.Ability == "Bless" then
 		openPicker()
 	elseif action.Ability == "Shoot" then
-		local direction = aimDirection(input)
+		local direction = Aim.direction(Config.Abilities.Sheriff.Range)
 		if direction then
 			Remotes.get("AbilityUse"):FireServer("Shoot", direction)
 		end
@@ -160,9 +128,9 @@ local function bind(action: Action)
 		return
 	end
 	bound[action.Id] = true
-	ContextActionService:BindAction(action.Id, function(_name: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
+	ContextActionService:BindAction(action.Id, function(_name: string, state: Enum.UserInputState): Enum.ContextActionResult
 		if state == Enum.UserInputState.Begin then
-			activate(action, input)
+			activate(action)
 		end
 		return Enum.ContextActionResult.Pass
 	end, true, table.unpack(action.Inputs))
