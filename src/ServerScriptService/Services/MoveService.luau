@@ -63,6 +63,11 @@ function MoveService.ClearModifierForAll(key: string)
 	end
 end
 
+-- Re-applies the current speed to a new body (after a revive).
+function MoveService.Refresh(id: number)
+	apply(id)
+end
+
 function MoveService.Speed(id: number): number
 	return SpeedStack.speed(stackOf(id))
 end

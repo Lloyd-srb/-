@@ -39,6 +39,7 @@ Remotes.Names = {
 	"HideChanged", -- own hiding spot
 	"RoleOptions", -- own usable roles for the role-selection screen
 	"RolePicksAck", -- own accepted picks
+	"DashStart", -- own dash (the client moves its own character)
 	-- client -> server
 	"RequestSync",
 	"VoteSelect",
@@ -47,6 +48,7 @@ Remotes.Names = {
 	"WolfAbility",
 	"HideExit",
 	"RolePicks",
+	"AbilityUse",
 }
 
 function Remotes.createAll()

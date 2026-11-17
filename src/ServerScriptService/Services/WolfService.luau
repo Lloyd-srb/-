@@ -28,10 +28,10 @@ local CombatService = require(script.Parent.CombatService)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
+local Melee = require(script.Parent.Melee)
 local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
 local RoundService = require(script.Parent.RoundService)
-local Sight = require(script.Parent.Sight)
 
 type WolfState = {
 	Form: string, -- "Wolf" | "Pup"
@@ -257,26 +257,6 @@ end
 -- Attack
 --------------------------------------------------------------------------------
 
-local function findTarget(attackerRoot: BasePart, range: number): Roster.Member?
-	local origin = attackerRoot.CFrame.Position
-	local look = attackerRoot.CFrame.LookVector
-	local best: Roster.Member? = nil
-	local bestDistance = range
-	for _, member in prey() do
-		local root = MatchService.RootOf(member.Id)
-		if root then
-			local offset = root.CFrame.Position - origin
-			local distance = offset.Magnitude
-			local facing = distance < 1 or offset.Unit:Dot(look) >= Config.Wolf.AttackMinDot
-			if distance <= bestDistance and facing and Sight.isClear(origin, root.CFrame.Position) then
-				best = member
-				bestDistance = distance
-			end
-		end
-	end
-	return best
-end
-
 local function startMaul(id: number, wolf: WolfState)
 	local duration = Config.Wolf.Sprint.MaulDuration
 	wolf.MaulUntil = os.clock() + duration
@@ -300,7 +280,7 @@ local function onAttack(player: Player)
 	local isPup = wolf.Form == "Pup"
 	local stats = if isPup then Config.Pup else Config.Wolf
 	local now = os.clock()
-	if now < wolf.MaulUntil or now - wolf.LastAttack < stats.AttackCooldown then
+	if now < wolf.MaulUntil or now - wolf.LastAttack < stats.AttackCooldown or CombatService.IsStunned(member.Id) then
 		return
 	end
 	local root = MatchService.RootOf(member.Id)
@@ -310,7 +290,9 @@ local function onAttack(player: Player)
 	wolf.LastAttack = now
 	setAnimation(wolf, "Attack")
 
-	local target = findTarget(root, stats.AttackRange)
+	local target = Melee.findTarget(member.Id, stats.AttackRange, Config.Wolf.AttackMinDot, function(other: Roster.Member)
+		return not Roster.isWolfSide(other)
+	end)
 	if target then
 		local outcome = CombatService.Damage(target.Id, stats.AttackDamage, wolf.Form, member.Id)
 		if outcome == "Killed" and now < wolf.SprintUntil then
@@ -393,6 +375,9 @@ local function onAbility(player: Player, ability: any)
 	if not member or not wolf or not member.Alive or not RoundService.IsNight() or type(ability) ~= "string" then
 		return
 	end
+	if CombatService.IsStunned(member.Id) then
+		return
+	end
 	if wolf.Form == "Wolf" and ability == "Sniff" then
 		sniff(player, wolf)
 	elseif wolf.Form == "Wolf" and ability == "Sprint" then
@@ -407,6 +392,7 @@ end
 function WolfService.Init() end
 
 function WolfService.Start()
+	CombatService.AddStunImmunity(WolfService.IsMauling)
 	Net.on("WolfAttack", onAttack, 20, 5)
 	Net.on("WolfAbility", onAbility, 10, 5)
 
@@ -444,6 +430,14 @@ function WolfService.Start()
 		if wolf then
 			wolf.MaulUntil = 0
 			wolf.SprintUntil = 0
+		end
+	end)
+
+	-- Revived by the Doctor: the old body (and costume) is gone.
+	MatchService.MemberRevived:Connect(function(member: Roster.Member)
+		wolves[member.Id] = nil
+		if Roster.isWolfSide(member) and RoundService.IsNight() then
+			transform(member)
 		end
 	end)
 

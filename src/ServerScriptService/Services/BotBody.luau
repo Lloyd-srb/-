@@ -25,12 +25,14 @@ local function part(name: string, size: Vector3, offset: Vector3, color: Color3,
 	return instance
 end
 
-function BotBody.create(name: string, seat: number, seats: number): Model
+-- `at` places the body somewhere specific (a revived bot); otherwise it
+-- takes its seat on the ring.
+function BotBody.create(name: string, seat: number, seats: number, at: Vector3?): Model
 	local body = Instance.new("Model")
 	body.Name = name
 
 	local angle = seat / seats * math.pi * 2
-	local origin = Vector3.new(math.sin(angle) * RING_RADIUS, 3, -math.cos(angle) * RING_RADIUS)
+	local origin = at or Vector3.new(math.sin(angle) * RING_RADIUS, 3, -math.cos(angle) * RING_RADIUS)
 	local shirt = Color3.fromHSV((seat * 0.17) % 1, 0.45, 0.9)
 
 	local root = part("HumanoidRootPart", Vector3.new(2, 2, 1), origin, shirt, body)

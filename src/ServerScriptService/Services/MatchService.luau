@@ -5,6 +5,7 @@
 	players leaving and the win check. Roles are only ever sent to their owner.
 ]]
 
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -35,6 +36,7 @@ MatchService.DeathsThisNight = 0
 MatchService.MatchStarted = Signal.new() -- ()
 MatchService.MemberDied = Signal.new() -- (member, cause)
 MatchService.MemberConverted = Signal.new() -- (member) a villager became the wolf pup
+MatchService.MemberRevived = Signal.new() -- (member)
 MatchService.GameOver = Signal.new() -- (winner)
 MatchService.SyncRequested = Signal.new() -- (player) a client asks for the current state
 
@@ -172,6 +174,19 @@ end
 -- Characters
 --------------------------------------------------------------------------------
 
+-- Characters share one collision group so a dashing Bodyguard can pass
+-- through people (GDD §9).
+MatchService.CharacterGroup = "Characters"
+MatchService.DashGroup = "Dash"
+
+function MatchService.SetCollisionGroup(body: Model, group: string)
+	for _, part in body:GetDescendants() do
+		if part:IsA("BasePart") then
+			part.CollisionGroup = group
+		end
+	end
+end
+
 local function setupCharacter(character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid and humanoid:IsA("Humanoid") then
@@ -185,6 +200,7 @@ local function setupCharacter(character: Model)
 	if regen then
 		regen:Destroy()
 	end
+	MatchService.SetCollisionGroup(character, MatchService.CharacterGroup)
 end
 
 local function readMode(player: Player)
@@ -246,6 +262,7 @@ function MatchService.Kill(id: number, cause: Roster.DeathCause, killerId: numbe
 	if isNight then
 		MatchService.DeathsThisNight += 1
 	end
+	MatchService.Roster.Members[id].DiedAtNight = isNight
 	MatchService.MemberDied:Fire(MatchService.Roster.Members[id], cause)
 	broadcastRoster()
 	return true
@@ -287,6 +304,39 @@ function MatchService.ConvertToPup(id: number, wolfId: number?): boolean
 	MatchService.MemberConverted:Fire(member)
 	MatchService.SendPack()
 	MatchService.CheckWin()
+	return true
+end
+
+--[[
+	The Doctor's revive (GDD §9): the corpse is replaced by a living body at
+	`where`. Yields while a player's character loads.
+]]
+function MatchService.Revive(id: number, where: CFrame): boolean
+	local member = MatchService.Roster.Members[id]
+	if not member or MatchService.Winner or not Roster.revive(MatchService.Roster, id) then
+		return false
+	end
+	local corpse = MatchService.BodyOf(id)
+	if corpse then
+		corpse:Destroy()
+	end
+	if member.IsBot then
+		local body = BotBody.create(member.Name, 0, 1, where.Position)
+		markBody(body, id)
+		botBodies[id] = body
+	else
+		local player = MatchService.PlayerOf(id)
+		if player then
+			player:LoadCharacterAsync()
+			local character = player.Character
+			if character then
+				character:PivotTo(where)
+				markBody(character, id)
+			end
+		end
+	end
+	MatchService.MemberRevived:Fire(member)
+	broadcastRoster()
 	return true
 end
 
@@ -418,6 +468,14 @@ function MatchService.Init()
 	if Config.Debug.Enabled and Config.Debug.Mode and Config.Modes[Config.Debug.Mode] then
 		MatchService.ModeId = Config.Debug.Mode
 	end
+	-- pcall: the groups already exist when the server script restarts in Studio.
+	pcall(function()
+		PhysicsService:RegisterCollisionGroup(MatchService.CharacterGroup)
+		PhysicsService:RegisterCollisionGroup(MatchService.DashGroup)
+	end)
+	pcall(function()
+		PhysicsService:CollisionGroupSetCollidable(MatchService.DashGroup, MatchService.CharacterGroup, false)
+	end)
 end
 
 function MatchService.Start()

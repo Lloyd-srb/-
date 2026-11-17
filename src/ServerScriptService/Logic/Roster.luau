@@ -26,6 +26,7 @@ export type Member = {
 	NightsSurvived: number,
 	TasksCompleted: number,
 	DeathCause: DeathCause?,
+	DiedAtNight: boolean, -- only night deaths leave a body the Doctor can revive
 }
 
 export type Roster = {
@@ -65,6 +66,7 @@ function Roster.add(roster: Roster, id: number, name: string, isBot: boolean): M
 		NightsSurvived = 0,
 		TasksCompleted = 0,
 		DeathCause = nil,
+		DiedAtNight = false,
 	}
 	roster.Members[id] = member
 	table.insert(roster.Order, id)
@@ -200,6 +202,21 @@ function Roster.recordDeath(
 	credit(roster, killerId, cause)
 	if wasMainWolf then
 		roster.MainWolfLostAtNight = nightsStarted
+	end
+	return true
+end
+
+-- The Doctor brings a dead member back (GDD §9). Kill counts are not undone.
+function Roster.revive(roster: Roster, id: number): boolean
+	local member = roster.Members[id]
+	if not member or member.Alive or member.Left then
+		return false
+	end
+	member.Alive = true
+	member.DeathCause = nil
+	member.DiedAtNight = false
+	if member.Faction == "Wolf" and not member.IsPup then
+		roster.MainWolfLostAtNight = nil -- the main wolf is back
 	end
 	return true
 end

@@ -340,6 +340,7 @@ Config.Abilities = {
 		StunDuration = 5, -- [GDD]
 		ShotsPerPhase = 1, -- [GDD] once per day and once per night
 		Range = 120, -- [ASSUMED]
+		MuzzleHeight = 1.5, -- [ASSUMED] shot origin above the character's centre
 	},
 	Doctor = {
 		RevivesPerGame = 1, -- [GDD] extra revives consume a First aid
@@ -354,6 +355,7 @@ Config.Abilities = {
 		StunDuration = 5, -- [GDD]
 		DashDistance = 24, -- [ASSUMED]
 		DashSpeed = 80, -- [ASSUMED]
+		HitRadius = 4, -- [ASSUMED] how close to the dash path a wolf must be
 	},
 	Monk = {
 		BlessingsPerMorning = 1, -- [GDD]
@@ -368,6 +370,7 @@ Config.Abilities = {
 		KillsPerDay = 1, -- [GDD]
 		KillsPerNight = 1, -- [GDD]
 		KnifeRange = 6, -- [ASSUMED]
+		MinDot = 0, -- [ASSUMED] target must be in the front half
 		KnifeDamage = 100, -- [GDD] one hit kills
 	},
 }

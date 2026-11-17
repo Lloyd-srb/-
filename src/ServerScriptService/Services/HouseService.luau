@@ -73,6 +73,9 @@ local function applyDoor(house: House, animate: boolean)
 	door:SetAttribute("HP", state.HP)
 	door:SetAttribute("MaxHP", state.MaxHP)
 	door:SetAttribute("State", state.State)
+	door:SetAttribute("Reinforced", state.Reinforced)
+	-- A reinforced door looks armoured (GDD §9 Engineer).
+	door.Material = if state.Reinforced then Enum.Material.DiamondPlate else Enum.Material.WoodPlanks
 
 	if state.State == "Broken" then
 		door.Transparency = 1
