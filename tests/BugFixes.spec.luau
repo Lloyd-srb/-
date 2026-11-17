@@ -118,3 +118,63 @@ test("bug: instance streaming unloaded the house around a hiding player", functi
 	expect(TextChatService:FindFirstChildOfClass("ChannelTabsConfiguration").Enabled).toBe(true)
 	expect(game:GetService("Players").CharacterAutoLoads).toBe(false)
 end)
+
+--------------------------------------------------------------------------------
+-- Found in the code review of 17 Nov 2026
+--------------------------------------------------------------------------------
+
+local function toolIds(server, playerId)
+	local ids = {}
+	local backpack = server.player(playerId):FindFirstChildOfClass("Backpack")
+	for _, child in (if backpack then backpack:GetChildren() else {}) do
+		if child.ClassName == "Tool" then
+			table.insert(ids, child:GetAttribute("ItemId"))
+		end
+	end
+	table.sort(ids)
+	return ids
+end
+
+test("bug: items vanished from the hotbar after a respawn in place", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Day", 1)
+	local apple = svc.Inventory.Give(2, "Apple")
+	local shovel = svc.Inventory.Give(2, "Shovel")
+	expect(#toolIds(server, 2)).toBe(2)
+
+	server.killHumanoid(2) -- a new body comes with a new, empty Backpack
+	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
+	local expected = { apple.Id, shovel.Id }
+	table.sort(expected)
+	expect(toolIds(server, 2)).toEqual(expected)
+
+	-- Still usable afterwards.
+	server.fireServer("ItemUse", 2, apple.Id)
+	expect(svc.Inventory.Count(2, "Apple")).toBe(0)
+
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: a ghost's hat that loads late floated around visible to the living", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Killer" })
+	waitFor(server, "Day", 1)
+	svc.Combat.Damage(2, 100, "Killer", 3)
+	server.waitFor("ghost body", function()
+		local character = server.player(2).Character
+		return character and character:HasTag("Ghost")
+	end, 5)
+	local ghost = server.player(2).Character
+
+	local hat = Instance.new("Accessory")
+	local handle = Instance.new("Part")
+	handle.Name = "Handle"
+	handle.Parent = hat
+	server.addDescendant(ghost, hat)
+	expect(handle.Transparency).toBe(1)
+	expect(handle.CanQuery).toBe(false) -- cannot stop a shot either
+	expect(handle.CollisionGroup).toBe("Ghosts")
+
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)

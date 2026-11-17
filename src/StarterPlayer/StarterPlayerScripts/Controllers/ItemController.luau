@@ -70,15 +70,15 @@ local function refreshHotbar()
 end
 
 function ItemController.Start()
-	local backpack = localPlayer:WaitForChild("Backpack")
-	watch(backpack)
+	-- Every respawn brings a new Backpack (and the server refills it).
+	localPlayer.ChildAdded:Connect(function(child: Instance)
+		if child:IsA("Backpack") then
+			watch(child)
+		end
+	end)
+	watch(localPlayer:WaitForChild("Backpack"))
 	localPlayer.CharacterAdded:Connect(function(character: Model)
 		watch(character) -- an equipped tool moves into the character
-		local newBackpack = localPlayer:WaitForChild("Backpack")
-		if newBackpack ~= backpack then
-			backpack = newBackpack
-			watch(newBackpack)
-		end
 	end)
 	if localPlayer.Character then
 		watch(localPlayer.Character)

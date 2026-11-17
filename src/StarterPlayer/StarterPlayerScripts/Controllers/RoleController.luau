@@ -110,11 +110,11 @@ local function title(action: Action): string
 	return text
 end
 
-local function activate(action: Action)
+local function activate(action: Action, fromTouch: boolean)
 	if action.Ability == "Bless" then
 		openPicker()
 	elseif action.Ability == "Shoot" then
-		local direction = Aim.direction(Config.Abilities.Sheriff.Range)
+		local direction = Aim.direction(Config.Abilities.Sheriff.Range, fromTouch)
 		if direction then
 			Remotes.get("AbilityUse"):FireServer("Shoot", direction)
 		end
@@ -128,9 +128,10 @@ local function bind(action: Action)
 		return
 	end
 	bound[action.Id] = true
-	ContextActionService:BindAction(action.Id, function(_name: string, state: Enum.UserInputState): Enum.ContextActionResult
+	ContextActionService:BindAction(action.Id, function(_name: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
 		if state == Enum.UserInputState.Begin then
-			activate(action)
+			-- A tap on the touch button: aim at the middle of the screen.
+			activate(action, input.UserInputType == Enum.UserInputType.Touch)
 		end
 		return Enum.ContextActionResult.Pass
 	end, true, table.unpack(action.Inputs))

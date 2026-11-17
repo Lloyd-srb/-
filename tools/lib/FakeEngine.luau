@@ -75,6 +75,17 @@ local function promptKey(s: any, prompt: any): string
 	return "Prompt:" .. id
 end
 
+-- A stable key for an instance whose events a script listens to.
+local function instanceKey(s: any, instance: any): string
+	local id = instance:GetAttribute("SimSignalId")
+	if not id then
+		s.signalCount = (s.signalCount or 0) + 1
+		id = s.signalCount
+		instance:SetAttribute("SimSignalId", id)
+	end
+	return tostring(id)
+end
+
 local function players(service: any): { any }
 	local list = {}
 	for _, child in service:GetChildren() do
@@ -234,9 +245,12 @@ local function install()
 		root.Name = "HumanoidRootPart"
 		root.CFrame = roblox.CFrame.new(0, 3, 20) -- the plaza spawn
 		root.Parent = character
-		if not self:FindFirstChildOfClass("Backpack") then
-			roblox.Instance.new("Backpack").Parent = self
+		-- Like Roblox: every spawn gets a fresh Backpack (old tools are gone).
+		local oldBackpack = self:FindFirstChildOfClass("Backpack")
+		if oldBackpack then
+			oldBackpack:Destroy()
 		end
+		roblox.Instance.new("Backpack").Parent = self
 		local regen = roblox.Instance.new("Script")
 		regen.Name = "Health"
 		regen.Parent = character
@@ -272,6 +286,13 @@ local function install()
 		source.CanSend = true
 		source.Parent = self
 		return source, true
+	end)
+
+	-- Lune cannot see a Parent change, so tests add parts with
+	-- server.addDescendant(), which fires this for every ancestor model.
+	roblox.implementProperty("Model", "DescendantAdded", function(self)
+		local s = simOf(self)
+		return signalFor(s, "DescendantAdded:" .. instanceKey(s, self))
 	end)
 
 	roblox.implementProperty("Humanoid", "Died", function(self)
@@ -452,6 +473,23 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 	function server.killHumanoid(id: number)
 		local humanoid = server.humanoid(id)
 		signalFor(s, "Died:" .. humanoid:GetFullName()):Fire()
+	end
+
+	-- Parents `child` to `parent` and fires DescendantAdded on every ancestor
+	-- model a script listens to (e.g. a hat that loads late).
+	function server.addDescendant(parent: any, child: any)
+		child.Parent = parent
+		local node = parent
+		while node do
+			local id = node:GetAttribute("SimSignalId")
+			if id then
+				signalFor(s, "DescendantAdded:" .. tostring(id)):Fire(child)
+				for _, inner in child:GetDescendants() do
+					signalFor(s, "DescendantAdded:" .. tostring(id)):Fire(inner)
+				end
+			end
+			node = node.Parent
+		end
 	end
 
 	function server.teleports(): { any }

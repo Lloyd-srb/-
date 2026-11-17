@@ -27,6 +27,7 @@ local announcement: TextLabel
 local subAnnouncement: TextLabel
 
 local phase: { [string]: any } = { Phase = "Waiting" }
+local roleText = "" -- "Your role: ..." (shown again after a revive)
 local announceToken = 0
 local lastMoonSecond = -1
 
@@ -92,7 +93,8 @@ local function onRoleAssigned(roleId: any)
 		return
 	end
 	local name = Loc.format("Role." .. roleId .. ".Name")
-	roleLabel.Text = Loc.format("Hud.YourRole", { role = name })
+	roleText = Loc.format("Hud.YourRole", { role = name })
+	roleLabel.Text = roleText
 	roleLabel.Visible = true
 	showAnnouncement(name, Color3.new(1, 1, 1), Loc.format("Role." .. roleId .. ".Desc"), ROLE_INTRO_SECONDS)
 end
@@ -133,16 +135,22 @@ function HudController.Start()
 	phaseLabel = label(topBar, "PhaseLabel")
 	timerLabel = label(topBar, "TimerLabel")
 	roleLabel = label(hud, "RoleLabel")
-	-- Dead: say so, once, and keep it on the role line.
+	announcement = label(hud, "Announcement")
+	subAnnouncement = label(hud, "SubAnnouncement")
+	-- Dead: say so, once, and keep it on the role line. Revived by the
+	-- Doctor: the role line comes back.
 	ClientState.Changed:Connect(function(key: string)
-		if key == "Alive" and not ClientState.Alive then
+		if key ~= "Alive" then
+			return
+		end
+		if not ClientState.Alive then
 			roleLabel.Text = Loc.format("Hud.Dead")
 			roleLabel.Visible = true
 			showAnnouncement(Loc.format("Hud.Dead"), Color3.fromRGB(180, 180, 180), Loc.format("Hud.Ghost"), ROLE_INTRO_SECONDS)
+		elseif roleText ~= "" then
+			roleLabel.Text = roleText
 		end
 	end)
-	announcement = label(hud, "Announcement")
-	subAnnouncement = label(hud, "SubAnnouncement")
 
 	Remotes.get("PhaseChanged").OnClientEvent:Connect(onPhaseChanged)
 	Remotes.get("RoleAssigned").OnClientEvent:Connect(onRoleAssigned)

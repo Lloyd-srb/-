@@ -215,3 +215,43 @@ test("match: fewer than 8 arrived: everyone goes back to the lobby", function()
 	expect(#trip.Players).toBe(5)
 	expect(server.phase()).toBe("Waiting")
 end)
+
+--------------------------------------------------------------------------------
+-- Found in the code review of 17 Nov 2026
+--------------------------------------------------------------------------------
+
+test("bug: a full pad's countdown stopped (too many quit) and the rest stayed frozen", function()
+	local server = openLobby(12)
+	server.Config.Lobby.FullCountdown = 30
+	settle()
+	for id = 1, 12 do
+		stand(server, id, 2, (id - 6.5) * 0.9)
+	end
+	settle()
+	expect(pad(server, 2).State).toBe("Countdown")
+	expect(server.humanoid(1).WalkSpeed).toBe(0)
+	for id = 8, 12 do
+		server.removePlayer(id) -- 7 left: fewer than 8, the countdown stops
+	end
+	settle()
+	expect(pad(server, 2).State).toBe("Waiting")
+	expect(server.humanoid(1).WalkSpeed).toBe(16)
+	expect(server.humanoid(7).JumpPower).toBe(50)
+	stepOff(server, 1) -- free to leave again
+	settle()
+	expect(pad(server, 2).Count).toBe(6)
+end)
+
+test("bug: one failed teleport home left everyone on a finished match server", function()
+	local server = startMatch(5, 8)
+	server.Config.Match.HomeRetryDelay = 0.3
+	server.waitFor("teleport home", function()
+		return server.teleports()[1]
+	end, 6)
+	-- In this simulation nobody really leaves, as if the trip had failed.
+	server.waitFor("second try", function()
+		return server.teleports()[2]
+	end, 3)
+	task.wait(1)
+	expect(#server.teleports()).toBe(server.Config.Match.HomeAttempts) -- then it stops trying
+end)

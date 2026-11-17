@@ -44,19 +44,27 @@ end
 
 local makeGhost: (player: Player, member: Roster.Member, at: Vector3) -> ()
 
+-- Makes one piece of a ghost invisible and untouchable on the server.
+local function conceal(instance: Instance)
+	if instance:IsA("BasePart") then
+		instance.Transparency = 1
+		instance.CanQuery = false -- shots, swings and line-of-sight ignore ghosts
+		instance.CanTouch = false
+		instance.CollisionGroup = MatchService.GhostGroup
+	elseif instance:IsA("Decal") then
+		instance.Transparency = 1
+	end
+end
+
 local function setUpGhost(player: Player, member: Roster.Member, ghost: Model)
 	ghost:AddTag("Ghost")
 	ghost:SetAttribute("MemberId", member.Id)
 	for _, instance in ghost:GetDescendants() do
-		if instance:IsA("BasePart") then
-			instance.Transparency = 1
-			instance.CanQuery = false -- shots, swings and line-of-sight ignore ghosts
-			instance.CanTouch = false
-			instance.CollisionGroup = MatchService.GhostGroup
-		elseif instance:IsA("Decal") then
-			instance.Transparency = 1
-		end
+		conceal(instance)
 	end
+	-- Hats, hair and clothing can arrive after the body itself: they must not
+	-- float around visible to the living (or stop a shot).
+	ghost.DescendantAdded:Connect(conceal)
 	local humanoid = ghost:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None

@@ -55,7 +55,11 @@ local function apply(player: Player)
 		local current: TextSource? = sources[name][userId]
 		if access and not current and player.Parent then
 			local source, ok = channels[name]:AddUserAsync(userId)
-			if ok and source then
+			if ok and source and not player.Parent then
+				-- Left while being added: a stale entry would keep them out
+				-- of this channel if they came back to this server.
+				source:Destroy()
+			elseif ok and source then
 				sources[name][userId] = source
 				current = source
 			end

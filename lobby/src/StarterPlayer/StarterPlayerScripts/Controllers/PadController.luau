@@ -15,8 +15,12 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local PadController = {}
 
+local NOTICE_SECONDS = 6
+
 local pads: { [number]: any } = {}
 local mine = { PadId = 0, IsHost = false, CanStart = false }
+local notice = "" -- e.g. "could not reach the village", kept on screen for a while
+local noticeUntil = 0
 
 local panel: Frame
 local statusLabel: TextLabel
@@ -60,8 +64,13 @@ local function render()
 	end
 
 	local pad = pads[mine.PadId]
-	panel.Visible = pad ~= nil
+	local showNotice = os.clock() < noticeUntil
+	panel.Visible = pad ~= nil or showNotice
 	if not pad then
+		-- Out of the queue (e.g. the trip failed): only the notice is shown.
+		statusLabel.Text = ""
+		hintLabel.Text = if showNotice then notice else ""
+		startButton.Visible = false
 		return
 	end
 	local status = Loc.format("Lobby.InQueue", { id = mine.PadId, count = pad.Count, max = pad.Max })
@@ -75,6 +84,9 @@ local function render()
 		hintLabel.Text = Loc.format("Lobby.YouAreHost") .. "  ·  " .. stateText(pad)
 	else
 		hintLabel.Text = Loc.format("Lobby.StepOff")
+	end
+	if showNotice then
+		hintLabel.Text = notice
 	end
 	startButton.Visible = mine.CanStart
 end
@@ -109,21 +121,32 @@ function PadController.Start()
 	end)
 	Remotes.get("LobbyNotice").OnClientEvent:Connect(function(data: any)
 		if type(data) == "table" and type(data.Key) == "string" then
-			hintLabel.Text = Loc.format(data.Key)
+			-- Kept for a few seconds: the pad updates that follow would
+			-- otherwise overwrite it at once.
+			notice = Loc.format(data.Key)
+			noticeUntil = os.clock() + NOTICE_SECONDS
+			render()
 		end
 	end)
 
-	-- The countdown ticks on screen between server updates.
+	-- The countdown ticks on screen between server updates; a notice runs out.
 	local last = 0
+	local noticeShown = false
 	RunService.Heartbeat:Connect(function()
 		local now = os.clock()
 		if now - last >= 0.25 then
 			last = now
+			local noticeNow = now < noticeUntil
+			local needed = noticeNow ~= noticeShown
+			noticeShown = noticeNow
 			for _, pad in pads do
 				if pad.State == "Countdown" then
-					render()
+					needed = true
 					break
 				end
+			end
+			if needed then
+				render()
 			end
 		end
 	end)

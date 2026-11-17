@@ -275,17 +275,33 @@ local function step()
 	for _, entry in QueueService.Pads do
 		local pad = entry.State
 		local launchNow = PadQueue.tick(pad, now)
-		-- A full pad holds everyone in place for the countdown.
+		-- A full pad holds everyone in place for the countdown (a new body
+		-- after a respawn too).
 		if pad.CountdownEndsAt then
 			for _, id in pad.Members do
 				local player = Players:GetPlayerByUserId(id)
-				if player and not frozen[id] then
+				local humanoid = player and player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+				if player and (not frozen[id] or (humanoid and humanoid.WalkSpeed ~= 0)) then
 					setFrozen(player, true)
 				end
 			end
 		end
 		if launchNow then
 			launch(entry)
+		end
+	end
+	-- Nobody stays frozen once their pad is no longer locked (e.g. the
+	-- countdown stopped because too many players quit).
+	for id in table.clone(frozen) do
+		local current = padOf[id]
+		local entry = if current then QueueService.Pads[current] else nil
+		if not entry or not PadQueue.isLocked(entry.State) then
+			local player = Players:GetPlayerByUserId(id)
+			if player then
+				setFrozen(player, false)
+			else
+				frozen[id] = nil
+			end
 		end
 	end
 	broadcast()

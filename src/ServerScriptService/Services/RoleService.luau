@@ -438,8 +438,11 @@ local function onReinforcePrompt(player: Player, houseId: number, prompt: Proxim
 	if not member or not scopeKey or not door or door.State == "Broken" then
 		return
 	end
-	local position = if anchor and anchor:IsA("Attachment") then Zones.worldCFrame(anchor).Position else nil
-	if position and not within(member.Id, position, prompt.MaxActivationDistance + REACH_SLACK) then
+	local position = if anchor and anchor:IsA("Attachment")
+		then Zones.worldCFrame(anchor).Position
+		elseif anchor and anchor:IsA("BasePart") then anchor.CFrame.Position
+		else nil
+	if not position or not within(member.Id, position, prompt.MaxActivationDistance + REACH_SLACK) then
 		return
 	end
 	local _, limit = limitFor("Engineer", kind)

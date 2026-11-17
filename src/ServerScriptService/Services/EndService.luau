@@ -146,7 +146,7 @@ end
 
 -- Back to the lobby. In Studio teleports do not work.
 local function sendHome()
-	Travel.toLobby(Players:GetPlayers())
+	Travel.sendEveryoneHome()
 end
 
 local function closeLikes()

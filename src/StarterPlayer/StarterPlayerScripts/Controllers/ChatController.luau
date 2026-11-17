@@ -14,6 +14,8 @@ local TextChatService = game:GetService("TextChatService")
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ClientState = require(script.Parent.ClientState)
+
 local WHITE = "#FFFFFF"
 local GRAY = "#969696"
 local RED = "#FF6464"
@@ -60,13 +62,26 @@ function ChatController.Start()
 		end
 	end)
 
-	-- No default channels: send to General unless a tab says otherwise.
+	-- No default channels: the living type into General, ghosts into the
+	-- Ghost channel (they may only read General). Tabs can still switch.
 	local folder = TextChatService:WaitForChild("WolfVillageChannels", 30)
-	local general = folder and folder:WaitForChild("General", 30)
 	local inputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
-	if general and general:IsA("TextChannel") and inputBar then
-		inputBar.TargetTextChannel = general
+	local function pointInputBar()
+		local name = if ClientState.Alive then "General" else "Ghost"
+		local channel = folder and folder:FindFirstChild(name)
+		if channel and channel:IsA("TextChannel") and inputBar then
+			inputBar.TargetTextChannel = channel
+		end
 	end
+	if folder then
+		folder:WaitForChild("General", 30)
+	end
+	ClientState.Changed:Connect(function(key: string)
+		if key == "Alive" then
+			pointInputBar()
+		end
+	end)
+	pointInputBar()
 end
 
 return ChatController

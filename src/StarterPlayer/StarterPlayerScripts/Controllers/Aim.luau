@@ -3,7 +3,8 @@
 	Aim — which way is this player pointing? Used for the stun gun (Sheriff and
 	gun item) and the thrown axe.
 	  - mouse / touch: towards what is under the pointer (last tap on mobile)
-	  - gamepad: towards what is in the middle of the screen
+	  - gamepad, or a tap on an on-screen ability button (that tap is on the
+	    button, not on the target): towards the middle of the screen
 	Returns a unit direction from the character's shooting height.
 ]]
 
@@ -23,14 +24,15 @@ local function usingGamepad(): boolean
 		or last == Enum.UserInputType.Gamepad4
 end
 
-function Aim.direction(range: number): Vector3?
+function Aim.direction(range: number, fromScreenButton: boolean?): Vector3?
 	local camera = workspace.CurrentCamera
 	local character = Players.LocalPlayer.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not camera or not character or not (root and root:IsA("BasePart")) then
 		return nil
 	end
-	local screenPoint = if usingGamepad() then camera.ViewportSize / 2 else UserInputService:GetMouseLocation()
+	local centre = usingGamepad() or fromScreenButton == true
+	local screenPoint = if centre then camera.ViewportSize / 2 else UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(screenPoint.X, screenPoint.Y)
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude

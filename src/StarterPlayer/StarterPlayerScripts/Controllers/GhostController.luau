@@ -14,14 +14,18 @@ local GHOST_TRANSPARENCY = 0.6
 
 local GhostController = {}
 
+local function paintPiece(instance: Instance)
+	local transparency = if ClientState.Alive then 1 else GHOST_TRANSPARENCY
+	if instance:IsA("BasePart") and instance.Name ~= "HumanoidRootPart" then
+		instance.Transparency = transparency
+	elseif instance:IsA("Decal") then
+		instance.Transparency = transparency
+	end
+end
+
 local function paint(ghost: Instance)
-	local visible = not ClientState.Alive
 	for _, instance in ghost:GetDescendants() do
-		if instance:IsA("BasePart") and instance.Name ~= "HumanoidRootPart" then
-			instance.Transparency = if visible then GHOST_TRANSPARENCY else 1
-		elseif instance:IsA("Decal") then
-			instance.Transparency = if visible then GHOST_TRANSPARENCY else 1
-		end
+		paintPiece(instance)
 	end
 end
 
@@ -32,17 +36,20 @@ local function paintAll()
 end
 
 function GhostController.Start()
-	CollectionService:GetInstanceAddedSignal("Ghost"):Connect(function(ghost: Instance)
-		-- Parts may still be arriving: paint now and once more a moment later.
+	local function track(ghost: Instance)
+		-- Parts (hats, hair) may still be arriving.
 		paint(ghost)
-		task.delay(0.5, paint, ghost)
-	end)
+		ghost.DescendantAdded:Connect(paintPiece)
+	end
+	CollectionService:GetInstanceAddedSignal("Ghost"):Connect(track)
+	for _, ghost in CollectionService:GetTagged("Ghost") do
+		track(ghost)
+	end
 	ClientState.Changed:Connect(function(key: string)
 		if key == "Alive" then
 			paintAll()
 		end
 	end)
-	paintAll()
 end
 
 return GhostController

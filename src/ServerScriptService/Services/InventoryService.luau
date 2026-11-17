@@ -554,6 +554,24 @@ function InventoryService.Start()
 		return InventoryService.Consume(doctorId, "FirstAid")
 	end
 
+	-- A new body (respawn in place) comes with a new, empty Backpack: Roblox
+	-- throws the old tools away, so the hotbar is rebuilt from the inventory.
+	MatchService.BodyReplaced:Connect(function(member: Roster.Member)
+		local player = MatchService.PlayerOf(member.Id)
+		if not player then
+			return
+		end
+		local backpack = player:FindFirstChildOfClass("Backpack") or player:WaitForChild("Backpack", 5)
+		if not backpack then
+			return
+		end
+		for _, item in InventoryService.Items(member.Id) do
+			if not findTool(member.Id, item.Id) then
+				makeTool(item).Parent = backpack
+			end
+		end
+	end)
+
 	MatchService.MemberDied:Connect(function(member: Roster.Member, cause: Roster.DeathCause)
 		local root = MatchService.RootOf(member.Id)
 		local body = MatchService.BodyOf(member.Id)

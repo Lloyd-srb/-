@@ -7,7 +7,6 @@
 	Other services react to those two signals; they never drive the clock.
 ]]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -141,7 +140,7 @@ local function run()
 		-- Too few made it from the lobby: everyone goes back.
 		announce("Phase.NotEnough", { min = Config.Match.MinPlayers })
 		task.wait(3)
-		Travel.toLobby(Players:GetPlayers())
+		Travel.sendEveryoneHome()
 		return
 	end
 

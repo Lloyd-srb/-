@@ -80,6 +80,8 @@ Config.Match = {
 	SpecialSlots = { [8] = 4, [9] = 4, [10] = 5, [11] = 5, [12] = 6 },
 	BothSoloFrom = 11, -- [owner] Killer and Fool in the same match only with 11-12 players
 	ArrivalTimeout = 20, -- [default] seconds the match server waits for teleported players
+	HomeAttempts = 3, -- [default] tries to send everyone back to the lobby at the end
+	HomeRetryDelay = 10, -- [default] seconds between those tries
 }
 
 --------------------------------------------------------------------------------
