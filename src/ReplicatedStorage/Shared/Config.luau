@@ -588,6 +588,10 @@ Config.Titles = { "PassFree", "PassPremium" }
 --------------------------------------------------------------------------------
 
 Config.CodeMaxLength = 32
+-- [ASSUMED] after this many wrong codes in a row, a player must wait before trying again
+-- (so nobody can guess codes by trying thousands of words).
+Config.CodeMaxWrong = 8
+Config.CodeLockSeconds = 300
 
 --------------------------------------------------------------------------------
 -- §13 Shop rules

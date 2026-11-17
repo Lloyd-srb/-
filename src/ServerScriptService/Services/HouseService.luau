@@ -136,6 +136,25 @@ function HouseService.HouseAt(position: Vector3): number?
 	return nil
 end
 
+--[[
+	Is this member inside a house they cannot have walked into? A house with a
+	closed door can only hold its own occupant tonight (by day, nobody).
+	Positions come from the player's own computer, so a modified client could
+	walk through a wall; every action taken from inside a house checks this.
+]]
+function HouseService.IsTrespassing(memberId: number): boolean
+	local root = MatchService.RootOf(memberId)
+	if not root then
+		return false
+	end
+	local houseId = HouseService.HouseAt(root.CFrame.Position)
+	local house = if houseId then houses[houseId] else nil
+	if not house or house.State.State ~= "Closed" then
+		return false
+	end
+	return not (RoundService.IsNight() and HouseService.Assigned[memberId] == houseId)
+end
+
 function HouseService.DoorOf(houseId: number): DoorState.Door?
 	local house = houses[houseId]
 	return if house then house.State else nil
@@ -302,13 +321,18 @@ local function beginDay(state: PhaseMachine.PhaseState)
 		DoorState.beginDay(house.State)
 		applyDoor(house, false)
 	end
-	-- Survivors still in the village wake up in front of their house.
+	-- Survivors still in the village wake up in front of their house. Anyone
+	-- else inside a house (came back from the forest and slipped in through a
+	-- broken or open door) steps out of that house: doors are shut by day.
 	for _, member in Roster.alive(MatchService.Roster) do
 		local houseId = HouseService.Assigned[member.Id]
 		local house = if houseId then houses[houseId] else nil
 		local root = MatchService.RootOf(member.Id)
+		local insideId = if root then HouseService.HouseAt(root.CFrame.Position) else nil
 		if house and root and Zones.isVillage(root.CFrame.Position) then
 			warp(member.Id, Zones.worldCFrame(house.FrontSpawn))
+		elseif insideId and houses[insideId] then
+			warp(member.Id, Zones.worldCFrame(houses[insideId].FrontSpawn))
 		end
 	end
 end

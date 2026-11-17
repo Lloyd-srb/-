@@ -164,11 +164,16 @@ local Strings: { [string]: Entry } = {
 	["Codes.Reason.Unknown"] = { en = "That code does not exist.", th = "ไม่มีโค้ดนี้" },
 	["Codes.Reason.Used"] = { en = "You already used this code.", th = "คุณใช้โค้ดนี้ไปแล้ว" },
 	["Codes.Reason.Expired"] = { en = "This code has expired.", th = "โค้ดนี้หมดอายุแล้ว" },
+	["Codes.Reason.TooMany"] = { en = "Too many wrong codes. Try again in a few minutes.", th = "ใส่โค้ดผิดหลายครั้งเกินไป ลองใหม่ในอีกสักครู่" },
 
 	-- HUD
 	["RoleRoll.YouAre"] = { en = "You are {role}!", th = "คุณคือ {role}!" },
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
+	["Hud.Spectating"] = {
+		en = "This match had already started: you are watching",
+		th = "เกมนี้เริ่มไปแล้ว: คุณเป็นผู้ชม",
+	},
 	["Hud.Ghost"] = {
 		en = "You are a ghost now. Only ghosts and the wolves can read what you write.",
 		th = "ตอนนี้คุณเป็นผี ผีด้วยกันและฝ่ายหมาป่าเท่านั้นที่อ่านแชทของคุณได้",

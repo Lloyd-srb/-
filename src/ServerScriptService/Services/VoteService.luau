@@ -188,7 +188,20 @@ function VoteService.Init()
 			Config.Vote.CallHold
 		)
 		prompt:SetAttribute("Audience", "Alive") -- ghosts cannot ring it
+		local reach = prompt.MaxActivationDistance + 4
 		prompt.Triggered:Connect(function(player: Player)
+			-- Prompts are triggered from the player's computer: check they are
+			-- really at the table (a modified client could ring from anywhere).
+			local member = MatchService.MemberOf(player)
+			local root = if member then MatchService.RootOf(member.Id) else nil
+			local anchor = prompt.Parent
+			local at = if anchor and anchor:IsA("Attachment")
+				then Zones.worldCFrame(anchor).Position
+				elseif anchor and anchor:IsA("BasePart") then anchor.CFrame.Position
+				else nil
+			if not root or not at or (root.CFrame.Position - at).Magnitude > reach then
+				return
+			end
 			if RoundService.CallMeeting(player) then
 				setBell(false)
 			end

@@ -20,6 +20,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Rng = require(ReplicatedStorage.Shared.Rng)
 local Shop = require(ReplicatedStorage.Shared.Logic.Shop)
 
@@ -35,6 +36,7 @@ local EconomyService = {}
 
 local rng = Rng.wrap(Random.new())
 local viewQueued: { [Player]: boolean } = {}
+local wrongCodes: { [number]: { Count: number, LockedUntil: number } } = {} -- by UserId
 
 local function sendView(player: Player)
 	local data = Profiles.Get(player)
@@ -131,10 +133,25 @@ local function onCode(player: Player, text: any)
 	if not Profiles.Get(player) then
 		return
 	end
+	local tries: { Count: number, LockedUntil: number } = wrongCodes[player.UserId] or { Count = 0, LockedUntil = 0 }
+	wrongCodes[player.UserId] = tries
+	if os.clock() < tries.LockedUntil then
+		Net.fire(player, "CodeResult", { Ok = false, Reason = "TooMany" })
+		return
+	end
 	local ok, outcome = false, nil :: any
 	Profiles.Update(player, function(profile: ProfileLogic.Data)
 		ok, outcome = Codes.redeem(profile, text, os.time(), CodeList)
 	end)
+	if ok then
+		tries.Count = 0
+	elseif outcome == "Unknown" then
+		tries.Count += 1
+		if tries.Count >= Config.CodeMaxWrong then
+			tries.Count = 0
+			tries.LockedUntil = os.clock() + Config.CodeLockSeconds
+		end
+	end
 	Net.fire(player, "CodeResult", {
 		Ok = ok,
 		Reason = if ok then nil else outcome,
@@ -179,6 +196,7 @@ function EconomyService.Start()
 	end
 	Players.PlayerRemoving:Connect(function(player: Player)
 		viewQueued[player] = nil
+		wrongCodes[player.UserId] = nil
 	end)
 end
 

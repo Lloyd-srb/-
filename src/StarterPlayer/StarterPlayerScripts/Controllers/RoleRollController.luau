@@ -44,6 +44,7 @@ local descLabel: TextLabel
 
 local shownRole: string? = nil
 local token = 0
+local slide: Tween? = nil
 local random = Random.new()
 
 local function pool(): { string }
@@ -67,6 +68,10 @@ end
 local function play(roleId: string, withReel: boolean)
 	token += 1
 	local mine = token
+	if slide then
+		slide:Cancel() -- a newer reveal replaces one still sliding
+		slide = nil
+	end
 	for _, child in strip:GetChildren() do
 		child:Destroy()
 	end
@@ -102,7 +107,7 @@ local function play(roleId: string, withReel: boolean)
 
 	if withReel then
 		local distance = (#list - 1) * step
-		local slide = TweenService:Create(
+		local tween = TweenService:Create(
 			strip,
 			TweenInfo.new(ROLL_SECONDS, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
 			{ Position = UDim2.fromOffset(distance, 0) }
@@ -115,8 +120,9 @@ local function play(roleId: string, withReel: boolean)
 				Audio.play("RoleRollTick")
 			end
 		end)
-		slide:Play()
-		slide.Completed:Wait()
+		slide = tween
+		tween:Play()
+		tween.Completed:Wait()
 		ticking:Disconnect()
 	end
 	if token ~= mine then

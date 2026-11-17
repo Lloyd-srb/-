@@ -15,6 +15,7 @@ local ClientState = {
 	Task = nil :: any, -- own task of the day: { Kind, Targets, Done, Complete } (see TaskController)
 	HouseId = 0, -- 0 = no door of my own
 	Hidden = false,
+	Spectator = false, -- joined after the start: watching only
 	Changed = Signal.new(),
 }
 

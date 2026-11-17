@@ -219,6 +219,9 @@ local function setupCharacter(player: Player, character: Model)
 		-- Names must not show through walls: they would give away who is in
 		-- which house at night.
 		humanoid.NameOcclusion = Enum.NameOcclusion.OccludeAll
+		-- No health bar over heads: a hurt villager would tell everyone the
+		-- pup bit them last night. Each player still sees their own health.
+		humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
 		humanoid.Died:Connect(function()
 			respawnInPlace(player, character)
 		end)

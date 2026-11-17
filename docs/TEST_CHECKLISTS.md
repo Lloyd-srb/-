@@ -204,6 +204,8 @@
 - [ ] ออกจากเกมแล้วเข้าใหม่: coin / Diamond / ของที่ได้ ยังอยู่ครบ
 
 **ลองซื้อด้วย coin / Diamond (ใน Studio ใช้ Command Bar เติมเงินให้ตัวเอง):**
+ระหว่างกด Play ให้สลับไปฝั่ง **Server** ก่อน (แถบด้านบน Test → ปุ่ม Current: Client → Server) แล้วค่อยวางคำสั่งใน Command Bar
+(ฝั่ง Client มองไม่เห็น ServerStorage คำสั่งจะ error)
 ```lua
 local P = require(game.ServerStorage.ServerShared.Profiles)
 local me = game.Players:GetPlayers()[1]

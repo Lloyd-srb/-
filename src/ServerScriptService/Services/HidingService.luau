@@ -73,6 +73,7 @@ local function near(id: number, spot: Spot): boolean
 	local position = root.CFrame.Position
 	return (position - spot.Anchor.CFrame.Position).Magnitude <= Config.Human.InteractDistance + 4
 		and HouseService.HouseAt(position) == spot.HouseId
+		and not HouseService.IsTrespassing(id)
 end
 
 -- Streaming focus follows the hiding spot while hidden (nil = the body again).

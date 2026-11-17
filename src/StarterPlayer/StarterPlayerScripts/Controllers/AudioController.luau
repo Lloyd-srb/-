@@ -52,6 +52,8 @@ local function onPhase(phase: any)
 	if name == "Night" then
 		setNight(true)
 	elseif name == "FullMoonWarning" then
+		-- "A wolf howls, and: Full moon in 10 seconds" (GDD §6.3).
+		Audio.play("WolfHowl")
 		Audio.play("FullMoonSting")
 	elseif name == "Day" or name == "MeetingCountdown" or name == "Meeting" then
 		setNight(false)

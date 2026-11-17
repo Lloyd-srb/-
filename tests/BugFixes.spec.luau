@@ -51,7 +51,9 @@ test("bug: hide / search worked through the back wall (prompts ignore walls)", f
 	server.trigger(bed.SearchPrompt, 1)
 	expect(svc.Hiding.IsHidden(2)).toBe(true) -- not found from outside
 
-	-- From inside the room the search works.
+	-- From inside the room the search works (after breaking in: the door is
+	-- the only way into a shut house).
+	svc.House.DamageDoor(bobHouse:GetAttribute("HouseId"), 1000)
 	svc.Match.RootOf(1).CFrame = CFrame.new(housePoint(bobHouse, -2, 3, 2))
 	server.trigger(bed.SearchPrompt, 1)
 	expect(svc.Hiding.IsHidden(2)).toBe(false)
@@ -177,4 +179,105 @@ test("bug: a ghost's hat that loads late floated around visible to the living", 
 
 	server.removePlayer(1)
 	server.waitForPhase("GameOver", 10)
+end)
+
+--------------------------------------------------------------------------------
+-- Found in the full audit of 17 Nov 2026
+--------------------------------------------------------------------------------
+
+test("bug: a cheater could walk through a wall into a shut house and kill the person inside", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Night", 1)
+	local houseId = server.last("HouseAssigned", 2)[1]
+	local inside = svc.Match.RootOf(2).CFrame.Position
+	expect(svc.House.HouseAt(inside)).toBe(houseId)
+
+	-- The wolf "appears" inside Bob's shut house (no broken door, nobody opened it).
+	svc.Match.RootOf(1).CFrame = CFrame.new(inside + Vector3.new(0, 0, 2)) * CFrame.Angles(0, math.pi, 0)
+	expect(svc.House.IsTrespassing(1)).toBe(true)
+	expect(svc.House.IsTrespassing(2)).toBe(false) -- Bob lives here tonight
+	server.fireServer("WolfAttack", 1)
+	task.wait(0.05)
+	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
+
+	-- Once the door is broken, getting in is fair.
+	svc.House.DamageDoor(houseId, 1000)
+	expect(svc.House.IsTrespassing(1)).toBe(false)
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: someone who slipped into another house at night stayed locked in all day", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Night", 1)
+	-- Cara has a house tonight; pretend she was in the forest at nightfall
+	-- (no house) and then walked in through Bob's broken door.
+	local houseId = server.last("HouseAssigned", 2)[1]
+	svc.House.Assigned[3] = nil
+	svc.House.DamageDoor(houseId, 1000)
+	svc.Match.RootOf(3).CFrame = svc.Match.RootOf(2).CFrame + Vector3.new(2, 0, 0)
+	expect(svc.House.HouseAt(svc.Match.RootOf(3).CFrame.Position)).toBe(houseId)
+
+	waitFor(server, "Day", 2)
+	expect(svc.House.HouseAt(svc.Match.RootOf(3).CFrame.Position)).toBeNil() -- out in front of it
+	expect(svc.House.HouseAt(svc.Match.RootOf(2).CFrame.Position)).toBeNil()
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: health bars over heads told everyone who the pup had bitten", function()
+	local server = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Day", 1)
+	expect(server.humanoid(2).HealthDisplayType).toBe(Enum.HumanoidHealthDisplayType.AlwaysOff)
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: a flashlight left on shone out of the werewolf (giving away who it is)", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Day", 1)
+	local item = svc.Inventory.Give(1, "Flashlight")
+	server.fireServer("ItemUse", 1, item.Id)
+	task.wait(0.05)
+	local light = server.player(1).Character:FindFirstChild("Flashlight", true)
+	expect(light.Enabled).toBe(true)
+	waitFor(server, "Night", 1)
+	expect(svc.Wolf.IsTransformed(1)).toBe(true)
+	expect(light.Enabled).toBe(false)
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: the meeting bell could be rung from anywhere on the map", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Day", 2)
+	local bellPart = server.game.Workspace.Map.Plaza.MeetingTable.Bell
+	local prompt = bellPart.PromptAnchor.CallMeeting
+	server.waitFor("bell to unlock", function()
+		return prompt.Enabled
+	end, 10)
+	svc.Match.RootOf(2).CFrame = CFrame.new(300, 3, 300) -- far away
+	server.trigger(prompt, 2)
+	task.wait(0.05)
+	expect(server.phase()).toBe("Day")
+	svc.Match.RootOf(2).CFrame = CFrame.new(bellPart.CFrame.Position + Vector3.new(0, 0, 4))
+	server.trigger(prompt, 2)
+	server.waitForPhase("MeetingCountdown", 3)
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("remotes: a client spamming an intent is cut off after its rate limit", function()
+	local server = startServer({ Players = { { Id = 1, Name = "Ann" } }, Debug = { MinPlayers = 99 } })
+	local Net = server.require(server.game.ServerStorage.ServerShared.Net)
+	local handled = 0
+	-- A lobby intent nobody listens to on this server (one listener only).
+	Net.on("StartRequest", function()
+		handled += 1
+	end, 5, 10)
+	for _ = 1, 40 do
+		server.fireServer("StartRequest", 1)
+	end
+	task.wait(0.05)
+	expect(handled).toBe(5)
 end)

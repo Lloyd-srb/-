@@ -39,6 +39,7 @@ local Roster = require(Logic.Roster)
 local CombatService = require(script.Parent.CombatService)
 local Flashlight = require(script.Parent.Flashlight)
 local HidingService = require(script.Parent.HidingService)
+local HouseService = require(script.Parent.HouseService)
 local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
@@ -249,6 +250,9 @@ local function onPickup(player: Player, model: Model, prompt: ProximityPrompt)
 	if not member or not member.Alive or WolfService.IsTransformed(member.Id) or HidingService.IsHidden(member.Id) then
 		return
 	end
+	if HouseService.IsTrespassing(member.Id) then
+		return
+	end
 	if not model.Parent then
 		return -- someone else was faster
 	end
@@ -434,6 +438,9 @@ local function onUse(player: Player, itemId: any, aim: any)
 	local id = member.Id
 	-- A werewolf has paws, a hidden player is parked away, a stunned one cannot act.
 	if WolfService.IsTransformed(id) or HidingService.IsHidden(id) or CombatService.IsStunned(id) then
+		return
+	end
+	if HouseService.IsTrespassing(id) then
 		return
 	end
 	local item = find(id, itemId)

@@ -59,22 +59,25 @@ test("audio: a door hit is heard near the door only; a hidden player hears it fr
 	server.waitForPhase("GameOver", 10)
 end)
 
-test("audio: a sound without an ID yet is not sent; the night howl reaches everyone", function()
-	local server = start({ [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
-	server.Config.Sounds.WolfHowl = 21
+test("audio: a sound without an ID yet is not sent; a sound for everyone reaches everyone", function()
+	local server, svc = start({ [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
 	server.Config.Sounds.DoorOpen = 0
+	server.Config.Sounds.MeetingBell = 21
 	server.waitFor("night", function()
 		local last = server.last("PhaseChanged", "all")
 		return last and last[1].Phase == "Night"
 	end, 10)
-	task.wait(0.05)
-	expect(server.last("Sound", "all")[1].Key).toBe("WolfHowl")
-	expect(server.last("Sound", "all")[1].At).toBeNil()
 	-- Bob opens his own door: DoorOpen has no ID, so nothing is sent.
 	local houseId = server.last("HouseAssigned", 2)[1]
 	local house = server.game.Workspace.Map.Houses[string.format("House%02d", houseId)]
 	server.trigger(house.Door.PromptAnchor.OpenPrompt, 2)
 	expect(heard(server, 2, "DoorOpen")).toBe(false)
+	-- The howl now comes with the full-moon warning, on every client (no server message).
+	expect(heard(server, 2, "WolfHowl")).toBe(false)
+	server.require(server.game.ServerScriptService.Services.AudioService).All("MeetingBell")
+	expect(server.last("Sound", "all")[1].Key).toBe("MeetingBell")
+	expect(server.last("Sound", "all")[1].At).toBeNil()
+	local _ = svc
 	server.removePlayer(1)
 	server.waitForPhase("GameOver", 10)
 end)

@@ -23,6 +23,7 @@ local Shop = require(ReplicatedStorage.Shared.Logic.Shop)
 local TOAST_SECONDS = 3
 local SPIN_MIN_SECONDS = 1.6
 local SPIN_TICK = 0.08
+local SPIN_GIVE_UP = 8 -- seconds without an answer from the server
 local DISABLED_TRANSPARENCY = 0.55
 
 local MenuController = {}
@@ -38,6 +39,7 @@ local toast: TextLabel
 local openPage: string? = nil
 local view: any = nil -- this player's ProfileView
 local spinning = false
+local spinStarted = 0
 local toastToken = 0
 local codeAnswer: TextLabel? = nil
 local spinInfo: TextLabel? = nil
@@ -245,6 +247,7 @@ end
 --------------------------------------------------------------------------------
 
 local PAGES: { [string]: () -> () } = {}
+local render: () -> () -- defined below; pages call it to redraw
 
 function PAGES.Role()
 	local current = wallet()
@@ -421,7 +424,14 @@ function PAGES.Spin()
 			return
 		end
 		spinning = true
+		spinStarted = os.clock()
 		Remotes.get("SpinRequest"):FireServer()
+		task.delay(SPIN_GIVE_UP, function()
+			if spinning and os.clock() - spinStarted >= SPIN_GIVE_UP - 0.1 then
+				spinning = false -- no answer (lost request): let the player try again
+				render()
+			end
+		end)
 		task.spawn(function()
 			local prizes = Config.DailySpin.Prizes
 			local index = 1
@@ -443,7 +453,7 @@ function PAGES.Spin()
 	end
 end
 
-local function render()
+function render()
 	local page = openPage
 	if not page or spinning then
 		return

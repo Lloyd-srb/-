@@ -97,7 +97,7 @@ local function actor(player: Player, roleId: Config.RoleId): Roster.Member?
 	if HidingService.IsHidden(member.Id) or CombatService.IsStunned(member.Id) then
 		return nil
 	end
-	if not MatchService.RootOf(member.Id) then
+	if not MatchService.RootOf(member.Id) or HouseService.IsTrespassing(member.Id) then
 		return nil
 	end
 	return member

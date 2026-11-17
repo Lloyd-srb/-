@@ -179,6 +179,14 @@ local function transform(member: Roster.Member)
 	if humanoid then
 		humanoid:UnequipTools()
 	end
+	-- A flashlight left on would shine out of the werewolf and give away who
+	-- carried it by day.
+	for _, light in character:GetDescendants() do
+		if light:IsA("SpotLight") and light.Name == "Flashlight" then
+			light.Enabled = false
+		end
+	end
+	character:SetAttribute("FlashlightOn", nil)
 	local shell = attachShell(character, form)
 	if shell then
 		paintShell(shell, MatchService.PlayerOf(member.Id))
@@ -320,7 +328,7 @@ local function onAttack(player: Player)
 		return
 	end
 	local root = MatchService.RootOf(member.Id)
-	if not root then
+	if not root or HouseService.IsTrespassing(member.Id) then
 		return
 	end
 	wolf.LastAttack = now
@@ -441,7 +449,6 @@ function WolfService.Start()
 					transform(member)
 				end
 			end
-			AudioService.All("WolfHowl") -- the whole village hears the change (GDD §6.5)
 			MatchService.SendPack()
 			startForestLoop()
 		end

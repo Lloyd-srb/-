@@ -80,6 +80,7 @@ local function onOpened(data: any)
 	if type(data) ~= "table" or type(data.Candidates) ~= "table" then
 		return
 	end
+	local wasOpen = gui.Enabled
 	clearCards()
 	canVote = false
 	for order, candidate in data.Candidates do
@@ -112,7 +113,7 @@ local function onOpened(data: any)
 	resultLabel.Visible = false
 	refreshSelection()
 	gui.Enabled = true
-	if canVote then
+	if canVote and not wasOpen then
 		GamepadFocus.offer(grid)
 	end
 end

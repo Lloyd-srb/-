@@ -55,10 +55,13 @@ local function hasAnnouncement(server, key)
 	return nil
 end
 
+-- Walks up to the table (the server checks the ringer is really there).
 local function ringBell(server, playerId)
 	server.waitFor("bell to unlock", function()
 		return bell(server).Enabled
 	end)
+	local table = server.game.Workspace.Map.Plaza.MeetingTable.Bell
+	server.root(playerId).CFrame = CFrame.new(table.CFrame.Position + Vector3.new(0, 0, 4))
 	expect(server.trigger(bell(server), playerId)).toBe(true)
 end
 

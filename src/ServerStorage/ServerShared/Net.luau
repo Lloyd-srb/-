@@ -13,14 +13,14 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Net = {}
 
-local calls: { [Player]: { [string]: { number } } } = {}
+local calls: { [number]: { [string]: { number } } } = {} -- by UserId
 
 local function allow(player: Player, name: string, rate: number, window: number): boolean
 	local now = os.clock()
-	local perPlayer = calls[player]
+	local perPlayer = calls[player.UserId]
 	if not perPlayer then
 		perPlayer = {}
-		calls[player] = perPlayer
+		calls[player.UserId] = perPlayer
 	end
 	local stamps = perPlayer[name]
 	if not stamps then
@@ -40,7 +40,7 @@ end
 function Net.Init()
 	Remotes.createAll()
 	Players.PlayerRemoving:Connect(function(player)
-		calls[player] = nil
+		calls[player.UserId] = nil
 	end)
 end
 

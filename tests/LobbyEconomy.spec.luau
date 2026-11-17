@@ -141,3 +141,17 @@ test("a match reward is saved and back in the lobby (Lobby -> Match -> Lobby)", 
 	expect(back.Level).toBe(2)
 	expect(back.Mastery.Doctor).toBe(2)
 end)
+
+test("codes: too many wrong guesses in a row = a short wait (no guessing codes by brute force)", function()
+	local server = open(1)
+	view(server, 1)
+	server.Config.CodeMaxWrong = 3
+	for index = 1, 3 do
+		server.fireServer("CodeRedeem", 1, "GUESS" .. index)
+		task.wait(0.05)
+	end
+	expect(server.last("CodeResult", 1)[1].Reason).toBe("Unknown")
+	server.fireServer("CodeRedeem", 1, "WOLFVILLAGE") -- even a real code waits now
+	task.wait(0.1)
+	expect(server.last("CodeResult", 1)[1].Reason).toBe("TooMany")
+end)

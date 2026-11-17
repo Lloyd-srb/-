@@ -50,8 +50,15 @@ local function rootOf(svc, id)
 end
 
 -- Puts `attackerId` 3 studs from the target. Facing it unless `lookAway`.
+-- Puts the attacker next to the target. A target inside a shut house first
+-- opens the door (nobody can walk into a shut house: HouseService.IsTrespassing).
 local function standBy(svc, attackerId, targetId, lookAway)
 	local target = rootOf(svc, targetId).CFrame.Position
+	local houseId = svc.House.HouseAt(target)
+	local door = if houseId then svc.House.DoorOf(houseId) else nil
+	if door and door.State == "Closed" then
+		door.State = "Open"
+	end
 	local offset = if lookAway then Vector3.new(0, 0, -3) else Vector3.new(0, 0, 3)
 	rootOf(svc, attackerId).CFrame = CFrame.new(target + offset) -- identity rotation looks along -Z
 end
@@ -323,7 +330,8 @@ test("hiding: only the hider knows the spot; the wolf must search; pulled out = 
 	server.trigger(wardrobe.HidePrompt, 2) -- already hidden
 	expect(svc.Hiding.IsHidden(2)).toBe(true)
 
-	-- The wolf stands in the room and swings: a hidden player cannot be hit.
+	-- The wolf breaks in, stands in the room and swings: a hidden player cannot be hit.
+	svc.House.DamageDoor(svc.House.HouseAt(insideBobHouse.Position), 1000)
 	server.fireServer("WolfAttack", 1)
 	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
 	expect(svc.Match.Roster.Members[2].IsPup).toBe(false)

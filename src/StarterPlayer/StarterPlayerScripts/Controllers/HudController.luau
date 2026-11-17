@@ -143,7 +143,10 @@ function HudController.Start()
 		if key ~= "Alive" then
 			return
 		end
-		if not ClientState.Alive then
+		if not ClientState.Alive and ClientState.Spectator then
+			roleLabel.Text = Loc.format("Hud.Spectating")
+			roleLabel.Visible = true
+		elseif not ClientState.Alive then
 			roleLabel.Text = Loc.format("Hud.Dead")
 			roleLabel.Visible = true
 			showAnnouncement(Loc.format("Hud.Dead"), Color3.fromRGB(180, 180, 180), Loc.format("Hud.Ghost"), ROLE_INTRO_SECONDS)

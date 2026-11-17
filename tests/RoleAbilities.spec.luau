@@ -120,20 +120,21 @@ test("Sheriff and Killer", function()
 	waitFor(server, "Night", 1)
 	expect(lastState(server, 1, "Shoot").UsesLeft).toBe(1) -- a new shot for the night
 	expect(svc.Wolf.IsTransformed(2)).toBe(true)
-	place(svc, 2, Vector3.new(0, 3, 50))
-	place(svc, 1, Vector3.new(0, 3, 60))
+	-- Out on the plaza (z = 60 is inside a house: nobody gets in there with the door shut).
+	place(svc, 2, Vector3.new(0, 3, 30))
+	place(svc, 1, Vector3.new(0, 3, 40))
 	use(server, 1, "Shoot", Vector3.new(0, 0, -1))
 	expect(svc.Combat.IsStunned(2)).toBe(true) -- a werewolf is only stunned
 	expect(server.humanoid(2).WalkSpeed).toBe(0)
 	-- A stunned wolf cannot attack.
-	place(svc, BOT_D, Vector3.new(0, 3, 47))
+	place(svc, BOT_D, Vector3.new(0, 3, 27))
 	server.fireServer("WolfAttack", 2)
 	expect(alive(svc, BOT_D)).toBe(true)
 	expect(roster.PupsCreated).toBe(0)
 
 	-- The Killer's knife kills a werewolf too.
 	place(svc, BOT_D, Vector3.new(100, 3, 100)) -- out of the way
-	place(svc, 3, Vector3.new(0, 3, 46), true) -- facing +Z, towards the wolf
+	place(svc, 3, Vector3.new(0, 3, 26), true) -- facing +Z, towards the wolf
 	use(server, 3, "Stab")
 	expect(alive(svc, 2)).toBe(false)
 	expect(roster.KillerKills).toBe(2)

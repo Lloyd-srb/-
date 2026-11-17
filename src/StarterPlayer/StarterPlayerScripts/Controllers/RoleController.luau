@@ -210,13 +210,20 @@ function RoleController.Start()
 			return
 		end
 		roster = {}
+		local inMatch = false
 		for _, entry in list do
 			if type(entry) == "table" and type(entry.Id) == "number" and type(entry.Name) == "string" then
 				table.insert(roster, { Id = entry.Id, Name = entry.Name, Alive = entry.Alive == true })
 				if entry.Id == localPlayer.UserId then
+					inMatch = true
 					ClientState.set("Alive", entry.Alive == true)
 				end
 			end
+		end
+		-- Joined after the roles were dealt: only watching (no prompts, no buttons).
+		if #roster > 0 and not inMatch then
+			ClientState.set("Spectator", true)
+			ClientState.set("Alive", false)
 		end
 	end)
 	Remotes.get("AbilityState").OnClientEvent:Connect(function(data: any)
