@@ -243,7 +243,7 @@
 3. เปิดไฟล์ `out/WolfVillage.rbxl` ใน Studio → Publish to Roblox As… → Wolf Village → เลือก **place ใหม่** จากข้อ 1 → Overwrite
 4. ไปที่ create.roblox.com → Wolf Village → Places แล้วส่ง Place ID ของทั้งสอง place ให้ Claude
    (Claude จะใส่ใน `Config.Places`: LobbyPlaceId = start place, MatchPlaceId = place ใหม่)
-5. ใน Game Settings → Security เปิด **Allow Third Party Teleports** ไม่ต้องเปิด (ย้ายในเกมเดียวกัน) — แต่ต้อง Publish เกมก่อน teleport ถึงจะทำงาน
+5. ไม่ต้องเปิด "Allow Third Party Teleports" (ย้ายภายในเกมเดียวกัน) แต่การย้ายจะทำงานหลัง Publish แล้วเท่านั้น
 
 การย้ายระหว่าง place ทดสอบใน Studio ไม่ได้ ต้องเทสต์ในเกมจริงที่ publish แล้ว (Play จากหน้าเว็บ)
 
