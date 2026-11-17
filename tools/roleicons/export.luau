@@ -47,4 +47,16 @@ for _, roleId in order do
 	out.names[roleId] = { en = Strings["Role." .. roleId .. ".Name"].en, th = Strings["Role." .. roleId .. ".Name"].th }
 end
 
+-- The how-to-play pages (pictures + English text) for the tutorial preview.
+local Tutorial = loaded.require(Shared.Tutorial)
+out.tutorial = {}
+for _, page in Tutorial.Pages do
+	table.insert(out.tutorial, {
+		icons = page.Icons,
+		title = Strings[page.Key .. ".Title"].en,
+		body = Strings[page.Key .. ".Body"].en,
+	})
+end
+out.buttons = { nextText = Strings["Tutorial.Next"].en, done = Strings["Tutorial.Done"].en }
+
 fs.writeFile(process.args[1] or "role_icons.json", serde.encode("json", out))

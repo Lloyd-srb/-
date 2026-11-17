@@ -32,6 +32,7 @@ export type Data = {
 	Spin: { LastFreeDay: number, Extra: number },
 	Codes: { [string]: boolean }, -- redeemed codes
 	Receipts: { string }, -- recent Robux purchase ids, oldest first
+	TutorialSeen: boolean, -- read the how-to-play pages
 }
 
 export type Reward = {
@@ -73,6 +74,7 @@ function ProfileLogic.template(): Data
 		Spin = { LastFreeDay = -1, Extra = 0 },
 		Codes = {},
 		Receipts = {},
+		TutorialSeen = false,
 	}
 end
 
@@ -141,6 +143,7 @@ function ProfileLogic.reconcile(raw: any): Data
 		data.Spin.LastFreeDay = math.floor(amount(raw.Spin.LastFreeDay, -1))
 		data.Spin.Extra = count(raw.Spin.Extra)
 	end
+	data.TutorialSeen = raw.TutorialSeen == true
 	if type(raw.Receipts) == "table" then
 		for _, id in raw.Receipts do
 			if type(id) == "string" then
@@ -441,6 +444,7 @@ function ProfileLogic.view(data: Data, now: number): { [string]: any }
 			Need = passNeed,
 			Premium = data.Pass.Premium,
 		},
+		TutorialSeen = data.TutorialSeen,
 		Spin = {
 			Free = DailySpin.freeReady(data.Spin, now),
 			Extra = data.Spin.Extra,

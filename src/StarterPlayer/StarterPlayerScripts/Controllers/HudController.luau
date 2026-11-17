@@ -79,6 +79,13 @@ local function phaseTitle(): string
 	return Loc.format("Phase." .. tostring(name))
 end
 
+local lobbyButton: TextButton
+
+-- Ghosts, spectators and everyone once the game is over can go back.
+local function refreshLobbyButton()
+	lobbyButton.Visible = not ClientState.Alive or phase.Phase == "GameOver"
+end
+
 local function onPhaseChanged(newPhase: any)
 	if type(newPhase) ~= "table" then
 		return
@@ -86,6 +93,7 @@ local function onPhaseChanged(newPhase: any)
 	phase = newPhase
 	phaseLabel.Text = phaseTitle()
 	timerLabel.Visible = phase.Phase ~= "Waiting" and phase.Phase ~= "GameOver"
+	refreshLobbyButton()
 end
 
 local function onRoleAssigned(roleId: any)
@@ -137,12 +145,19 @@ function HudController.Start()
 	roleLabel = label(hud, "RoleLabel")
 	announcement = label(hud, "Announcement")
 	subAnnouncement = label(hud, "SubAnnouncement")
+	lobbyButton = hud:WaitForChild("LobbyButton") :: TextButton
+	lobbyButton.Text = Loc.format("Hud.BackToLobby")
+	lobbyButton.Activated:Connect(function()
+		Remotes.get("BackToLobby"):FireServer()
+		showAnnouncement(Loc.format("Hud.GoingToLobby"), Color3.new(1, 1, 1), nil, ANNOUNCE_SECONDS)
+	end)
 	-- Dead: say so, once, and keep it on the role line. Revived by the
 	-- Doctor: the role line comes back.
 	ClientState.Changed:Connect(function(key: string)
 		if key ~= "Alive" then
 			return
 		end
+		refreshLobbyButton()
 		if not ClientState.Alive and ClientState.Spectator then
 			roleLabel.Text = Loc.format("Hud.Spectating")
 			roleLabel.Visible = true

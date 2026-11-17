@@ -155,3 +155,11 @@ test("codes: too many wrong guesses in a row = a short wait (no guessing codes b
 	task.wait(0.1)
 	expect(server.last("CodeResult", 1)[1].Reason).toBe("TooMany")
 end)
+
+test("how to play: a new player has not read it; after Got it! it is remembered", function()
+	local server = open(1)
+	expect(view(server, 1).TutorialSeen).toBe(false)
+	server.fireServer("TutorialDone", 1)
+	task.wait(0.1)
+	expect(view(server, 1).TutorialSeen).toBe(true)
+end)

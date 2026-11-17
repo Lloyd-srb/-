@@ -17,6 +17,7 @@ local ordered: { Service } = {
 	require(Services.RoundService),
 	require(Services.RoleSelectService),
 	require(Services.MoveService),
+	require(Services.MovementGuard),
 	require(Services.CombatService),
 	require(Services.HouseService),
 	require(Services.HidingService),

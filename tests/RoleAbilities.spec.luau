@@ -351,12 +351,13 @@ test("Chief and Villager", function()
 	-- Day 2: nobody rings the bell, the meeting is forced. 2 votes against 2:
 	-- the Chief's side wins ("Ahem!").
 	server.waitForPhase("Meeting", 10)
-	server.fireServer("VoteSelect", 1, BOT_C) -- the Chief's vote counts twice
+	server.fireServer("VoteSelect", 1, BOT_C) -- the Chief's vote counts twice...
 	server.fireServer("VoteSelect", 2, BOT_D)
 	server.fireServer("VoteSelect", 3, BOT_D)
 	local counts = server.last("VoteCounts", "all")[1]
 	for _, entry in counts do
-		expect(entry.Pending).toBe(2)
+		-- ...but shows as one silhouette (owner, 17 Nov 2026): 1 on BOT_C, 2 on BOT_D.
+		expect(entry.Pending).toBe(if entry.Id == BOT_C then 1 else 2)
 	end
 	local closed = server.waitFor("vote result", function()
 		return server.last("VoteClosed", "all")

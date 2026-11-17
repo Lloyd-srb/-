@@ -22,6 +22,7 @@ local Roster = require(Logic.Roster)
 
 local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
+local MovementGuard = require(script.Parent.MovementGuard)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
@@ -91,9 +92,8 @@ local function release(id: number, spot: Spot?)
 		root.Anchored = false
 	end
 	parked[id] = nil
-	local character = MatchService.CharacterOf(id)
-	if character and spot then
-		character:PivotTo(spotCFrame(spot, "ExitSpot"))
+	if spot then
+		MovementGuard.Warp(id, spotCFrame(spot, "ExitSpot"))
 	end
 	local player = MatchService.PlayerOf(id)
 	if player then
@@ -116,7 +116,7 @@ local function onHide(player: Player, spot: Spot)
 		nextSlot += 1
 		parked[member.Id] = nextSlot
 		root.Anchored = true
-		character:PivotTo(CFrame.new(nextSlot * Config.Hiding.HoldingSpacing, Config.Hiding.HoldingHeight, 0))
+		MovementGuard.Warp(member.Id, CFrame.new(nextSlot * Config.Hiding.HoldingSpacing, Config.Hiding.HoldingHeight, 0))
 	end
 	-- Only the hider learns the spot (their camera moves there). The body is
 	-- parked far away, so keep streaming focused on the spot, not the body.

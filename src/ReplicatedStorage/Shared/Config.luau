@@ -153,7 +153,13 @@ Config.Timers = {
 Config.Vote = {
 	MeetingsPerDay = 1, -- [GDD]
 	DefaultWeight = 1,
-	ChiefWeight = 2, -- [GDD]
+	ChiefWeight = 2, -- [GDD] counted twice, but shown as one silhouette ([owner] 17 Nov 2026)
+	-- [owner] 17 Nov 2026: nobody is exiled with fewer votes than this (the Chief's
+	-- vote counts 2), so one lone vote cannot exile someone.
+	MinVotesToExile = 2,
+	-- [owner] 17 Nov 2026: in the last seconds every vote is locked (selections are
+	-- confirmed) and the Chief's silhouette shows a crown.
+	LockBeforeEnd = 5,
 	AllowSelfVote = false, -- [ASSUMED]
 	ConfirmIsFinal = true, -- [ASSUMED] a confirmed vote cannot be changed
 	CallHold = 1, -- [ASSUMED] seconds holding E on the meeting bell
@@ -509,19 +515,21 @@ Config.DailySpin = {
 	FreeSpinsPerDay = 1, -- [GDD]
 	-- [GDD] weights in percent (sum = 100)
 	Prizes = {
+		-- [owner] 17 Nov 2026: Diamond prizes halved (10 / 25 / 50 / 100, was 20 / 50 / 100 / 200)
+		-- so the free spin gives about 7 diamonds a day instead of 14. Odds unchanged.
 		{ Kind = "Coins", Amount = 20, Weight = 30 },
-		{ Kind = "Diamonds", Amount = 20, Weight = 15 },
+		{ Kind = "Diamonds", Amount = 10, Weight = 15 },
 		{ Kind = "Coins", Amount = 50, Weight = 22 },
-		{ Kind = "Diamonds", Amount = 50, Weight = 8 },
+		{ Kind = "Diamonds", Amount = 25, Weight = 8 },
 		{ Kind = "Coins", Amount = 100, Weight = 12 },
-		{ Kind = "Diamonds", Amount = 100, Weight = 4 },
+		{ Kind = "Diamonds", Amount = 50, Weight = 4 },
 		{ Kind = "Coins", Amount = 200, Weight = 6 },
-		{ Kind = "Diamonds", Amount = 200, Weight = 1.5 },
+		{ Kind = "Diamonds", Amount = 100, Weight = 1.5 },
 		{ Kind = "Role", Id = "Killer", Weight = 1 },
 		{ Kind = "Skin", Id = "WolfSpin", Weight = 0.5 },
 	} :: { SpinPrize },
 	DuplicateRoleCoins = 2500, -- [GDD] already own Killer
-	DuplicateSkinDiamonds = 200, -- [default] already own the spin wolf skin
+	DuplicateSkinDiamonds = 100, -- [owner] halved with the other Diamond prizes (was 200 [default])
 	ResetHourUtc = 0, -- [ASSUMED] OWNER_TODO 20: the free spin comes back at 00:00 UTC (07:00 Thai time)
 }
 
@@ -605,6 +613,28 @@ Config.Shop = {
 	-- [ASSUMED] a Robux purchase of something already owned (two quick
 	-- clicks) gives its price back as Diamonds instead.
 	RefundDuplicatesAsDiamonds = true,
+}
+
+--------------------------------------------------------------------------------
+-- Fair play (owner, 17 Nov 2026)
+--------------------------------------------------------------------------------
+
+-- Speed / teleport check (MovementGuard). [ASSUMED] tuning values.
+Config.AntiCheat = {
+	Enabled = true,
+	InStudio = false, -- Studio testers teleport on purpose
+	Interval = 0.5, -- seconds between checks
+	Tolerance = 1.4, -- allowed speed x this (lag, slopes)
+	Slack = 6, -- studs always allowed on top
+	WarpGrace = 1.5, -- seconds after a move made by the game
+}
+
+-- AFK: a night where a player did nothing at all (did not walk, press a
+-- "hold" prompt, use any button or type in chat) does not count as a night
+-- survived. Hiding under a bed is a plan, not AFK: pressing "hide" counts.
+Config.Afk = {
+	Enabled = true,
+	MoveStuds = 1, -- walking at least this far in one check counts as doing something
 }
 
 --------------------------------------------------------------------------------

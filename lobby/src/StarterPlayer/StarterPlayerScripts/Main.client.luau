@@ -12,7 +12,7 @@ local Controllers = script.Parent:WaitForChild("Controllers")
 
 type Controller = { Start: () -> () }
 
-for _, name in { "PadController", "MenuController", "TitleController" } do
+for _, name in { "PadController", "MenuController", "TitleController", "TutorialController" } do
 	task.spawn(function()
 		local controller = (require :: any)(Controllers:WaitForChild(name)) :: Controller
 		xpcall(controller.Start, function(err)

@@ -31,6 +31,7 @@ Remotes.Names = {
 	"VoteCounts",
 	"VoteMine",
 	"VoteClosed",
+	"VoteLocked", -- the last seconds of the meeting: no more changes (owner, 17 Nov 2026)
 	"GameOver",
 	"FormChanged", -- "Human" | "Wolf" | "Pup" (own form)
 	"PackChanged", -- wolf side only: ids of the pack
@@ -67,6 +68,8 @@ Remotes.Names = {
 	"Equip", -- Lobby: wear a skin / title (slot, id or "")
 	"SpinRequest", -- Lobby: use a Daily Spin
 	"CodeRedeem", -- Lobby: redeem a code (text)
+	"TutorialDone", -- Lobby: the player read the how-to-play pages
+	"BackToLobby", -- Match: a ghost / spectator / anyone after the end goes back
 	"AbilityUse",
 	"ItemUse",
 	"Like",

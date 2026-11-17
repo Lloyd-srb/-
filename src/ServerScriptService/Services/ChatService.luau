@@ -121,6 +121,7 @@ function ChatService.Init()
 			if not speaker then
 				return true -- system messages
 			end
+			MatchService.MarkActive(speaker.UserId) -- typing is doing something (AFK rule)
 			return ChatRules.canDeliver(name, ChatService.Viewer(speaker.UserId), ChatService.Viewer(target.UserId))
 		end
 		channels[name] = channel

@@ -2,9 +2,10 @@
 Draws the role icons (exported by export.luau) the way the game builds them:
 rounded frames on a 100x100 grid, clipped to a circle, with a faction ring.
 
-  python3 tools/roleicons/render.py icons.json docs/role_icons.png [docs/role_roll_mock.png]
+  python3 tools/roleicons/render.py icons.json docs/role_icons.png [docs/role_roll_mock.png [docs/tutorial_pages.png]]
 
-The second image is a mock-up of the intro screen (the reel stopped on one role).
+The second image is a mock-up of the intro screen (the reel stopped on one role),
+the third the lobby's how-to-play pages.
 """
 import json
 import sys
@@ -120,8 +121,63 @@ def mock(data, path, role="Sheriff"):
     img.convert("RGB").save(path)
 
 
+def wrap(draw, text, fnt, width):
+    lines, line = [], ""
+    for word in text.split():
+        trial = (line + " " + word).strip()
+        if draw.textlength(trial, font=fnt) <= width:
+            line = trial
+        else:
+            lines.append(line)
+            line = word
+    if line:
+        lines.append(line)
+    return lines
+
+
+def tutorial(data, path):
+    """All how-to-play pages side by side (lobby TutorialUI)."""
+    pages = data["tutorial"]
+    pw, ph, gap, cols = 560, 400, 24, 3
+    rows = (len(pages) + cols - 1) // cols
+    img = Image.new("RGBA", (cols * (pw + gap) + gap, rows * (ph + gap) + gap), (40, 60, 45, 255))
+    draw = ImageDraw.Draw(img)
+    title_font, body_font, small = font(30), font(17, False), font(15, False)
+    for index, page in enumerate(pages):
+        x = gap + (index % cols) * (pw + gap)
+        y = gap + (index // cols) * (ph + gap)
+        draw.rounded_rectangle([x, y, x + pw, y + ph], radius=20, fill=(24, 26, 38, 255))
+        pic = [x + 16, y + 16, x + pw - 16, y + 16 + int(ph * 0.36)]
+        draw.rounded_rectangle(pic, radius=14, fill=(44, 48, 68, 255))
+        icons = page["icons"]
+        by_width = (pic[2] - pic[0] - 24 - (len(icons) - 1) * 12) / len(icons)
+        size = int(min((pic[3] - pic[1]) * 0.72, by_width))
+        total = len(icons) * size + (len(icons) - 1) * 12
+        ix = (pic[0] + pic[2]) // 2 - total // 2
+        for role in icons:
+            ic = icon(data["icons"][role], data["rings"][role], size)
+            img.alpha_composite(ic, (ix, (pic[1] + pic[3]) // 2 - ic.height // 2))
+            ix += size + 12
+        tw = draw.textlength(page["title"], font=title_font)
+        draw.text((x + (pw - tw) / 2, pic[3] + 10), page["title"], font=title_font, fill=(255, 255, 255, 255))
+        ty = pic[3] + 56
+        for line in wrap(draw, page["body"], body_font, pw - 60):
+            lw = draw.textlength(line, font=body_font)
+            draw.text((x + (pw - lw) / 2, ty), line, font=body_font, fill=(200, 205, 220, 255))
+            ty += 24
+        draw.text((x + 20, y + ph - 36), f"{index + 1} / {len(pages)}", font=small, fill=(200, 205, 220, 255))
+        label = data["buttons"]["done"] if index == len(pages) - 1 else data["buttons"]["nextText"]
+        bx = [x + pw - 170, y + ph - 58, x + pw - 16, y + ph - 16]
+        draw.rounded_rectangle(bx, radius=12, fill=(90, 200, 110, 255))
+        bw = draw.textlength(label, font=font(20))
+        draw.text(((bx[0] + bx[2] - bw) / 2, bx[1] + 9), label, font=font(20), fill=(255, 255, 255, 255))
+    img.convert("RGB").save(path)
+
+
 if __name__ == "__main__":
     data = json.load(open(sys.argv[1]))
     sheet(data, sys.argv[2])
     if len(sys.argv) > 3:
         mock(data, sys.argv[3])
+    if len(sys.argv) > 4 and data.get("tutorial"):
+        tutorial(data, sys.argv[4])

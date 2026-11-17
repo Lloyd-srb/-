@@ -166,10 +166,52 @@ local Strings: { [string]: Entry } = {
 	["Codes.Reason.Expired"] = { en = "This code has expired.", th = "โค้ดนี้หมดอายุแล้ว" },
 	["Codes.Reason.TooMany"] = { en = "Too many wrong codes. Try again in a few minutes.", th = "ใส่โค้ดผิดหลายครั้งเกินไป ลองใหม่ในอีกสักครู่" },
 
+	-- How to play (lobby, owner 17 Nov 2026)
+	["Tutorial.Next"] = { en = "Next", th = "ต่อไป" },
+	["Tutorial.Done"] = { en = "Got it!", th = "เข้าใจแล้ว!" },
+	["Tutorial.Open"] = { en = "How to play", th = "วิธีเล่น" },
+	["Tutorial.Page"] = { en = "{page:int} / {count:int}", th = "{page:int} / {count:int}" },
+	["Tutorial.1.Title"] = { en = "Who is the werewolf?", th = "ใครคือหมาป่า?" },
+	["Tutorial.1.Body"] = {
+		en = "Up to 12 villagers live here, and one of them is secretly a werewolf. The village must find it before it eats everyone. Nobody knows anyone's role.",
+		th = "หมู่บ้านนี้มีชาวบ้านไม่เกิน 12 คน และหนึ่งในนั้นคือหมาป่าที่ปลอมตัวอยู่ ชาวบ้านต้องหาให้เจอก่อนจะถูกกินหมด ไม่มีใครรู้บทของคนอื่น",
+	},
+	["Tutorial.2.Title"] = { en = "The day", th = "กลางวัน" },
+	["Tutorial.2.Body"] = {
+		en = "Do your task of the day for coins. After 3 minutes anyone can ring the bell on the meeting table. At the meeting everyone votes; at least 2 votes are needed to throw someone out.",
+		th = "ทำภารกิจประจำวันเพื่อรับ coin ผ่านไป 3 นาทีใครก็กดระฆังที่โต๊ะประชุมได้ ในที่ประชุมทุกคนโหวต ต้องได้อย่างน้อย 2 เสียงถึงจะไล่ใครออกได้",
+	},
+	["Tutorial.3.Title"] = { en = "The night", th = "กลางคืน" },
+	["Tutorial.3.Body"] = {
+		en = "At night everyone is sent into a house. The werewolf breaks doors (5 hits) and searches beds and wardrobes. Hide under the bed or in the wardrobe! Anyone in the forest glows red to the wolves.",
+		th = "ตอนกลางคืนทุกคนถูกส่งเข้าบ้าน หมาป่าพังประตู (ตี 5 ครั้ง) และค้นเตียงกับตู้ ซ่อนใต้เตียงหรือในตู้ให้ดี! ใครอยู่ในป่าจะเรืองแสงสีแดงให้หมาป่าเห็น",
+	},
+	["Tutorial.4.Title"] = { en = "Roles", th = "บทบาท" },
+	["Tutorial.4.Body"] = {
+		en = "Before the match, pick 3 roles you own; you get one of them. Each role has a power: use it with its button, or by holding E on a body or a door.",
+		th = "ก่อนเริ่มเกมเลือก 3 บทที่คุณมี แล้วจะได้หนึ่งในนั้น แต่ละบทมีพลังพิเศษ ใช้ด้วยปุ่มบนจอ หรือกด E ค้างที่ศพหรือประตู",
+	},
+	["Tutorial.5.Title"] = { en = "Lone roles", th = "บทที่เล่นคนเดียว" },
+	["Tutorial.5.Body"] = {
+		en = "The Killer wins by outlasting everyone. The Fool wins only by being voted out. And watch out: the werewolf's first victim at night becomes a Wolf Pup!",
+		th = "ฆาตกรชนะเมื่อเหลือรอดเป็นคนท้ายๆ คนบ้าชนะเมื่อถูกโหวตไล่ออกเท่านั้น และระวัง: เหยื่อคนแรกของหมาป่าตอนกลางคืนจะกลายเป็นลูกหมาป่า!",
+	},
+	["Tutorial.6.Title"] = { en = "Ghosts and rewards", th = "ผีและรางวัล" },
+	["Tutorial.6.Body"] = {
+		en = "The dead become ghosts: they can walk around and chat with other ghosts, or go back to the lobby. Survive nights, finish tasks and win to earn coins, EXP and Diamonds.",
+		th = "คนตายจะกลายเป็นผี เดินได้และคุยกับผีด้วยกันได้ หรือกลับ Lobby ก็ได้ รอดหลายคืน ทำภารกิจ และชนะ เพื่อรับ coin, EXP และ Diamond",
+	},
+
 	-- HUD
 	["RoleRoll.YouAre"] = { en = "You are {role}!", th = "คุณคือ {role}!" },
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
+	["Hud.BackToLobby"] = { en = "Back to lobby", th = "กลับ Lobby" },
+	["Hud.GoingToLobby"] = { en = "Going back to the lobby...", th = "กำลังกลับ Lobby..." },
+	["Hud.NoLobbyTeleport"] = {
+		en = "Going back to the lobby does not work in Studio (or the Lobby place id is not set).",
+		th = "ใน Studio กลับ Lobby ไม่ได้ (หรือยังไม่ได้ใส่ Place ID ของ Lobby)",
+	},
 	["Hud.Spectating"] = {
 		en = "This match had already started: you are watching",
 		th = "เกมนี้เริ่มไปแล้ว: คุณเป็นผู้ชม",
@@ -215,6 +257,8 @@ local Strings: { [string]: Entry } = {
 	["Vote.Confirmed"] = { en = "Vote confirmed", th = "ยืนยันโหวตแล้ว" },
 	["Vote.Exiled"] = { en = "{name} was exiled.", th = "{name} ถูกไล่ออกจากหมู่บ้าน" },
 	["Vote.NoExile"] = { en = "Nobody was exiled.", th = "ไม่มีใครถูกไล่ออก" },
+	["Vote.TooFewVotes"] = { en = "Not enough votes. Nobody was exiled.", th = "เสียงโหวตไม่พอ ไม่มีใครถูกไล่ออก" },
+	["Vote.Locked"] = { en = "Votes are locked!", th = "ล็อคโหวตแล้ว!" },
 	["Vote.ChiefTieBreak"] = { en = "Ahem!", th = "Ahem!" },
 	["Vote.RandomTieBreak"] = { en = "A tie! Fate decides...", th = "คะแนนเสมอ! ปล่อยให้โชคชะตาตัดสิน..." },
 	["Vote.NightFalls"] = { en = "Night falls in {seconds:int} seconds", th = "กลางคืนจะมาถึงในอีก {seconds:int} วินาที" },

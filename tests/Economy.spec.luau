@@ -140,7 +140,7 @@ test("daily spin: odds and duplicate conversion", function()
 		counts[key] = (counts[key] or 0) + 1
 	end
 	expect(counts.Coins20 / rolls).toBeNear(0.30, 0.01)
-	expect(counts.Diamonds50 / rolls).toBeNear(0.08, 0.005)
+	expect(counts.Diamonds25 / rolls).toBeNear(0.08, 0.005)
 	expect(counts.RoleKiller / rolls).toBeNear(0.01, 0.003)
 	expect(counts.SkinWolfSpin / rolls).toBeNear(0.005, 0.002)
 
@@ -152,7 +152,7 @@ test("daily spin: odds and duplicate conversion", function()
 			expect(grant).toEqual({ Kind = "Coins", Amount = 2500, ConvertedFrom = "Killer" })
 			sawRoleDup = true
 		elseif grant.ConvertedFrom == "WolfSpin" then
-			expect(grant).toEqual({ Kind = "Diamonds", Amount = 200, ConvertedFrom = "WolfSpin" })
+			expect(grant).toEqual({ Kind = "Diamonds", Amount = 100, ConvertedFrom = "WolfSpin" })
 			sawSkinDup = true
 		end
 	end

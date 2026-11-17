@@ -114,6 +114,18 @@ test("a player gets one of their own picks when it is free", function()
 	end
 end)
 
+test("owner rule: a player whose picks are gone never gets the Killer or Fool unpicked", function()
+	for seed = 1, 200 do
+		-- Everyone owns everything but picks the same three village roles, so
+		-- most of them fall back. Killer / Fool are free, yet nobody picked them.
+		local list = candidates(12, { "Seer", "Monk", "Engineer" }, ALL)
+		local result = RoleAssignment.assign(list, RoleAssignment.composition(12), Rng.seeded(seed))
+		for _, roleId in result do
+			expect(roleId ~= "Killer" and roleId ~= "Fool").toBe(true)
+		end
+	end
+end)
+
 test("the wolf is spread evenly (random, not chosen)", function()
 	local wolfCount = {}
 	for seed = 1, 1200 do

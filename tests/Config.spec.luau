@@ -51,7 +51,7 @@ test("crate and spin weights sum to 100%", function()
 	expect(spin).toBe(100)
 end)
 
-test("spin average matches the GDD (about 41 coins + 14 diamonds)", function()
+test("spin average: about 41 coins + 7 diamonds (owner halved the diamonds, 17 Nov 2026)", function()
 	local coins, diamonds = 0, 0
 	for _, entry in Config.DailySpin.Prizes do
 		if entry.Kind == "Coins" then
@@ -61,5 +61,5 @@ test("spin average matches the GDD (about 41 coins + 14 diamonds)", function()
 		end
 	end
 	expect(coins).toBeNear(41, 0.01)
-	expect(diamonds).toBeNear(14, 0.01)
+	expect(diamonds).toBeNear(7, 0.01)
 end)

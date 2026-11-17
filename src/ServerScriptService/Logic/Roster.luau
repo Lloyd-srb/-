@@ -249,10 +249,13 @@ function Roster.promotePup(roster: Roster): Member?
 	return pup
 end
 
--- Call when a night ends: everyone still alive survived it.
-function Roster.creditNightSurvived(roster: Roster)
+-- Call when a night ends: everyone still alive survived it. With `counts`,
+-- only members it accepts get the night (the AFK rule).
+function Roster.creditNightSurvived(roster: Roster, counts: ((member: Member) -> boolean)?)
 	for _, member in Roster.alive(roster) do
-		member.NightsSurvived += 1
+		if counts == nil or counts(member) then
+			member.NightsSurvived += 1
+		end
 	end
 end
 

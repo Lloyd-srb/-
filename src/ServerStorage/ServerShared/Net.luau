@@ -14,6 +14,13 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Net = {}
 
 local calls: { [number]: { [string]: { number } } } = {} -- by UserId
+local activityHandlers: { (Player) -> () } = {}
+
+-- Called with the player every time one of their intents is accepted
+-- (the Match place uses it for the AFK rule).
+function Net.onActivity(handler: (Player) -> ())
+	table.insert(activityHandlers, handler)
+end
 
 local function allow(player: Player, name: string, rate: number, window: number): boolean
 	local now = os.clock()
@@ -52,6 +59,9 @@ function Net.on(name: string, handler: (player: Player, ...any) -> (), rate: num
 	local perSeconds = window or Config.Net.DefaultWindow
 	Remotes.get(name).OnServerEvent:Connect(function(player: Player, ...: any)
 		if allow(player, name, maxCalls, perSeconds) then
+			for _, notify in activityHandlers do
+				notify(player)
+			end
 			handler(player, ...)
 		end
 	end)

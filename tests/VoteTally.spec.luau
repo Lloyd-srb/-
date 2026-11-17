@@ -77,6 +77,21 @@ test("tie where the chief voted for neither side: random", function()
 	expect(result.Tied).toEqual({ 5, 6 })
 end)
 
+test("one lone vote exiles nobody (at least 2 votes; the chief alone has 2)", function()
+	local result = VoteTally.tally({ [1] = ballot(5) }, nil, Rng.seeded(1))
+	expect(result.Exiled).toBeNil()
+	expect(result.Resolution).toBe("TooFewVotes")
+	local tie = VoteTally.tally({ [1] = ballot(5), [2] = ballot(6) }, nil, Rng.seeded(1))
+	expect(tie.Resolution).toBe("TooFewVotes") -- 1 - 1: nobody
+	local chief = VoteTally.tally({ [1] = ballot(5) }, 1, Rng.seeded(1))
+	expect(chief.Exiled).toBe(5)
+end)
+
+test("the chief's vote is one silhouette like everyone else's", function()
+	local counts = VoteTally.publicCounts({ [1] = ballot(5), [2] = ballot(5, false) }, 1)
+	expect(counts[5]).toEqual({ Pending = 1, Confirmed = 1 })
+end)
+
 test("publicCounts shows gray/blue numbers and never voter ids", function()
 	local counts = VoteTally.publicCounts({
 		[1] = ballot(5, false),

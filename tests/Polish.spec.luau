@@ -35,6 +35,7 @@ local LATIN_IN_THAI = {
 	["End.Mvp"] = true,
 	["Item.FirstAid.Name"] = true,
 	["Item.Cross.Name"] = true,
+	["Tutorial.Page"] = true, -- "1 / 6"
 }
 
 local function hasThai(text)

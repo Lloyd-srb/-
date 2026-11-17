@@ -3,12 +3,15 @@
 	VoteTally — pure voting rules (GDD §6.2).
 
 	- Most votes is exiled. Nobody voted = nobody is exiled.
+	- [owner] At least Config.Vote.MinVotesToExile votes are needed to exile
+	  anyone ("TooFewVotes" otherwise).
 	- A selection that was not confirmed is auto-confirmed when time runs out,
 	  so the final tally counts every ballot.
 	- The Chief's vote weighs 2. On a tie, the side the Chief voted for wins
 	  ("Ahem!"). Otherwise one of the tied players is exiled at random.
 	- Clients only ever receive `publicCounts` (silhouette numbers), never
-	  who voted for whom.
+	  who voted for whom. The Chief's vote shows as one silhouette like any
+	  other ([owner]); only after the lock is it marked with a crown.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,7 +24,7 @@ export type Ballot = {
 	Confirmed: boolean,
 }
 
-export type Resolution = "NoVotes" | "Majority" | "ChiefTieBreak" | "RandomTieBreak"
+export type Resolution = "NoVotes" | "TooFewVotes" | "Majority" | "ChiefTieBreak" | "RandomTieBreak"
 
 export type Result = {
 	Exiled: number?,
@@ -55,20 +58,19 @@ function VoteTally.isValidVote(voterId: number, targetId: number, alive: { [numb
 	return true
 end
 
--- What every client may see: silhouette counts per target.
-function VoteTally.publicCounts(ballots: { [number]: Ballot }, chiefId: number?): { [number]: PublicCount }
+-- What every client may see: one silhouette per voter (the Chief's too).
+function VoteTally.publicCounts(ballots: { [number]: Ballot }, _chiefId: number?): { [number]: PublicCount }
 	local counts: { [number]: PublicCount } = {}
-	for voterId, ballot in ballots do
+	for _, ballot in ballots do
 		local entry = counts[ballot.Target]
 		if entry == nil then
 			entry = { Pending = 0, Confirmed = 0 }
 			counts[ballot.Target] = entry
 		end
-		local weight = weightOf(voterId, chiefId)
 		if ballot.Confirmed then
-			entry.Confirmed += weight
+			entry.Confirmed += 1
 		else
-			entry.Pending += weight
+			entry.Pending += 1
 		end
 	end
 	return counts
@@ -88,6 +90,9 @@ function VoteTally.tally(ballots: { [number]: Ballot }, chiefId: number?, rng: R
 
 	if top == 0 then
 		return { Exiled = nil, Resolution = "NoVotes", Counts = counts, Tied = {} }
+	end
+	if top < Config.Vote.MinVotesToExile then
+		return { Exiled = nil, Resolution = "TooFewVotes", Counts = counts, Tied = {} }
 	end
 
 	local tied: { number } = {}

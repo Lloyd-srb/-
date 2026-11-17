@@ -175,8 +175,21 @@ end
 
 function EndService.Init() end
 
+-- A ghost, a spectator, or anyone once the game is over may go back to the
+-- lobby at once (owner, 17 Nov 2026). The living must play on.
+local function onBackToLobby(player: Player)
+	local member = MatchService.MemberOf(player)
+	if member and member.Alive and not MatchService.Winner then
+		return
+	end
+	if not Travel.toLobby({ player }) then
+		Net.fire(player, "Announcement", { Key = "Hud.NoLobbyTeleport" })
+	end
+end
+
 function EndService.Start()
 	Net.on("Like", onLike, 10, 5)
+	Net.on("BackToLobby", onBackToLobby, 2, 10)
 
 	RoundService.PhaseStarted:Connect(function(state: PhaseMachine.PhaseState)
 		if state.Phase == "GameOver" then

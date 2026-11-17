@@ -17,6 +17,7 @@ local function path(root, names)
 end
 
 test("Hud has everything HudController looks up", function()
+	expect(game:GetService("StarterGui").Hud:FindFirstChild("LobbyButton") ~= nil).toBe(true)
 	local hud = StarterGui:FindFirstChild("Hud")
 	expect(hud ~= nil).toBe(true)
 	for _, names in {

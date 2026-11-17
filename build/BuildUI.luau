@@ -165,6 +165,23 @@ local function buildHud()
 	toast.Visible = false
 	textStroke(toast, 2)
 
+	-- Ghosts, spectators and everyone after the end: back to the lobby (owner, 17 Nov 2026).
+	local lobbyButton = Instance.new("TextButton")
+	lobbyButton.Name = "LobbyButton"
+	lobbyButton.Size = UDim2.new(0, 190, 0, 44)
+	lobbyButton.Position = UDim2.new(1, -16, 0, 48)
+	lobbyButton.AnchorPoint = Vector2.new(1, 0)
+	lobbyButton.BackgroundColor3 = Colors.PanelLight
+	lobbyButton.BorderSizePixel = 0
+	lobbyButton.FontFace = TITLE_FONT
+	lobbyButton.TextColor3 = Colors.Text
+	lobbyButton.TextScaled = true
+	lobbyButton.Text = ""
+	lobbyButton.Visible = false
+	lobbyButton.Parent = hud
+	corner(lobbyButton, 12)
+	maxTextSize(lobbyButton, 20)
+
 	local announcement = label(
 		"Announcement",
 		hud,
@@ -212,6 +229,21 @@ local function buildSilhouetteTemplate(parent: Instance)
 	corner(head, 5)
 	local body = frame("Body", silhouette, UDim2.new(0, 15, 0, 10), UDim2.new(0.5, 0, 1, 0), Vector2.new(0.5, 1), Colors.Text, 0)
 	corner(body, 5)
+	-- The Chief's crown (shown on one silhouette once the votes are locked).
+	local crown = Instance.new("Frame")
+	crown.Name = "Crown"
+	crown.Size = UDim2.new(0, 12, 0, 6)
+	crown.Position = UDim2.new(0.5, 0, 0, -1)
+	crown.AnchorPoint = Vector2.new(0.5, 1)
+	crown.BackgroundTransparency = 1
+	crown.Visible = false
+	crown.Parent = silhouette
+	local gold = rgb(255, 205, 60)
+	frame("Band", crown, UDim2.new(1, 0, 0, 3), UDim2.new(0.5, 0, 1, 0), Vector2.new(0.5, 1), gold, 0)
+	for index, x in { 0.15, 0.5, 0.85 } do
+		local point = frame("Point" .. index, crown, UDim2.new(0, 4, 0, 4), UDim2.new(x, 0, 0.45, 0), Vector2.new(0.5, 0.5), gold, 0)
+		point.Rotation = 45
+	end
 end
 
 local function buildCardTemplate(parent: Instance)

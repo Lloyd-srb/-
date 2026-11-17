@@ -301,6 +301,43 @@ local function buildMenuUI()
 	buildWallet(gui)
 end
 
+--------------------------------------------------------------------------------
+-- TutorialUI: how to play (owner, 17 Nov 2026) — picture, title, text, Next
+--------------------------------------------------------------------------------
+
+local function buildTutorialUI()
+	local gui = screenGui("TutorialUI", 10)
+	gui.Enabled = false
+	local panel = frame("Panel", gui, UDim2.new(0.9, 0, 0.82, 0), UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), Colors.Panel, 0.03)
+	corner(panel, 22)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(720, 520)
+	limit.Parent = panel
+
+	-- The picture: role icons in a row (filled by TutorialController).
+	local picture = frame("Picture", panel, UDim2.new(1, -40, 0.36, 0), UDim2.new(0.5, 0, 0, 20), Vector2.new(0.5, 0), Colors.PanelLight, 0)
+	corner(picture, 16)
+	local row = Instance.new("UIListLayout")
+	row.FillDirection = Enum.FillDirection.Horizontal
+	row.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	row.VerticalAlignment = Enum.VerticalAlignment.Center
+	row.Padding = UDim.new(0, 14)
+	row.SortOrder = Enum.SortOrder.LayoutOrder
+	row.Parent = picture
+
+	label("TitleLabel", panel, UDim2.new(1, -40, 0.1, 0), UDim2.new(0.5, 0, 0.4, 0), Vector2.new(0.5, 0), TITLE_FONT, 34)
+	local body = label("BodyLabel", panel, UDim2.new(1, -60, 0.3, 0), UDim2.new(0.5, 0, 0.52, 0), Vector2.new(0.5, 0), BODY_FONT, 22)
+	body.TextColor3 = Colors.SubText
+	body.TextYAlignment = Enum.TextYAlignment.Top
+	local page = label("PageLabel", panel, UDim2.new(0, 120, 0, 24), UDim2.new(0, 24, 1, -26), Vector2.new(0, 1), BODY_FONT, 18)
+	page.TextXAlignment = Enum.TextXAlignment.Left
+	page.TextColor3 = Colors.SubText
+	local nextButton = button("NextButton", panel, UDim2.new(0, 180, 0, 48), Colors.Start)
+	nextButton.Position = UDim2.new(1, -20, 1, -18)
+	nextButton.AnchorPoint = Vector2.new(1, 1)
+end
+
 buildQueueUI()
 buildMenuUI()
+buildTutorialUI()
 print("[BuildLobbyUI] done")

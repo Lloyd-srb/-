@@ -168,6 +168,11 @@ function EconomyService.Start()
 	Net.on("Equip", onEquip, 10, 5)
 	Net.on("SpinRequest", onSpin, 3, 5)
 	Net.on("CodeRedeem", onCode, 5, 10)
+	Net.on("TutorialDone", function(player: Player)
+		Profiles.Update(player, function(profile: ProfileLogic.Data)
+			profile.TutorialSeen = true
+		end)
+	end, 3, 10)
 
 	Profiles.Loaded:Connect(function(player: Player)
 		sendView(player)

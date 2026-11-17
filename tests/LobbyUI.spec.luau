@@ -138,3 +138,28 @@ test("lobby: text keys built at runtime all exist (skins, titles, reasons, rewar
 	expect(table.find(Config.Titles, Config.SeasonPass.FreeTitle) ~= nil).toBe(true)
 	expect(table.find(Config.Titles, Config.SeasonPass.PremiumTitle) ~= nil).toBe(true)
 end)
+
+test("how to play: every page has a picture (known icons), a title and text; the screen exists", function()
+	local Tutorial = lobby.require(lobby.game.ReplicatedStorage.Shared.Tutorial)
+	local RoleIcons = lobby.require(lobby.game.ReplicatedStorage.Shared.RoleIcons)
+	expect(#Tutorial.Pages >= 4).toBe(true)
+	for _, page in Tutorial.Pages do
+		expect(Strings[page.Key .. ".Title"] ~= nil).toBe(true)
+		expect(Strings[page.Key .. ".Body"] ~= nil).toBe(true)
+		expect(#page.Icons >= 1).toBe(true)
+		for _, roleId in page.Icons do
+			expect(RoleIcons.Designs[roleId] ~= nil).toBe(true)
+		end
+	end
+	for _, key in { "Tutorial.Next", "Tutorial.Done", "Tutorial.Open", "Tutorial.Page" } do
+		expect(Strings[key] ~= nil).toBe(true)
+	end
+	local panel = StarterGui.TutorialUI.Panel
+	expect(StarterGui.TutorialUI.Enabled).toBe(false)
+	for _, name in { "TitleLabel", "BodyLabel", "PageLabel" } do
+		expect(panel[name]:IsA("TextLabel")).toBe(true)
+	end
+	expect(panel.Picture:IsA("Frame")).toBe(true)
+	expect(panel.NextButton:IsA("TextButton")).toBe(true)
+	expect(StarterGui.TutorialUI.DisplayOrder > StarterGui.MenuUI.DisplayOrder).toBe(true)
+end)

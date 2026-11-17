@@ -21,6 +21,7 @@ local WolfPack = require(Logic.WolfPack)
 
 local BotBody = require(script.Parent.BotBody)
 local Net = require(script.Parent.Net)
+local Prompts = require(script.Parent.Prompts)
 local ProfileService = require(script.Parent.ProfileService)
 
 local BOT_ID_BASE = -1000 -- Studio test clients already use small negative UserIds
@@ -46,6 +47,7 @@ local isNight = false
 local botBodies: { [number]: Model } = {} -- debug bots have no Player
 local corpses: { [number]: Model } = {} -- bodies of the dead (a dead player's character is their ghost)
 local picks: { [number]: { Config.RoleId } } = {} -- confirmed on the role screen
+local activeTonight: { [number]: boolean } = {} -- did something this night (AFK rule)
 
 --------------------------------------------------------------------------------
 -- Queries
@@ -85,6 +87,15 @@ end
 
 function MatchService.IsNight(): boolean
 	return isNight
+end
+
+-- The member did something (walked, pressed a prompt or button, chatted).
+function MatchService.MarkActive(id: number)
+	activeTonight[id] = true
+end
+
+function MatchService.WasActiveTonight(id: number): boolean
+	return activeTonight[id] == true
 end
 
 -- The member's body, alive or dead (a corpse stays in the world).
@@ -543,6 +554,7 @@ function MatchService.BeginNight(night: number): Roster.Member?
 	nightsStarted = night
 	isNight = true
 	MatchService.DeathsThisNight = 0
+	table.clear(activeTonight)
 	if WolfPack.shouldPromote(night, MatchService.Roster.MainWolfLostAtNight) then
 		local promoted = Roster.promotePup(MatchService.Roster)
 		if promoted then
@@ -559,7 +571,12 @@ end
 
 function MatchService.EndNight()
 	isNight = false
-	Roster.creditNightSurvived(MatchService.Roster)
+	-- A night spent doing nothing at all is not a night survived (owner, 17 Nov 2026).
+	Roster.creditNightSurvived(MatchService.Roster, if Config.Afk.Enabled
+		then function(member: Roster.Member): boolean
+			return member.IsBot or activeTonight[member.Id] == true
+		end
+		else nil)
 end
 
 --------------------------------------------------------------------------------
@@ -582,6 +599,13 @@ function MatchService.Init()
 end
 
 function MatchService.Start()
+	Net.onActivity(function(player: Player)
+		MatchService.MarkActive(player.UserId)
+	end)
+	Prompts.onTriggered(function(player: Player)
+		MatchService.MarkActive(player.UserId)
+	end)
+
 	Net.on("RequestSync", function(player: Player)
 		if MatchService.Started then
 			sendRole(player)

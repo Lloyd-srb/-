@@ -7,11 +7,15 @@
 	  to the table and cannot walk.
 	- Clients send "select" / "confirm" intents. Everyone receives silhouette
 	  counts only; who voted for whom never leaves the server.
-	- When the timer ends, unconfirmed selections count, the result is tallied
-	  and the exiled player dies without a role reveal.
+	- [owner] Config.Vote.LockBeforeEnd seconds before the end every vote is
+	  locked (selections are confirmed, nothing can change) and the Chief's
+	  silhouette gets a crown: everyone sees whom the Chief voted for.
+	- When the timer ends, the result is tallied and the exiled player dies
+	  without a role reveal.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -26,6 +30,7 @@ local VoteTally = require(Logic.VoteTally)
 local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local MoveService = require(script.Parent.MoveService)
+local MovementGuard = require(script.Parent.MovementGuard)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
@@ -37,6 +42,8 @@ local VoteService = {}
 
 local rng = Rng.wrap(Random.new())
 local isOpen = false
+local isLocked = false
+local meetingToken = 0
 local ballots: { [number]: VoteTally.Ballot } = {}
 local bellPrompt: ProximityPrompt? = nil
 
@@ -50,10 +57,18 @@ local function chiefId(): number?
 end
 
 -- Array form: remote arguments must not use sparse numeric keys.
+-- After the lock, the Chief's target carries Chief = true (the crown).
 local function countsPayload(): { any }
+	local chief = chiefId()
+	local chiefBallot = if isLocked and chief then ballots[chief] else nil
 	local list = {}
-	for target, count in VoteTally.publicCounts(ballots, chiefId()) do
-		table.insert(list, { Id = target, Pending = count.Pending, Confirmed = count.Confirmed })
+	for target, count in VoteTally.publicCounts(ballots, chief) do
+		table.insert(list, {
+			Id = target,
+			Pending = count.Pending,
+			Confirmed = count.Confirmed,
+			Chief = if chiefBallot and chiefBallot.Target == target then true else nil,
+		})
 	end
 	return list
 end
@@ -85,17 +100,42 @@ end
 -- Meeting
 --------------------------------------------------------------------------------
 
-local function openMeeting()
+-- The last seconds: every selection becomes final and the crown shows.
+local function lockVotes()
+	if not isOpen or isLocked then
+		return
+	end
+	isLocked = true
+	for _, ballot in ballots do
+		ballot.Confirmed = true
+	end
+	Net.fireAll("VoteLocked")
+	Net.fireAll("VoteCounts", countsPayload())
+	for _, player in Players:GetPlayers() do
+		sendMine(player)
+	end
+end
+
+local function openMeeting(state: PhaseMachine.PhaseState)
 	table.clear(ballots)
 	isOpen = true
+	isLocked = false
+	meetingToken += 1
+	local token = meetingToken
+	local scale = if Config.Debug.Enabled then Config.Debug.TimerScale else 1
+	local lockIn = math.max(0, PhaseMachine.scaledDuration(state) - Config.Vote.LockBeforeEnd * scale)
+	task.delay(lockIn, function()
+		if meetingToken == token then
+			lockVotes()
+		end
+	end)
 
 	local seat = 0
 	for _, member in Roster.alive(MatchService.Roster) do
 		seat += 1
-		local character = MatchService.CharacterOf(member.Id)
 		local spot = meetingSpot((seat - 1) % Config.Map.HouseCount + 1)
-		if character and spot then
-			character:PivotTo(Zones.worldCFrame(spot))
+		if spot then
+			MovementGuard.Warp(member.Id, Zones.worldCFrame(spot))
 		end
 		-- Nobody can walk during the meeting (GDD §6.2).
 		MoveService.SetModifier(member.Id, FREEZE_KEY, { Override = 0, NoJump = true })
@@ -111,6 +151,8 @@ local function closeMeeting()
 		return
 	end
 	isOpen = false
+	isLocked = false
+	meetingToken += 1
 	MoveService.ClearModifierForAll(FREEZE_KEY)
 	if MatchService.Winner then
 		Net.fireAll("VoteClosed", { Resolution = "Cancelled" })
@@ -135,7 +177,7 @@ end
 --------------------------------------------------------------------------------
 
 local function onSelect(player: Player, target: any)
-	if not isOpen or type(target) ~= "number" or target ~= target then
+	if not isOpen or isLocked or type(target) ~= "number" or target ~= target then
 		return
 	end
 	local voterId = player.UserId
@@ -156,7 +198,7 @@ end
 
 local function onConfirm(player: Player)
 	local ballot = ballots[player.UserId]
-	if not isOpen or not ballot or ballot.Confirmed then
+	if not isOpen or isLocked or not ballot or ballot.Confirmed then
 		return
 	end
 	-- The target may have left since it was selected.
@@ -219,7 +261,7 @@ function VoteService.Start()
 	RoundService.PhaseStarted:Connect(function(state: PhaseMachine.PhaseState)
 		setBell(false)
 		if state.Phase == "Meeting" then
-			openMeeting()
+			openMeeting(state)
 		elseif state.Phase == "Day" and state.Day > 1 then
 			-- The bell unlocks after 3 minutes (GDD §6.1).
 			local scale = if Config.Debug.Enabled then Config.Debug.TimerScale else 1
@@ -260,6 +302,9 @@ function VoteService.Start()
 	MatchService.SyncRequested:Connect(function(player: Player)
 		if isOpen then
 			Net.fire(player, "VoteOpened", { Candidates = candidates() })
+			if isLocked then
+				Net.fire(player, "VoteLocked")
+			end
 			Net.fire(player, "VoteCounts", countsPayload())
 			sendMine(player)
 		end

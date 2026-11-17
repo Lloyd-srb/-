@@ -26,6 +26,9 @@ local function start(scale, roles, debug)
 		Players = { { Id = 1, Name = "Alice" }, { Id = 2, Name = "Bob" }, { Id = 3, Name = "Cara" } },
 		Debug = debug,
 	})
+	-- These players stand still in the simulation; the AFK rule has its own
+	-- tests (FairPlay.spec), here every survivor's night counts.
+	server.Config.Afk.Enabled = false
 	local folder = server.game.ServerScriptService.Services
 	local svc = setmetatable({}, {
 		__index = function(_, name)
@@ -175,4 +178,21 @@ test("mastery: every 20 points is worth 20 diamonds", function()
 	server.removePlayer(1)
 	server.removePlayer(2)
 	server.removePlayer(3)
+end)
+
+test("back to lobby: ghosts may go at once, the living must play on", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	server.Config.Places.LobbyPlaceId = 777
+	waitFor(server, "Day", 1)
+	server.fireServer("BackToLobby", 2) -- alive: no
+	task.wait(0.05)
+	expect(#server.teleports()).toBe(0)
+	svc.Combat.Damage(2, 100, "Killer", nil) -- Bob dies and becomes a ghost
+	server.fireServer("BackToLobby", 2)
+	task.wait(0.05)
+	local trip = server.teleports()[1]
+	expect(trip.PlaceId).toBe(777)
+	expect(trip.Players).toEqual({ 2 })
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
 end)

@@ -28,6 +28,7 @@ local Roster = require(Logic.Roster)
 
 local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
+local MovementGuard = require(script.Parent.MovementGuard)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
@@ -269,10 +270,7 @@ local function marker(name: string): Attachment?
 end
 
 local function warp(memberId: number, target: CFrame)
-	local character = MatchService.CharacterOf(memberId)
-	if character then
-		character:PivotTo(target)
-	end
+	MovementGuard.Warp(memberId, target) -- a move made by the game, not by the player
 end
 
 local function beginNight()

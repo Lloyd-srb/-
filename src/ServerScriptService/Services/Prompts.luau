@@ -12,6 +12,13 @@ local Strings = require(ReplicatedStorage.Shared.Strings)
 
 local Prompts = {}
 
+local triggeredHandlers: { (Player) -> () } = {}
+
+-- Called with the player whenever any "hold" prompt is completed (AFK rule).
+function Prompts.onTriggered(handler: (Player) -> ())
+	table.insert(triggeredHandlers, handler)
+end
+
 function Prompts.create(parent: Instance, name: string, locKey: string, holdDuration: number): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = name
@@ -22,6 +29,11 @@ function Prompts.create(parent: Instance, name: string, locKey: string, holdDura
 	prompt.RequiresLineOfSight = false
 	prompt.Enabled = false
 	prompt:SetAttribute("LocKey", locKey)
+	prompt.Triggered:Connect(function(player: Player)
+		for _, notify in triggeredHandlers do
+			notify(player)
+		end
+	end)
 	prompt.Parent = parent
 	return prompt
 end

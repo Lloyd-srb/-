@@ -34,21 +34,29 @@ local cards: { [number]: GuiButton } = {}
 local myTarget = 0
 local myConfirmed = false
 local canVote = false
+local locked = false -- the last seconds: nobody can change their vote
 
-local function setSilhouettes(card: GuiButton, pending: number, confirmed: number)
+-- `crowned`: after the lock, the Chief voted for this player (one silhouette wears a crown).
+local function setSilhouettes(card: GuiButton, pending: number, confirmed: number, crowned: boolean?)
 	local holder = card:WaitForChild("Silhouettes")
 	for _, child in holder:GetChildren() do
 		if child:IsA("Frame") then
 			child:Destroy()
 		end
 	end
+	local crownPlaced = false
 	local function add(count: number, color: Color3)
 		for _ = 1, count do
 			local silhouette = silhouetteTemplate:Clone()
 			for _, piece in silhouette:GetChildren() do
-				if piece:IsA("Frame") then
+				if piece:IsA("Frame") and piece.Name ~= "Crown" then
 					piece.BackgroundColor3 = color
 				end
+			end
+			local crown = silhouette:FindFirstChild("Crown")
+			if crown and crown:IsA("GuiObject") then
+				crown.Visible = crowned == true and not crownPlaced
+				crownPlaced = crownPlaced or crown.Visible
 			end
 			silhouette.Visible = true
 			silhouette.Parent = holder
@@ -66,7 +74,7 @@ local function refreshSelection()
 			stroke.Color = if myConfirmed then Config.Vote.ConfirmedColor else Config.Vote.PendingColor
 		end
 	end
-	confirmButton.Visible = canVote and myTarget ~= 0 and not myConfirmed
+	confirmButton.Visible = canVote and myTarget ~= 0 and not myConfirmed and not locked
 end
 
 local function clearCards()
@@ -81,6 +89,9 @@ local function onOpened(data: any)
 		return
 	end
 	local wasOpen = gui.Enabled
+	if not wasOpen then
+		locked = false
+	end
 	clearCards()
 	canVote = false
 	for order, candidate in data.Candidates do
@@ -101,7 +112,7 @@ local function onOpened(data: any)
 		card.Visible = true
 		card.Parent = grid
 		card.Activated:Connect(function()
-			if not canVote or myConfirmed then
+			if not canVote or myConfirmed or locked then
 				return
 			end
 			-- Clicking the selected card again clears the selection.
@@ -127,7 +138,7 @@ local function onCounts(list: any)
 		local card = cards[entry.Id]
 		if card then
 			seen[entry.Id] = true
-			setSilhouettes(card, entry.Pending or 0, entry.Confirmed or 0)
+			setSilhouettes(card, entry.Pending or 0, entry.Confirmed or 0, entry.Chief == true)
 		end
 	end
 	for id, card in cards do
@@ -151,6 +162,7 @@ local function onClosed(data: any)
 		return
 	end
 	local text: string
+	locked = false
 	if data.Resolution == "Cancelled" then
 		GamepadFocus.release(gui)
 		gui.Enabled = false
@@ -162,6 +174,8 @@ local function onClosed(data: any)
 		elseif data.Resolution == "RandomTieBreak" then
 			text = Loc.format("Vote.RandomTieBreak") .. "\n" .. text
 		end
+	elseif data.Resolution == "TooFewVotes" then
+		text = Loc.format("Vote.TooFewVotes")
 	else
 		text = Loc.format("Vote.NoExile")
 	end
@@ -206,6 +220,12 @@ function VoteController.Start()
 	Remotes.get("VoteCounts").OnClientEvent:Connect(onCounts)
 	Remotes.get("VoteMine").OnClientEvent:Connect(onMine)
 	Remotes.get("VoteClosed").OnClientEvent:Connect(onClosed)
+	Remotes.get("VoteLocked").OnClientEvent:Connect(function()
+		locked = true
+		refreshSelection()
+		resultLabel.Text = Loc.format("Vote.Locked")
+		resultLabel.Visible = true
+	end)
 end
 
 return VoteController

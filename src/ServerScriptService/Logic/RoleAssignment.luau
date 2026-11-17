@@ -9,7 +9,9 @@
 	   do not use a special slot, they replace a villager; both together only
 	   with 11-12 players (owner, 17 Nov 2026).
 	4. When all of a player's picks are gone:
-	     a) a random other role they own that is still free, else
+	     a) a random other village role they own that is still free
+	        ([owner] 17 Nov 2026: never the Killer or the Fool, whose goal is
+	        different, unless the player picked them), else
 	     b) Villager.
 ]]
 
@@ -175,7 +177,8 @@ function RoleAssignment.assign(
 	for _, candidate in unplaced do
 		local owned: { RoleId } = {}
 		for _, roleId in Config.RoleOrder do
-			if roleId ~= "Villager" and candidate.Usable[roleId] and isFree(roleId) then
+			local def = Config.Roles[roleId]
+			if roleId ~= "Villager" and def.Faction == "Village" and candidate.Usable[roleId] and isFree(roleId) then
 				table.insert(owned, roleId)
 			end
 		end

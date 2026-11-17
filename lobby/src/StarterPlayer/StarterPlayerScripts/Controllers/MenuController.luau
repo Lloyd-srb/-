@@ -316,7 +316,14 @@ function PAGES.Settings()
 end
 
 function PAGES.News()
-	addText(Loc.format("News.Body"), 1)
+	-- How to play: the tutorial pages again (owner, 17 Nov 2026).
+	local row = addRow(1, Loc.format("Tutorial.Open"), Loc.format("Tutorial.1.Title"), "", "")
+	addButton(row, Loc.format("Tutorial.Open"), "Plain", function()
+		window.Visible = false
+		openPage = nil
+		require(script.Parent.TutorialController).Open()
+	end, true)
+	addText(Loc.format("News.Body"), 2)
 end
 
 function PAGES.Codes()
