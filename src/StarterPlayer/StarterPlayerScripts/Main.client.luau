@@ -31,6 +31,7 @@ local names = {
 	"HighlightController",
 	"ShellAnimator",
 	"HideController",
+	"AudioController",
 }
 
 -- Each controller starts in its own thread: one waiting for missing UI must

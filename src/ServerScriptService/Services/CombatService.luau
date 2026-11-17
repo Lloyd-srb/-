@@ -16,6 +16,7 @@ local Logic = script.Parent.Parent.Logic
 local Roster = require(Logic.Roster)
 local WolfPack = require(Logic.WolfPack)
 
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
@@ -99,8 +100,12 @@ function CombatService.Damage(victimId: number, amount: number, cause: Roster.De
 	end
 
 	local body = MatchService.CharacterOf(victimId)
+	local bodyRoot = body and body:FindFirstChild("HumanoidRootPart")
 	if not MatchService.Kill(victimId, cause, attackerId) then
 		return "None"
+	end
+	if bodyRoot and bodyRoot:IsA("BasePart") then
+		AudioService.At("DeathScream", bodyRoot.CFrame.Position)
 	end
 	if body then
 		MatchService.MarkCorpse(victimId, body)

@@ -41,7 +41,6 @@ local function enter(anchor: BasePart)
 		return Enum.ContextActionResult.Sink
 	end, true, Enum.KeyCode.E, Enum.KeyCode.ButtonB)
 	ContextActionService:SetTitle(EXIT_ACTION, Loc.format("Prompt.LeaveHiding"))
-	ContextActionService:SetPosition(EXIT_ACTION, UDim2.new(1, -150, 1, -150))
 end
 
 local function leave()

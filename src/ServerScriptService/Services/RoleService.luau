@@ -39,6 +39,7 @@ local CombatService = require(script.Parent.CombatService)
 local Flashlight = require(script.Parent.Flashlight)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local Net = require(script.Parent.Net)
@@ -314,6 +315,7 @@ local function dash(player: Player)
 	end)
 	-- The player's own client moves its character (it owns its physics).
 	Net.fire(player, "DashStart", { Direction = flat, Speed = cfg.DashSpeed, Duration = duration })
+	AudioService.At("BodyguardDash", start)
 	sendState(member)
 end
 
@@ -427,6 +429,7 @@ local function onRevivePrompt(player: Player, corpseId: number, prompt: Proximit
 	end
 	local where = CFrame.new(root.CFrame.Position + Vector3.new(0, REVIVE_RISE, 0))
 	MatchService.Revive(corpseId, where)
+	AudioService.At("Revive", where.Position)
 	sendState(member)
 end
 

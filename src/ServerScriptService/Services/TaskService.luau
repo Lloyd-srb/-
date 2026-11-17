@@ -27,6 +27,7 @@ local Roster = require(Logic.Roster)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local InventoryService = require(script.Parent.InventoryService)
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
@@ -34,6 +35,7 @@ local RoundService = require(script.Parent.RoundService)
 local WolfService = require(script.Parent.WolfService)
 
 local REACH_SLACK = 4
+local STEP_SOUNDS: { [string]: string } = { ChopTrees = "TreeChop", PlantCarrot = "Digging", RepairDoor = "Reinforce" }
 
 type StepPrompt = { Prompt: ProximityPrompt, Kind: string, Target: number }
 
@@ -101,6 +103,10 @@ local function onStep(player: Player, step: StepPrompt)
 		return -- someone else repaired it first
 	end
 
+	local stepSound = STEP_SOUNDS[step.Kind]
+	if stepSound then
+		AudioService.At(stepSound, position)
+	end
 	local _, complete = DailyTask.mark(task, step.Target)
 	if complete then
 		member.TasksCompleted += 1

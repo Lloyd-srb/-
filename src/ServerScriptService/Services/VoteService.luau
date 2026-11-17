@@ -23,6 +23,7 @@ local Logic = script.Parent.Parent.Logic
 local Roster = require(Logic.Roster)
 local VoteTally = require(Logic.VoteTally)
 
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
@@ -102,6 +103,7 @@ local function openMeeting()
 
 	Net.fireAll("VoteOpened", { Candidates = candidates() })
 	Net.fireAll("VoteCounts", countsPayload())
+	AudioService.All("MeetingBell")
 end
 
 local function closeMeeting()
@@ -123,6 +125,7 @@ local function closeMeeting()
 		ExiledName = if exiled then exiled.Name else nil,
 	})
 	if exiled then
+		AudioService.All("Exile")
 		MatchService.Exile(exiled.Id)
 	end
 end

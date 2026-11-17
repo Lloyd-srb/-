@@ -26,6 +26,7 @@ local DoorState = require(Logic.DoorState)
 local NightHousing = require(Logic.NightHousing)
 local Roster = require(Logic.Roster)
 
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
@@ -150,8 +151,12 @@ function HouseService.DamageDoor(houseId: number, amount: number): boolean
 	if not house or not RoundService.IsNight() then
 		return false
 	end
+	local wasClosed = house.State.State == "Closed"
 	local broke = DoorState.damage(house.State, amount)
 	applyDoor(house, false)
+	if wasClosed then
+		AudioService.At(if broke then "DoorBreak" else "DoorHit", house.Door.CFrame.Position)
+	end
 	return broke
 end
 
@@ -207,6 +212,7 @@ function HouseService.ReinforceDoor(houseId: number): boolean
 		return false
 	end
 	applyDoor(house, false)
+	AudioService.At("Reinforce", house.Door.CFrame.Position)
 	return true
 end
 
@@ -228,6 +234,7 @@ local function onOpenPrompt(player: Player, house: House)
 	end
 	if DoorState.open(house.State) then
 		applyDoor(house, true)
+		AudioService.At("DoorOpen", house.Door.CFrame.Position)
 	end
 end
 

@@ -6,9 +6,11 @@
 	pressed this"; the server decides what, if anything, happens.
 
 	  Attack  left mouse / R2 / touch      (wolf and pup)
-	  Sniff   Q / X                        (wolf)
-	  Sprint  Left Shift / Y               (wolf)
-	  Howl    Q / X                        (pup)
+	  Sniff   Q / L2                       (wolf)
+	  Sprint  Left Shift / Y               (wolf; taken before Roblox's shift lock)
+	  Howl    Q / L2                       (pup)
+	Gamepad X is left to the "hold" prompts (searching hiding spots).
+	Touch buttons use Roblox's own layout around the jump button.
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -25,7 +27,7 @@ type Action = {
 	Forms: { string },
 	Ability: string?, -- nil = the attack
 	TitleKey: string,
-	Position: UDim2,
+	Sink: boolean?, -- keep the key from Roblox's own uses (shift lock)
 	Inputs: { Enum.KeyCode | Enum.UserInputType },
 }
 
@@ -35,7 +37,6 @@ local ACTIONS: { Action } = {
 		Forms = { "Wolf", "Pup" },
 		Ability = nil,
 		TitleKey = "Ability.Attack",
-		Position = UDim2.new(1, -150, 1, -150),
 		Inputs = { Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2 },
 	},
 	{
@@ -43,15 +44,14 @@ local ACTIONS: { Action } = {
 		Forms = { "Wolf" },
 		Ability = "Sniff",
 		TitleKey = "Ability.Sniff",
-		Position = UDim2.new(1, -230, 1, -110),
-		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX },
+		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 },
 	},
 	{
 		Id = "WolfSprint",
 		Forms = { "Wolf" },
 		Ability = "Sprint",
 		TitleKey = "Ability.Sprint",
-		Position = UDim2.new(1, -210, 1, -200),
+		Sink = true,
 		Inputs = { Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonY },
 	},
 	{
@@ -59,8 +59,7 @@ local ACTIONS: { Action } = {
 		Forms = { "Pup" },
 		Ability = "Howl",
 		TitleKey = "Ability.Howl",
-		Position = UDim2.new(1, -230, 1, -110),
-		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX },
+		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 },
 	},
 }
 
@@ -86,7 +85,7 @@ local function bind(action: Action)
 		return
 	end
 	bound[action.Id] = true
-	ContextActionService:BindAction(action.Id, function(_name: string, state: Enum.UserInputState): Enum.ContextActionResult
+	ContextActionService:BindActionAtPriority(action.Id, function(_name: string, state: Enum.UserInputState): Enum.ContextActionResult
 		if state == Enum.UserInputState.Begin then
 			if action.Ability then
 				Remotes.get("WolfAbility"):FireServer(action.Ability)
@@ -94,9 +93,8 @@ local function bind(action: Action)
 				Remotes.get("WolfAttack"):FireServer()
 			end
 		end
-		return Enum.ContextActionResult.Pass
-	end, true, table.unpack(action.Inputs))
-	ContextActionService:SetPosition(action.Id, action.Position)
+		return if action.Sink then Enum.ContextActionResult.Sink else Enum.ContextActionResult.Pass
+	end, true, Enum.ContextActionPriority.High.Value, table.unpack(action.Inputs))
 	ContextActionService:SetTitle(action.Id, title(action))
 end
 

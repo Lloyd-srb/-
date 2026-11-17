@@ -49,6 +49,7 @@ Remotes.Names = {
 	"PadsChanged", -- every pad's count and state (public)
 	"QueueChanged", -- own pad: am I in a queue, am I the host
 	"LobbyNotice", -- a short message for one player
+	"Sound", -- a sound to play: { Key, At? } (world sounds only to players close by)
 	"ProfileView", -- own coins, diamonds, level, owned things, pass, spins (Lobby)
 	"ShopResult", -- own purchase / equip result
 	"SpinResult", -- own Daily Spin prize

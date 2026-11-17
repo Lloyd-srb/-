@@ -762,6 +762,43 @@ Config.Sounds = {
 	LoseJingle = 0,
 }
 
+-- How sounds are played (IDs above). A sound that happens somewhere in the
+-- world is only sent to players this close, so nobody learns from a far-away
+-- door hit or scream where the wolf is (GDD §6.5). [ASSUMED] art values.
+Config.Audio = {
+	DefaultVolume = 0.6,
+	DefaultRadius = 80, -- studs
+	Volume = {
+		NightMusic = 0.25,
+		Crickets = 0.3,
+		DayAmbience = 0.3,
+		Owl = 0.45,
+		UIClick = 0.35,
+		SpinTick = 0.3,
+	} :: { [string]: number },
+	Radius = {
+		DoorHit = 70,
+		DoorBreak = 90,
+		DoorOpen = 40,
+		DeathScream = 150,
+		WolfAttack = 50,
+		WolfMaul = 60,
+		WolfHowl = 300,
+		Gunshot = 160,
+		StunHit = 60,
+		AxeThrow = 60,
+		KnifeStab = 60,
+		BodyguardDash = 50,
+		Revive = 50,
+		Reinforce = 50,
+		TreeChop = 50,
+		Digging = 40,
+		CrateOpen = 40,
+	} :: { [string]: number },
+	Loops = { NightMusic = true, Crickets = true, DayAmbience = true } :: { [string]: boolean },
+	OwlEvery = { 20, 45 }, -- seconds between owl hoots at night (random in this range)
+}
+
 Config.Products = {
 	-- Developer Products, granted through MarketplaceService.ProcessReceipt.
 	-- One-time items (roles, premium pass) are stored in the player's profile, so

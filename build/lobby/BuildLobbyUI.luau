@@ -108,13 +108,14 @@ end
 
 local function buildQueueUI()
 	local gui = screenGui("QueueUI", 2)
-	local panel = frame("Panel", gui, UDim2.new(0, 420, 0, 96), UDim2.new(0.5, 0, 1, -24), Vector2.new(0.5, 1), Colors.Panel, 0.15)
+	local panel = frame("Panel", gui, UDim2.new(0, 420, 0, 112), UDim2.new(0.5, 0, 1, -24), Vector2.new(0.5, 1), Colors.Panel, 0.15)
 	corner(panel, 16)
 	panel.Visible = false
 	label("StatusLabel", panel, UDim2.new(1, -24, 0, 30), UDim2.new(0.5, 0, 0, 8), Vector2.new(0.5, 0), TITLE_FONT, 24)
 	local hint = label("HintLabel", panel, UDim2.new(1, -24, 0, 20), UDim2.new(0.5, 0, 0, 40), Vector2.new(0.5, 0), BODY_FONT, 16)
 	hint.TextColor3 = Colors.SubText
-	local start = button("StartButton", panel, UDim2.new(0, 160, 0, 30), Colors.Start)
+	-- Touch targets are at least 44 px tall.
+	local start = button("StartButton", panel, UDim2.new(0, 160, 0, 44), Colors.Start)
 	start.Position = UDim2.new(0.5, 0, 1, -6)
 	start.AnchorPoint = Vector2.new(0.5, 1)
 	start.Visible = false
@@ -187,7 +188,7 @@ local function buildMenuUI()
 	limit.Parent = window
 	label("Title", window, UDim2.new(1, -120, 0, 40), UDim2.new(0, 20, 0, 12), Vector2.new(0, 0), TITLE_FONT, 32).TextXAlignment =
 		Enum.TextXAlignment.Left
-	local close = button("CloseButton", window, UDim2.new(0, 90, 0, 36), Colors.PanelLight)
+	local close = button("CloseButton", window, UDim2.new(0, 100, 0, 44), Colors.PanelLight)
 	close.Position = UDim2.new(1, -14, 0, 14)
 	close.AnchorPoint = Vector2.new(1, 0)
 
@@ -232,18 +233,18 @@ local function buildMenuUI()
 	local price = label("PriceLabel", row, UDim2.new(0.5, 0, 0, 22), UDim2.new(1, -12, 0, 10), Vector2.new(1, 0), BODY_FONT, 16)
 	price.TextXAlignment = Enum.TextXAlignment.Right
 	price.TextColor3 = rgb(255, 220, 110)
-	local level = label("LevelLabel", row, UDim2.new(0.4, 0, 0, 18), UDim2.new(0, 12, 1, -6), Vector2.new(0, 1), BODY_FONT, 14)
+	local level = label("LevelLabel", row, UDim2.new(0.34, 0, 0, 18), UDim2.new(0, 12, 1, -6), Vector2.new(0, 1), BODY_FONT, 14)
 	level.TextXAlignment = Enum.TextXAlignment.Left
 	level.TextColor3 = rgb(255, 170, 90)
 	-- Buy / equip buttons, bottom right (filled by MenuController).
-	local buttons = frame("Buttons", row, UDim2.new(0.62, 0, 0, 30), UDim2.new(1, -10, 1, -8), Vector2.new(1, 1), Colors.Panel, 1)
+	local buttons = frame("Buttons", row, UDim2.new(0.62, 0, 0, 44), UDim2.new(1, -10, 1, -8), Vector2.new(1, 1), Colors.Panel, 1)
 	local buttonLayout = Instance.new("UIListLayout")
 	buttonLayout.FillDirection = Enum.FillDirection.Horizontal
 	buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 	buttonLayout.Padding = UDim.new(0, 6)
 	buttonLayout.SortOrder = Enum.SortOrder.LayoutOrder
 	buttonLayout.Parent = buttons
-	row.Size = UDim2.new(1, -8, 0, 116)
+	row.Size = UDim2.new(1, -8, 0, 136)
 
 	-- One buy / equip button (its colour shows the currency).
 	local action = button("ActionButton", templates, UDim2.new(0, 120, 1, 0), Colors.Accent)

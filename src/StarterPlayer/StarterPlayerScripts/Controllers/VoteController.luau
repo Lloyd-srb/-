@@ -10,7 +10,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Audio = require(ReplicatedStorage.Shared.Audio)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -103,12 +105,16 @@ local function onOpened(data: any)
 			end
 			-- Clicking the selected card again clears the selection.
 			Remotes.get("VoteSelect"):FireServer(if myTarget == id then 0 else id)
+			Audio.play("VoteSelect")
 		end)
 		cards[id] = card
 	end
 	resultLabel.Visible = false
 	refreshSelection()
 	gui.Enabled = true
+	if canVote then
+		GamepadFocus.offer(grid)
+	end
 end
 
 local function onCounts(list: any)
@@ -145,6 +151,7 @@ local function onClosed(data: any)
 	end
 	local text: string
 	if data.Resolution == "Cancelled" then
+		GamepadFocus.release(gui)
 		gui.Enabled = false
 		return
 	elseif type(data.ExiledName) == "string" then
@@ -164,6 +171,7 @@ local function onClosed(data: any)
 	myConfirmed = false
 	task.delay(RESULT_SECONDS, function()
 		if resultLabel.Visible then
+			GamepadFocus.release(gui)
 			gui.Enabled = false
 			resultLabel.Visible = false
 			clearCards()
@@ -189,6 +197,7 @@ function VoteController.Start()
 	confirmButton.Activated:Connect(function()
 		if canVote and myTarget ~= 0 and not myConfirmed then
 			Remotes.get("VoteConfirm"):FireServer()
+			Audio.play("VoteConfirm")
 		end
 	end)
 

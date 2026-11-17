@@ -27,6 +27,7 @@ local Roster = require(script.Parent.Parent.Logic.Roster)
 local CombatService = require(script.Parent.CombatService)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local MoveService = require(script.Parent.MoveService)
@@ -295,6 +296,10 @@ local function startMaul(id: number, wolf: WolfState)
 	MoveService.ClearModifier(id, "Sprint")
 	MoveService.SetModifier(id, "Maul", { Override = 0, NoJump = true })
 	setAnimation(wolf, "Maul")
+	local root = MatchService.RootOf(id)
+	if root then
+		AudioService.At("WolfMaul", root.CFrame.Position)
+	end
 	task.delay(duration, function()
 		if wolves[id] == wolf then
 			MoveService.ClearModifier(id, "Maul")
@@ -320,6 +325,7 @@ local function onAttack(player: Player)
 	end
 	wolf.LastAttack = now
 	setAnimation(wolf, "Attack")
+	AudioService.At("WolfAttack", root.CFrame.Position)
 
 	local target = Melee.findTarget(member.Id, stats.AttackRange, Config.Wolf.AttackMinDot, function(other: Roster.Member)
 		return not Roster.isWolfSide(other)
@@ -389,6 +395,7 @@ local function howl(player: Player, id: number, wolf: WolfState)
 	if not root then
 		return
 	end
+	AudioService.At("WolfHowl", root.CFrame.Position)
 	local ids: { number } = {}
 	for _, member in prey() do
 		local other = MatchService.RootOf(member.Id)
@@ -434,6 +441,7 @@ function WolfService.Start()
 					transform(member)
 				end
 			end
+			AudioService.All("WolfHowl") -- the whole village hears the change (GDD §6.5)
 			MatchService.SendPack()
 			startForestLoop()
 		end

@@ -28,6 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
 local Rng = require(ReplicatedStorage.Shared.Rng)
+local Strings = require(ReplicatedStorage.Shared.Strings)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 
 local Logic = script.Parent.Parent.Logic
@@ -38,6 +39,7 @@ local Roster = require(Logic.Roster)
 local CombatService = require(script.Parent.CombatService)
 local Flashlight = require(script.Parent.Flashlight)
 local HidingService = require(script.Parent.HidingService)
+local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local MoveService = require(script.Parent.MoveService)
@@ -286,7 +288,9 @@ function InventoryService.SpawnWorldItem(kind: string, itemUses: number, positio
 	model:SetAttribute("Uses", itemUses)
 	model:AddTag("WorldItem")
 	local prompt = Prompts.create(part, "PickupPrompt", "Prompt.PickUp", Items.PickupHold)
-	prompt.ObjectText = kind
+	-- English fallback; each client shows its own language (PromptController).
+	local itemName = Strings["Item." .. kind .. ".Name"]
+	prompt.ObjectText = if itemName then itemName.en else kind
 	prompt:SetAttribute("Audience", "Human")
 	prompt:SetAttribute("Active", true)
 	prompt:SetAttribute("ItemKind", kind)
@@ -439,6 +443,7 @@ local function onUse(player: Player, itemId: any, aim: any)
 	local kind = item.Kind
 	if kind == "Apple" then
 		eatApple(id, item)
+		AudioService.To(player, "AppleEat")
 	elseif kind == "FirstAid" then
 		CombatService.Heal(id)
 		spend(id, item)
@@ -482,6 +487,7 @@ local function onOpenCrate(player: Player, crate: Model, prompt: ProximityPrompt
 		return
 	end
 	local position = ground(part.CFrame.Position)
+	AudioService.At("CrateOpen", part.CFrame.Position)
 	crate:Destroy()
 	local kind = Loot.rollCrate(rng)
 	if not InventoryService.Give(member.Id, kind) then

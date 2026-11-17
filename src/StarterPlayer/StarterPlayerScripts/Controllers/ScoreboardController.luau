@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -90,6 +91,7 @@ local function onScoreboard(data: any)
 	end
 	refreshButtons()
 	gui.Enabled = true
+	GamepadFocus.offer(list)
 end
 
 local function onCounts(list: any)

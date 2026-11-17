@@ -59,11 +59,13 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `src/ReplicatedStorage/Shared/Logic/` | Pure shared rules: round phases, levels / Season Pass, shop prices and "may I buy this" |
 | `src/ServerScriptService/Logic/` | Pure server rules: role assignment, voting, win conditions, rewards, loot, wolf pup |
 | `src/ReplicatedStorage/Shared/Remotes.luau` | The list of RemoteEvents (who may receive what) |
+| `src/ReplicatedStorage/Shared/Audio.luau` | Client sound playback for both places (silent while a `Config.Sounds` ID is 0) |
+| `src/ReplicatedStorage/Shared/GamepadFocus.luau` | Console: selects the first button when a screen the player must use opens |
 | `src/ServerScriptService/Main.server.luau` | Server bootstrap (the only Script) |
 | `src/ReplicatedStorage/Shared/WolfAnimData.luau` | Werewolf animations as data (keyframe builder + client fallback animator) |
-| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), inventory + crates, tasks, ghosts, chat channels, end of match (scoreboard, likes, rewards), houses/doors, vote, wolf, combat, hiding, movement, profiles (saved data + skins), lighting, net |
+| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), inventory + crates, tasks, ghosts, chat channels, end of match (scoreboard, likes, rewards), houses/doors, vote, wolf, combat, hiding, movement, profiles (saved data + skins), audio (world sounds only to players in earshot), lighting, net |
 | `src/StarterPlayer/StarterPlayerScripts/Main.client.luau` | Client bootstrap (the only LocalScript) |
-| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, role select, vote screen, role / wolf controls, items, tasks, ghosts, chat styling, scoreboard, effects, one-way windows, prompts, highlights, rig animation, hiding camera |
+| `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, role select, vote screen, role / wolf controls, items, tasks, ghosts, chat styling, scoreboard, effects, one-way windows, prompts, highlights, rig animation, hiding camera, audio (ambience, effects, jingles, clicks) |
 | `docs/TEST_CHECKLISTS.md` | What to click and what should happen, per milestone (Thai) |
 | `docs/BUGS.md` | Bugs found and fixed, risks that need Studio to check (Thai) |
 | `build/` | Builder scripts that create the map, lighting, UI, wolf rigs, localization table |
@@ -111,3 +113,9 @@ every script in `src/`, and the builder scripts as ModuleScripts under
 crate · 6. Ghosts and chat · 7. End of match · 8. Lobby place · 9. Data and
 economy · 10. Polish. Each one ends with an export to `src/`, a commit, and a
 test checklist for the owner.
+
+All ten milestones are written. Nothing has run in Roblox Studio yet: every
+check so far is offline (rules, simulated servers, UI contracts, type check).
+What the owner still has to do before launch is listed in order in
+`docs/OWNER_TODO.md` section 5; what to click and look for is in
+`docs/TEST_CHECKLISTS.md`.

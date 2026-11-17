@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -113,6 +114,7 @@ local function build(options: any)
 	end
 	refresh()
 	gui.Enabled = true
+	GamepadFocus.offer(grid)
 end
 
 function RoleSelectController.Start()
@@ -156,6 +158,7 @@ function RoleSelectController.Start()
 	-- The screen closes when day 1 begins.
 	Remotes.get("PhaseChanged").OnClientEvent:Connect(function(phase: any)
 		if type(phase) == "table" and phase.Phase ~= "RoleSelect" and phase.Phase ~= "Waiting" then
+			GamepadFocus.release(gui)
 			gui.Enabled = false
 		end
 	end)

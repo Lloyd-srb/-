@@ -97,6 +97,11 @@ function PromptController.Start()
 		if type(key) == "string" and Loc.has(key) then
 			prompt.ActionText = Loc.format(key)
 		end
+		-- Items on the ground: "Pick up" + the item's name in this language.
+		local itemKind = prompt:GetAttribute("ItemKind")
+		if type(itemKind) == "string" and Loc.has("Item." .. itemKind .. ".Name") then
+			prompt.ObjectText = Loc.format("Item." .. itemKind .. ".Name")
+		end
 	end)
 
 	Remotes.get("HouseAssigned").OnClientEvent:Connect(function(houseId: any)

@@ -102,7 +102,12 @@
 ## 2. เสียง (ส่ง ID จาก Creator Store มาได้เลย ไม่ต้องรอ)
 
 วิธีหา: Roblox Studio → Toolbox → Audio (หรือ create.roblox.com/store/audio) → ค้นคำในคอลัมน์ "คำค้น" → คลิกขวา Copy Asset ID
-ระหว่างนี้ทุกเสียงเป็นค่า 0 (เงียบ)
+ระหว่างนี้ทุกเสียงเป็นค่า 0 (เงียบ) — **โค้ดต่อเสียงไว้ครบทุกจุดแล้ว (Milestone 10)** ส่ง ID มาเมื่อไรก็ดังเลย ไม่ต้องแก้โค้ด
+ส่งทีละไม่กี่อันก็ได้ แนะนำให้เริ่มจาก 10 อันนี้ก่อน (มีผลต่อบรรยากาศมากที่สุด):
+`NightMusic`, `Crickets`, `WolfHowl`, `DoorHit`, `DeathScream`, `FullMoonSting`, `MeetingBell`, `WinJingle`, `LoseJingle`, `UIClick`
+
+เสียงที่เกิด "ที่ใดที่หนึ่ง" (ตีประตู, คนร้อง, หมาป่าตะปบ ฯลฯ) ส่งให้เฉพาะคนที่อยู่ใกล้พอจะได้ยิน
+(ระยะอยู่ใน `Config.Audio.Radius`) คนอยู่ไกลจึงไม่รู้ว่าหมาป่าอยู่บ้านไหน
 
 | Key ใน Config | ใช้ตอนไหน | คำค้นแนะนำ | ID |
 |---|---|---|---|
@@ -274,11 +279,22 @@
 
 ---
 
-## 5. อื่นๆ ที่ต้องทำเอง (จะแจ้งขั้นตอนเมื่อถึงเวลา)
+## 5. ก่อนเปิดเกมให้คนเล่น (ทำตามลำดับ)
 
-- **ตั้งอวาตาร์เป็น R6:** Game Settings → Avatar → Avatar Type = R6 (สคริปต์ตั้งค่านี้เองไม่ได้)
+| # | ทำอะไร | ดูวิธีที่ | จำเป็น? |
+|---|---|---|---|
+| 1 | ตั้งอวาตาร์เป็น **R6**: Game Settings → Avatar → Avatar Type = R6 (ทั้งสอง place) | — | จำเป็น |
+| 2 | สร้างห้องเกมเป็น place ที่สอง แล้ว publish ทั้งสอง place + ส่ง Place ID ให้ Claude | ข้อ 4c | จำเป็น |
+| 3 | เปิด **Enable Studio Access to API Services** (เซฟข้อมูล) | ข้อ 4d | จำเป็น |
+| 4 | ตั้งจำนวนคนต่อเซิร์ฟเวอร์: create.roblox.com → เกม → Places → **ห้องเกม** → Server Size = **12** / **Lobby** = ตามชอบ (แนะนำ 40) | — | จำเป็น |
+| 5 | สร้าง Developer Products 15 ชิ้น + ส่ง ID | ข้อ 3 | ถ้าจะขายของ |
+| 6 | ตอบคำถามที่ติดป้าย [ASSUMED] (โดยเฉพาะข้อ 15, 19, 56, 66–72) | ข้อ 1 | แนะนำ |
+| 7 | ส่ง ID เสียง (อย่างน้อย 10 อันแรก) | ข้อ 2 | แนะนำ |
+| 8 | Publish แอนิเมชันหมาป่า + ส่ง ID (ไม่ทำก็ใช้ท่าสำรองได้) | ข้อ 4 | ไม่บังคับ |
+| 9 | ตัดสินใจเรื่อง voice chat (ผียังพูดให้คนเป็นได้ยิน) แล้วค่อยเปิดใน Game Settings → Communication | ข้อ 56 | ก่อนเปิด voice |
+| 10 | เทสต์หลายคนใน Studio: Test → Clients and Servers → 3 คนขึ้นไป (Debug เติม Bot ให้) | TEST_CHECKLISTS | จำเป็น |
+| 11 | เทสต์ในเกมจริงกับเพื่อน 8 คน: Lobby → เข้าคิว → เล่นจบ → กลับ Lobby → ของยังอยู่ | TEST_CHECKLISTS M8–M10 | จำเป็น |
+| 12 | ปิด Debug ในเกมจริงไม่ต้องทำ: เปิดเองเฉพาะใน Studio (`Config.Debug.Enabled = IsStudio`) | — | — |
+| 13 | ตั้งเกมเป็น Public (Game Settings → Permissions) | — | ตอนพร้อม |
 
-- เปิด voice chat ใน Game Settings
-- สร้าง place ที่สอง (Lobby) ใน experience เดียวกัน — Milestone 8
-- Publish เกม
-- เทสต์หลายคน (Studio → Test → Clients and Servers)
+หมายเหตุ: ห้ามแก้ `Config.Data.StoreName` หลังข้อ 13 (ข้อมูลผู้เล่นเก่าจะหาไม่เจอ)

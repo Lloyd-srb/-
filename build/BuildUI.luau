@@ -578,7 +578,7 @@ local function buildScoreboardUI()
 	count.Text = "0"
 	local like = Instance.new("TextButton")
 	like.Name = "LikeButton"
-	like.Size = UDim2.new(0, 120, 0, 38)
+	like.Size = UDim2.new(0, 120, 0, 44) -- 44 px: big enough for a finger
 	like.Position = UDim2.new(1, -8, 0.5, 0)
 	like.AnchorPoint = Vector2.new(1, 0.5)
 	like.BackgroundColor3 = rgb(230, 90, 120)

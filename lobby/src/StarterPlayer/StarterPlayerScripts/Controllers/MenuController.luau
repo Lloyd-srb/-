@@ -12,7 +12,9 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Audio = require(ReplicatedStorage.Shared.Audio)
 local Config = require(ReplicatedStorage.Shared.Config)
+local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Progression = require(ReplicatedStorage.Shared.Logic.Progression)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -426,6 +428,7 @@ function PAGES.Spin()
 			while spinning and wheel.Parent do
 				index = index % #prizes + 1
 				wheel.Text = prizeText(prizes[index])
+				Audio.play("SpinTick")
 				task.wait(SPIN_TICK)
 			end
 		end)
@@ -470,6 +473,8 @@ local function open(page: string)
 	body.CanvasPosition = Vector2.zero
 	render()
 	window.Visible = true
+	Audio.play("UIOpen")
+	GamepadFocus.offer(body:FindFirstChildWhichIsA("GuiButton", true) or window:FindFirstChild("CloseButton"))
 end
 
 --------------------------------------------------------------------------------
@@ -506,6 +511,7 @@ local function onShopResult(data: any)
 			text = nameOf(data.Kind, data.Id)
 		end
 		showToast(Loc.format("Shop.Bought", { thing = text }))
+		Audio.play("Purchase")
 	elseif type(data.Reason) == "string" and Loc.has("Shop.Reason." .. data.Reason) then
 		showToast(Loc.format("Shop.Reason." .. data.Reason))
 	end
@@ -521,6 +527,9 @@ local function onSpinResult(data: any)
 		end
 		spinning = false
 		local text = if type(data) == "table" and data.Ok then Loc.format("Spin.Won", { prize = rewardText(data.Prize) }) else Loc.format("Spin.NoneLeft")
+		if type(data) == "table" and data.Ok then
+			Audio.play("SpinWin")
+		end
 		showToast(text)
 		render()
 		local wheelPanel = body:FindFirstChild("SpinPanel")
@@ -557,6 +566,7 @@ function MenuController.Start()
 	local close = window:WaitForChild("CloseButton") :: TextButton
 	close.Text = Loc.format("Menu.Close")
 	close.Activated:Connect(function()
+		GamepadFocus.release(window)
 		window.Visible = false
 		openPage = nil
 	end)

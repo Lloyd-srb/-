@@ -6,11 +6,13 @@
 
 	  Sheriff    Shoot       R / R2      aims at the mouse (PC) or the screen centre
 	  Killer     Stab        R / R2
-	  Seer       See         Q / X
-	  Bodyguard  Dash        Q / X
-	  Monk       Bless       Q / X       opens a list of living players
+	  Seer       See         Q / L2
+	  Bodyguard  Dash        Q / L2
+	  Monk       Bless       Q / L2      opens a list of living players
 	  Villager   Flashlight  F / Y
 	Doctor and Engineer use "hold E" prompts on bodies / doors instead.
+	Gamepad X is left to the "hold" prompts (Roblox's default prompt button).
+	Touch buttons use Roblox's own layout around the jump button.
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -19,6 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -30,20 +33,16 @@ type Action = {
 	Role: string,
 	Ability: string,
 	TitleKey: string,
-	Position: UDim2,
 	Inputs: { Enum.KeyCode | Enum.UserInputType },
 }
 
-local PRIMARY = UDim2.new(1, -150, 1, -150)
-local SECONDARY = UDim2.new(1, -230, 1, -110)
-
 local ACTIONS: { Action } = {
-	{ Id = "RoleShoot", Role = "Sheriff", Ability = "Shoot", TitleKey = "Ability.Shoot", Position = PRIMARY, Inputs = { Enum.KeyCode.R, Enum.KeyCode.ButtonR2 } },
-	{ Id = "RoleStab", Role = "Killer", Ability = "Stab", TitleKey = "Ability.Stab", Position = PRIMARY, Inputs = { Enum.KeyCode.R, Enum.KeyCode.ButtonR2 } },
-	{ Id = "RoleSee", Role = "Seer", Ability = "See", TitleKey = "Ability.See", Position = SECONDARY, Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX } },
-	{ Id = "RoleDash", Role = "Bodyguard", Ability = "Dash", TitleKey = "Ability.Dash", Position = SECONDARY, Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX } },
-	{ Id = "RoleBless", Role = "Monk", Ability = "Bless", TitleKey = "Ability.Bless", Position = SECONDARY, Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonX } },
-	{ Id = "RoleFlashlight", Role = "Villager", Ability = "Flashlight", TitleKey = "Ability.Flashlight", Position = SECONDARY, Inputs = { Enum.KeyCode.F, Enum.KeyCode.ButtonY } },
+	{ Id = "RoleShoot", Role = "Sheriff", Ability = "Shoot", TitleKey = "Ability.Shoot", Inputs = { Enum.KeyCode.R, Enum.KeyCode.ButtonR2 } },
+	{ Id = "RoleStab", Role = "Killer", Ability = "Stab", TitleKey = "Ability.Stab", Inputs = { Enum.KeyCode.R, Enum.KeyCode.ButtonR2 } },
+	{ Id = "RoleSee", Role = "Seer", Ability = "See", TitleKey = "Ability.See", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
+	{ Id = "RoleDash", Role = "Bodyguard", Ability = "Dash", TitleKey = "Ability.Dash", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
+	{ Id = "RoleBless", Role = "Monk", Ability = "Bless", TitleKey = "Ability.Bless", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
+	{ Id = "RoleFlashlight", Role = "Villager", Ability = "Flashlight", TitleKey = "Ability.Flashlight", Inputs = { Enum.KeyCode.F, Enum.KeyCode.ButtonY } },
 }
 
 local RoleController = {}
@@ -63,6 +62,7 @@ local optionTemplate: TextButton
 --------------------------------------------------------------------------------
 
 local function closePicker()
+	GamepadFocus.release(pickerGui)
 	pickerGui.Enabled = false
 end
 
@@ -88,6 +88,7 @@ local function openPicker()
 		end
 	end
 	pickerGui.Enabled = true
+	GamepadFocus.offer(pickerList)
 end
 
 --------------------------------------------------------------------------------
@@ -135,7 +136,6 @@ local function bind(action: Action)
 		end
 		return Enum.ContextActionResult.Pass
 	end, true, table.unpack(action.Inputs))
-	ContextActionService:SetPosition(action.Id, action.Position)
 	ContextActionService:SetTitle(action.Id, title(action))
 end
 
@@ -147,7 +147,8 @@ local function unbind(action: Action)
 end
 
 local function refresh()
-	local usable = ClientState.Form == "Human" and ClientState.Alive
+	-- Hidden: the only button is "leave the hiding spot" (HideController).
+	local usable = ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden
 	for _, action in ACTIONS do
 		if usable and action.Role == ClientState.Role then
 			bind(action)
