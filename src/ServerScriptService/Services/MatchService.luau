@@ -420,10 +420,19 @@ function MatchService.BeginMatch()
 	end
 
 	local forced: { [number]: Config.RoleId }? = nil
-	if Config.Debug.Enabled and Config.Debug.ForceRole then
+	if Config.Debug.Enabled then
+		local map: { [number]: Config.RoleId } = {}
+		if Config.Debug.ForceRoles then
+			for id, roleId in Config.Debug.ForceRoles do
+				map[id] = roleId
+			end
+		end
 		local targetId = Config.Debug.ForceRoleUserId or firstPlayerId
-		if targetId then
-			forced = { [targetId] = Config.Debug.ForceRole }
+		if Config.Debug.ForceRole and targetId then
+			map[targetId] = Config.Debug.ForceRole
+		end
+		if next(map) ~= nil then
+			forced = map
 		end
 	end
 

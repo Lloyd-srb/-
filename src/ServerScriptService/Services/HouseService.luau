@@ -18,6 +18,7 @@ local TweenService = game:GetService("TweenService")
 local Config = require(ReplicatedStorage.Shared.Config)
 local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
 local Rng = require(ReplicatedStorage.Shared.Rng)
+local Signal = require(ReplicatedStorage.Shared.Signal)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 
 local Logic = script.Parent.Parent.Logic
@@ -48,6 +49,7 @@ local HouseService = {}
 
 -- memberId -> houseId for the current / last night.
 HouseService.Assigned = {} :: { [number]: number }
+HouseService.DoorChanged = Signal.new() -- (houseId, door state)
 
 local houses: { [number]: House } = {}
 local houseCount = 0
@@ -112,6 +114,7 @@ local function applyDoor(house: House, animate: boolean)
 	if house.DebugPrompt then
 		house.DebugPrompt.Enabled = isNight and state.State == "Closed"
 	end
+	HouseService.DoorChanged:Fire(house.Id, state)
 end
 
 --------------------------------------------------------------------------------
@@ -339,6 +342,7 @@ local function register(model: Instance)
 
 	houses[id] = house
 	houseCount += 1
+	applyDoor(house, false) -- every door attribute exists from the start
 end
 
 function HouseService.Init()

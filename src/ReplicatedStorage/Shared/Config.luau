@@ -60,6 +60,7 @@ export type DebugConfig = {
 	DoorHitPrompt: boolean,
 	ForceRole: RoleId?,
 	ForceRoleUserId: number?,
+	ForceRoles: { [number]: RoleId }?,
 	TimerScale: number,
 	SkipRoleSelect: boolean,
 }
@@ -349,6 +350,10 @@ Config.Abilities = {
 	Seer = {
 		Duration = 5, -- [GDD]
 		UsesPerNight = 1, -- [GDD]
+	},
+	Villager = {
+		-- The villager's flashlight (GDD §9) uses Config.Items.Flashlight.
+		ToggleCooldown = 0.3,
 	},
 	Bodyguard = {
 		Cooldown = 30, -- [GDD]
@@ -665,6 +670,7 @@ Config.Debug = {
 	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf
 	ForceRole = nil, -- e.g. "Wolf" to always get that role
 	ForceRoleUserId = nil, -- nil = the first player in the server
+	ForceRoles = nil, -- several at once: { [UserId] = "Sheriff", ... } (bots: -1004 .. -1012)
 	TimerScale = 1, -- e.g. 0.1 makes every timer 10x shorter
 	SkipRoleSelect = false,
 } :: DebugConfig

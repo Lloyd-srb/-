@@ -128,7 +128,7 @@ local function buildRig(name: string, scale: number, parent: Instance): Model
 		part.Anchored = false
 		part.CanCollide = false
 		part.CanTouch = false
-		part.CanQuery = false
+		part.CanQuery = true -- stun shots hit the costume, not just the small body inside
 		part.Massless = true
 		part.Parent = rig
 	end

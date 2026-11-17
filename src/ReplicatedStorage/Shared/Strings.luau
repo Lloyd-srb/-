@@ -53,6 +53,20 @@ local Strings: { [string]: Entry } = {
 	["Ability.Sniff"] = { en = "Sniff", th = "ดมกลิ่น" },
 	["Ability.Sprint"] = { en = "Sprint", th = "วิ่ง 4 ขา" },
 	["Ability.Howl"] = { en = "Howl", th = "หอน" },
+	["Ability.Shoot"] = { en = "Shoot", th = "ยิง" },
+	["Ability.See"] = { en = "See", th = "มองทะลุ" },
+	["Ability.Dash"] = { en = "Dash", th = "พุ่ง" },
+	["Ability.Bless"] = { en = "Bless", th = "ให้พร" },
+	["Ability.Stab"] = { en = "Stab", th = "แทง" },
+	["Ability.Flashlight"] = { en = "Flashlight", th = "ไฟฉาย" },
+
+	-- Ability feedback
+	["Effect.Blocked"] = { en = "The attack was blocked!", th = "การโจมตีถูกกันไว้!" },
+	["Effect.Blessed"] = { en = "You blessed {name}", th = "คุณให้พร {name} แล้ว" },
+	["Effect.Stunned"] = { en = "Stunned!", th = "ติดสตั้น!" },
+	["Picker.Bless"] = { en = "Who do you bless today?", th = "วันนี้จะให้พรใคร?" },
+	["Picker.Close"] = { en = "Close", th = "ปิด" },
+	["Picker.You"] = { en = "{name} (you)", th = "{name} (คุณ)" },
 
 	-- Morning announcement in red (GDD §6.1)
 	["Morning.Safe"] = { en = "You're safe... for now...", th = "พวกแกปลอดภัย... แค่ตอนนี้..." },

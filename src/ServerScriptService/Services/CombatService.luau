@@ -18,6 +18,7 @@ local WolfPack = require(Logic.WolfPack)
 
 local MatchService = require(script.Parent.MatchService)
 local MoveService = require(script.Parent.MoveService)
+local Net = require(script.Parent.Net)
 local Ragdoll = require(script.Parent.Ragdoll)
 
 -- "None" | "Blocked" | "Hurt" | "Killed" | "Converted"
@@ -67,6 +68,17 @@ function CombatService.Damage(victimId: number, amount: number, cause: Roster.De
 	end
 	for _, shield in shields do
 		if shield(victimId, cause) then
+			-- Only the two people involved learn that something blocked the hit.
+			local involved: { number } = { victimId }
+			if attackerId then
+				table.insert(involved, attackerId)
+			end
+			for _, id in involved do
+				local player = MatchService.PlayerOf(id)
+				if player then
+					Net.fire(player, "Effect", { Kind = "Blocked" })
+				end
+			end
 			return "Blocked"
 		end
 	end

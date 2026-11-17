@@ -80,7 +80,7 @@ local function prepare(name: string, scale: number, parent: Instance): Model
 			part.Anchored = false
 			part.CanCollide = false
 			part.CanTouch = false
-			part.CanQuery = false
+			part.CanQuery = true -- stun shots hit the costume, not just the small body inside
 			part.Massless = true
 			local weld = Instance.new("WeldConstraint")
 			weld.Part0 = root

@@ -21,6 +21,7 @@ local ordered: { Service } = {
 	require(Services.HidingService),
 	require(Services.VoteService),
 	require(Services.WolfService),
+	require(Services.RoleService),
 	require(Services.LightingService),
 }
 

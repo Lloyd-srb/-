@@ -17,6 +17,17 @@ function Sight.isClear(from: Vector3, to: Vector3): boolean
 	return workspace:Raycast(from, to - from, params) == nil
 end
 
+-- How far can something travel from `from` along `ray` before it hits
+-- something solid? Characters never block.
+function Sight.clearDistance(from: Vector3, ray: Vector3): number
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = CollectionService:GetTagged("MemberBody")
+	params.RespectCanCollide = true
+	local result = workspace:Raycast(from, ray, params)
+	return if result then result.Distance else ray.Magnitude
+end
+
 --[[
 	Who does a shot hit? Casts a ray and returns the id of the first living
 	member's body in its way (nil if it hits scenery, a corpse or nothing).

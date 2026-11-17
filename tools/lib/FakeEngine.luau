@@ -106,9 +106,48 @@ local function install()
 			end,
 		}
 	end)
-	-- Line of sight is clear unless a test blocks it (sim.blockRays).
-	roblox.implementMethod("Workspace", "Raycast", function()
-		return if sim.blockRays then { Instance = "wall" } else nil
+	--[[
+		Raycast stand-in. There is no physics here, so "solid things" are:
+		  - a wall, when a test calls server.blockSight(true) (it stands
+		    `sim.wallDistance` studs from the origin, default 0);
+		  - every member body (tag MemberBody) that is not excluded, as a
+		    sphere of radius 2.5 around its HumanoidRootPart.
+		The closest one along the ray is returned.
+	]]
+	local BODY_RADIUS = 2.5
+	roblox.implementMethod("Workspace", "Raycast", function(_, origin, direction, params)
+		local length = direction.Magnitude
+		if length < 1e-9 then
+			return nil
+		end
+		local unit = direction.Unit
+		local best = nil
+		if sim.blockRays then
+			local distance = math.min(sim.wallDistance or 0, length)
+			best = { Instance = sim.game:GetService("Workspace"), Distance = distance, Position = origin + unit * distance }
+		end
+		local excluded = (params and params.FilterDescendantsInstances) or {}
+		for _, body in sim.game:GetDescendants() do
+			if body:HasTag("MemberBody") then
+				local skip = false
+				for _, exclude in excluded do
+					if body == exclude or body:IsDescendantOf(exclude) then
+						skip = true
+						break
+					end
+				end
+				local root = body:FindFirstChild("HumanoidRootPart")
+				if not skip and root then
+					local offset = root.CFrame.Position - origin
+					local t = offset:Dot(unit)
+					local miss = (offset - unit * t).Magnitude
+					if t >= 0 and t <= length and miss <= BODY_RADIUS and (best == nil or t < best.Distance) then
+						best = { Instance = root, Distance = t, Position = origin + unit * t }
+					end
+				end
+			end
+		end
+		return best
 	end)
 	roblox.implementMethod("Model", "PivotTo", function(self, cframe)
 		local root = self:FindFirstChild("HumanoidRootPart")
@@ -312,8 +351,9 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 	end
 
 	-- Walls between attacker and target (true = every line of sight is blocked).
-	function server.blockSight(blocked: boolean)
+	function server.blockSight(blocked: boolean, distance: number?)
 		sim.blockRays = blocked
+		sim.wallDistance = distance
 	end
 
 	function server.phase(): string
