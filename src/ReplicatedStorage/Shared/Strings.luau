@@ -181,6 +181,13 @@ local Strings: { [string]: Entry } = {
 	["Task.PlantCarrot"] = { en = "Plant carrots behind a house", th = "ปลูกแครอตหลังบ้าน" },
 	["Task.PickApples"] = { en = "Pick apples in the forest ({done:int}/{total:int})", th = "เก็บแอปเปิ้ลในป่า ({done:int}/{total:int})" },
 	["Task.ChopTrees"] = { en = "Chop trees ({done:int}/{total:int})", th = "ตัดต้นไม้ ({done:int}/{total:int})" },
+	["Hud.Task"] = { en = "Task: {task}", th = "ภารกิจ: {task}" },
+	["Hud.TaskDone"] = { en = "Task done", th = "ทำภารกิจแล้ว" },
+	["Effect.Gained"] = { en = "You got: {item}", th = "ได้รับ: {item}" },
+	["Effect.CrossInfo"] = {
+		en = "The Cross protects you from one attack while you carry it.",
+		th = "Cross จะกันการโจมตีให้ 1 ครั้งเมื่อพกติดตัว",
+	},
 	["Task.Complete"] = { en = "Task complete! +{coins:int} coins at the end of the game", th = "ภารกิจสำเร็จ! +{coins:int} coin ตอนจบเกม" },
 
 	-- Interaction prompts (hold E)
@@ -193,6 +200,10 @@ local Strings: { [string]: Entry } = {
 	["Prompt.Revive"] = { en = "Revive", th = "ชุบชีวิต" },
 	["Prompt.Reinforce"] = { en = "Reinforce door", th = "เสริมประตู" },
 	["Prompt.OpenCrate"] = { en = "Open crate", th = "เปิดกล่อง" },
+	["Prompt.Repair"] = { en = "Repair door", th = "ซ่อมประตู" },
+	["Prompt.Plant"] = { en = "Plant carrots", th = "ปลูกแครอต" },
+	["Prompt.PickApple"] = { en = "Pick apple", th = "เก็บแอปเปิ้ล" },
+	["Prompt.Chop"] = { en = "Chop tree", th = "ตัดต้นไม้" },
 	["Prompt.PickUp"] = { en = "Pick up", th = "เก็บ" },
 	["Prompt.DebugHitDoor"] = { en = "[Debug] Hit door", th = "[Debug] ตีประตู" },
 

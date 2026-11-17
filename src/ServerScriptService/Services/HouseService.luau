@@ -178,6 +178,28 @@ function HouseService.HitDoorNear(position: Vector3, look: Vector3, range: numbe
 	return bestId
 end
 
+-- Houses whose door was broken last night and still shows the repair marks.
+function HouseService.DoorsNeedingRepair(): { number }
+	local ids: { number } = {}
+	for id, house in houses do
+		if house.State.RepairLook then
+			table.insert(ids, id)
+		end
+	end
+	table.sort(ids)
+	return ids
+end
+
+-- Task "repair a broken door" (GDD §10). Returns false if there was nothing to repair.
+function HouseService.RepairDoor(houseId: number): boolean
+	local house = houses[houseId]
+	if not house or not DoorState.repair(house.State) then
+		return false
+	end
+	applyDoor(house, false)
+	return true
+end
+
 -- Engineer ability (milestone 4).
 function HouseService.ReinforceDoor(houseId: number): boolean
 	local house = houses[houseId]

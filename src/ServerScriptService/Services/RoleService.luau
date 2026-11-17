@@ -35,6 +35,7 @@ local DoorState = require(Logic.DoorState)
 local Roster = require(Logic.Roster)
 
 local CombatService = require(script.Parent.CombatService)
+local Flashlight = require(script.Parent.Flashlight)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
@@ -375,29 +376,7 @@ local function flashlight(player: Player)
 	end
 	lightToggledAt[member.Id] = now
 
-	local holder = character:FindFirstChild("Head") or character:FindFirstChild("HumanoidRootPart")
-	if not holder then
-		return
-	end
-	-- The beam is a real light, so everyone sees where the villager looks.
-	local light = holder:FindFirstChild("Flashlight")
-	if not light then
-		local cfg = Config.Items.Flashlight
-		local spot = Instance.new("SpotLight")
-		spot.Name = "Flashlight"
-		spot.Face = Enum.NormalId.Front
-		spot.Range = cfg.Range
-		spot.Angle = cfg.Angle
-		spot.Brightness = cfg.Brightness
-		spot.Shadows = true
-		spot.Enabled = false
-		spot.Parent = holder
-		light = spot
-	end
-	if light and light:IsA("SpotLight") then
-		light.Enabled = not light.Enabled
-		character:SetAttribute("FlashlightOn", light.Enabled)
-	end
+	Flashlight.toggle(character)
 end
 
 --------------------------------------------------------------------------------

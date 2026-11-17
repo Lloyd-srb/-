@@ -156,6 +156,11 @@ local function transform(member: Roster.Member)
 		return
 	end
 	local form = if member.IsPup then "Pup" else "Wolf"
+	-- Paws cannot hold items: put away whatever was in hand.
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid:UnequipTools()
+	end
 	local shell = attachShell(character, form)
 	setBodyHidden(character, shell, true)
 	character:SetAttribute("Form", form)

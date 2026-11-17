@@ -55,6 +55,7 @@ export type DebugConfig = {
 	MinPlayers: number,
 	FillWithBots: boolean,
 	BotBodies: boolean,
+	ForceTask: string?,
 	UnlockAllRoles: boolean,
 	Mode: ModeId?,
 	DoorHitPrompt: boolean,
@@ -390,6 +391,7 @@ Config.Tasks = {
 	PlantCarrot = { Hold = 10, Reward = "Shovel" }, -- [GDD]
 	PickApples = { Trees = 3, HoldPerTree = 2, Reward = "Apple", RewardCount = 1 }, -- [GDD]
 	ChopTrees = { Trees = 2, HoldPerTree = 4, Reward = "Axe" }, -- [GDD]
+	Kinds = { "RepairDoor", "PlantCarrot", "PickApples", "ChopTrees" }, -- [GDD §10]
 }
 
 --------------------------------------------------------------------------------
@@ -404,6 +406,26 @@ Config.Items = {
 	FirstAid = { Uses = 1 }, -- heal to full; the Doctor can spend it on an extra revive
 	Cross = { Blocks = 1 },
 	Flashlight = { Range = 45, Angle = 60, Brightness = 2 }, -- [ASSUMED]
+	PickupHold = 0.5, -- [ASSUMED] hold E on an item on the ground
+	DropSpread = 2.5, -- studs between items dropped in one place
+	MinDot = 0, -- shovel: target must be in the front half
+}
+
+-- How items look: in the hand (Tool handle) and on the ground. Art defaults.
+Config.ItemLook = {
+	Shovel = { Color = Color3.fromRGB(150, 150, 160), Size = Vector3.new(0.4, 3.2, 0.4) },
+	Apple = { Color = Color3.fromRGB(220, 40, 40), Size = Vector3.new(0.8, 0.8, 0.8) },
+	Axe = { Color = Color3.fromRGB(150, 105, 60), Size = Vector3.new(0.4, 2.4, 0.4) },
+	Gun = { Color = Color3.fromRGB(50, 50, 58), Size = Vector3.new(0.4, 0.6, 1.4) },
+	FirstAid = { Color = Color3.fromRGB(240, 240, 240), Size = Vector3.new(1, 0.7, 0.7) },
+	Cross = { Color = Color3.fromRGB(240, 200, 70), Size = Vector3.new(0.3, 1.4, 0.3) },
+	Flashlight = { Color = Color3.fromRGB(240, 210, 60), Size = Vector3.new(0.4, 0.4, 1.2) },
+}
+
+-- Crates sit under a forest tree until someone opens them (GDD §6.1).
+Config.CrateLook = {
+	Color = Color3.fromRGB(150, 100, 55),
+	Size = Vector3.new(2.6, 2.2, 2.6),
 }
 
 Config.Crate = {
@@ -665,6 +687,7 @@ Config.Debug = {
 	MinPlayers = 1, -- start a match with fewer players than the mode needs
 	FillWithBots = true, -- fill the empty seats with idle bots so votes / win checks work
 	BotBodies = true, -- bots get a simple dummy body the wolf can chase and attack
+	ForceTask = nil, -- e.g. "PickApples": everyone gets this task (if it is available that day)
 	UnlockAllRoles = true, -- every role is owned and level gates are ignored
 	Mode = nil, -- "Turbo" to test the 6-player mode (no TeleportData in Studio)
 	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf

@@ -197,6 +197,9 @@ local function install()
 		root.Name = "HumanoidRootPart"
 		root.CFrame = roblox.CFrame.new(0, 3, 20) -- the plaza spawn
 		root.Parent = character
+		if not self:FindFirstChildOfClass("Backpack") then
+			roblox.Instance.new("Backpack").Parent = self
+		end
 		local regen = roblox.Instance.new("Script")
 		regen.Name = "Health"
 		regen.Parent = character
@@ -223,6 +226,8 @@ local function install()
 			table.insert(sim.log, { Remote = self.Name, To = "all", Args = { ... } })
 		end
 	end)
+
+	roblox.implementMethod("Humanoid", "UnequipTools", function() end)
 
 	roblox.implementProperty("Humanoid", "Died", function(self)
 		return signalFor("Died:" .. self:GetFullName())

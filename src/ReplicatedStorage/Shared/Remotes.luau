@@ -40,6 +40,7 @@ Remotes.Names = {
 	"RoleOptions", -- own usable roles for the role-selection screen
 	"RolePicksAck", -- own accepted picks
 	"DashStart", -- own dash (the client moves its own character)
+	"TaskChanged", -- own task of the day
 	"Effect", -- visual feedback: shot tracers (everyone), "blocked" / "blessed" (the people involved)
 	-- client -> server
 	"RequestSync",
@@ -50,6 +51,7 @@ Remotes.Names = {
 	"HideExit",
 	"RolePicks",
 	"AbilityUse",
+	"ItemUse",
 }
 
 function Remotes.createAll()
