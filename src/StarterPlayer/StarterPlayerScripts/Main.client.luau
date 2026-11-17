@@ -19,6 +19,8 @@ local names = {
 	"WindowController",
 	"PromptController",
 	"WolfController",
+	"RoleController",
+	"EffectController",
 	"HighlightController",
 	"ShellAnimator",
 	"HideController",

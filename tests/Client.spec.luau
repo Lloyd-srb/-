@@ -24,6 +24,7 @@ test("Hud has everything HudController looks up", function()
 		{ "TopBar", "TimerLabel" },
 		{ "RoleLabel" },
 		{ "PackLabel" },
+		{ "Toast" },
 		{ "Announcement" },
 		{ "SubAnnouncement" },
 	} do
@@ -68,6 +69,15 @@ test("RoleSelectUI has everything RoleSelectController looks up", function()
 	expect(card:FindFirstChildOfClass("UIStroke") ~= nil).toBe(true)
 end)
 
+test("PickerUI has everything RoleController looks up", function()
+	local gui = StarterGui:FindFirstChild("PickerUI")
+	expect(gui ~= nil and gui.Enabled == false).toBe(true)
+	expect(path(gui, { "Panel", "Title" }):IsA("TextLabel")).toBe(true)
+	expect(path(gui, { "Panel", "List" }) ~= nil).toBe(true)
+	expect(path(gui, { "Panel", "CloseButton" }):IsA("TextButton")).toBe(true)
+	expect(path(gui, { "Templates", "Option" }):IsA("TextButton")).toBe(true)
+end)
+
 test("every remote the scripts use is declared in Remotes.Names", function()
 	local used = {}
 	for _, instance in game:GetDescendants() do
@@ -95,7 +105,7 @@ test("every remote the scripts use is declared in Remotes.Names", function()
 end)
 
 test("every text key written in code exists in Strings", function()
-	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud", "Ability", "RoleSelect", "Picker" }
+	local prefixes = { "Phase", "Morning", "Vote", "Ending", "Role", "Item", "Task", "Prompt", "Chat", "End", "Faction", "Hud", "Ability", "RoleSelect", "Picker", "Effect" }
 	local checked = 0
 	for _, instance in game:GetDescendants() do
 		if instance:IsA("LuaSourceContainer") and instance.Name ~= "Strings" then

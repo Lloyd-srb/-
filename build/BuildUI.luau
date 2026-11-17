@@ -135,6 +135,19 @@ local function buildHud()
 	pack.Visible = false
 	textStroke(pack, 2)
 
+	-- Short private feedback ("You blessed ...", "Blocked!").
+	local toast = label(
+		"Toast",
+		hud,
+		UDim2.new(0.6, 0, 0, 34),
+		UDim2.new(0.5, 0, 0.72, 0),
+		Vector2.new(0.5, 0.5),
+		BODY_FONT,
+		26
+	)
+	toast.Visible = false
+	textStroke(toast, 2)
+
 	local announcement = label(
 		"Announcement",
 		hud,
@@ -401,7 +414,81 @@ local function buildRoleSelectUI()
 	lock.Visible = false
 end
 
+--------------------------------------------------------------------------------
+-- PickerUI: choose a player (Monk's blessing)
+--------------------------------------------------------------------------------
+
+local function buildPickerUI()
+	local gui = screenGui("PickerUI", 7)
+	gui.Enabled = false
+
+	local panel = frame(
+		"Panel",
+		gui,
+		UDim2.new(0, 420, 0.7, 0),
+		UDim2.new(0.5, 0, 0.5, 0),
+		Vector2.new(0.5, 0.5),
+		Colors.Panel,
+		0.05
+	)
+	corner(panel, 18)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(420, 560)
+	limit.Parent = panel
+
+	label("Title", panel, UDim2.new(1, -40, 0, 40), UDim2.new(0.5, 0, 0, 12), Vector2.new(0.5, 0), TITLE_FONT, 28)
+
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "List"
+	list.Size = UDim2.new(1, -32, 1, -130)
+	list.Position = UDim2.new(0.5, 0, 0, 60)
+	list.AnchorPoint = Vector2.new(0.5, 0)
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 6
+	list.CanvasSize = UDim2.new(0, 0, 0, 0)
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.Parent = panel
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 8)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+
+	local close = Instance.new("TextButton")
+	close.Name = "CloseButton"
+	close.Size = UDim2.new(0, 160, 0, 44)
+	close.Position = UDim2.new(0.5, 0, 1, -14)
+	close.AnchorPoint = Vector2.new(0.5, 1)
+	close.BackgroundColor3 = Colors.PanelLight
+	close.BorderSizePixel = 0
+	close.FontFace = TITLE_FONT
+	close.Text = "Close"
+	close.TextColor3 = Colors.Text
+	close.TextScaled = true
+	close.Parent = panel
+	corner(close, 12)
+	maxTextSize(close, 24)
+
+	local templates = Instance.new("Folder")
+	templates.Name = "Templates"
+	templates.Parent = gui
+	local option = Instance.new("TextButton")
+	option.Name = "Option"
+	option.Size = UDim2.new(1, -8, 0, 48)
+	option.BackgroundColor3 = Colors.PanelLight
+	option.BorderSizePixel = 0
+	option.FontFace = BODY_FONT
+	option.Text = ""
+	option.TextColor3 = Colors.Text
+	option.TextScaled = true
+	option.Visible = false
+	option.Parent = templates
+	corner(option, 10)
+	maxTextSize(option, 22)
+end
+
 buildHud()
 buildVoteUI()
 buildRoleSelectUI()
+buildPickerUI()
 print("[BuildUI] done")

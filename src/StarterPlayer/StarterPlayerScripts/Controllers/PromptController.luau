@@ -30,6 +30,12 @@ local function isForMe(prompt: ProximityPrompt, audience: string): boolean
 		return ClientState.Form == "Human" and not ClientState.Hidden
 	elseif audience == "Wolf" then
 		return ClientState.Form ~= "Human"
+	elseif audience:sub(1, 5) == "Role:" then
+		-- e.g. "Role:Doctor": only that role, in human form, alive, not hiding
+		return ClientState.Role == audience:sub(6)
+			and ClientState.Form == "Human"
+			and ClientState.Alive
+			and not ClientState.Hidden
 	end
 	return true
 end

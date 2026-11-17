@@ -10,6 +10,8 @@ local Signal = require(ReplicatedStorage.Shared.Signal)
 
 local ClientState = {
 	Form = "Human", -- "Human" | "Wolf" | "Pup"
+	Role = "", -- own role id ("Pup" once bitten), from RoleAssigned
+	Alive = true,
 	HouseId = 0, -- 0 = no door of my own
 	Hidden = false,
 	Changed = Signal.new(),
