@@ -45,6 +45,10 @@ Remotes.Names = {
 	"LikeCounts", -- likes per player on the scoreboard
 	"Results", -- the MVP
 	"RewardSummary", -- own reward
+	-- Lobby place
+	"PadsChanged", -- every pad's count and state (public)
+	"QueueChanged", -- own pad: am I in a queue, am I the host
+	"LobbyNotice", -- a short message for one player
 	"Effect", -- visual feedback: shot tracers (everyone), "blocked" / "blessed" (the people involved)
 	-- client -> server
 	"RequestSync",
@@ -57,6 +61,7 @@ Remotes.Names = {
 	"AbilityUse",
 	"ItemUse",
 	"Like",
+	"StartRequest", -- lobby: the host starts the match
 }
 
 function Remotes.createAll()

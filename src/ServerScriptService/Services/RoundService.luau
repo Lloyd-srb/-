@@ -7,6 +7,7 @@
 	Other services react to those two signals; they never drive the clock.
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -15,6 +16,7 @@ local Signal = require(ReplicatedStorage.Shared.Signal)
 
 local MatchService = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
+local Travel = require(script.Parent.Travel)
 
 local TAUNT_COUNT = 3 -- Morning.Taunt1..3 in Strings
 local POLL = 0.1
@@ -132,13 +134,15 @@ function RoundService.CallMeeting(player: Player): boolean
 end
 
 local function run()
-	while MatchService.PlayerCount() < MatchService.RequiredPlayers() do
-		Net.fireAll("PhaseChanged", {
-			Phase = "Waiting",
-			Count = MatchService.PlayerCount(),
-			Needed = MatchService.RequiredPlayers(),
-		})
-		task.wait(1)
+	local enough = MatchService.WaitForPlayers(function(count: number, needed: number)
+		Net.fireAll("PhaseChanged", { Phase = "Waiting", Count = count, Needed = needed })
+	end)
+	if not enough then
+		-- Too few made it from the lobby: everyone goes back.
+		announce("Phase.NotEnough", { min = Config.Match.MinPlayers })
+		task.wait(3)
+		Travel.toLobby(Players:GetPlayers())
+		return
 	end
 
 	enter(PhaseMachine.initial())

@@ -80,7 +80,12 @@ export type Game = {
 	globals: { [string]: any },
 }
 
-function Harness.load(srcDir: string): Game
+-- A source tree to load: `Dir` mirrors the DataModel from its root, or from
+-- `Prefix` (e.g. Dir "src/ReplicatedStorage" with Prefix { "ReplicatedStorage" }).
+export type Root = { Dir: string, Prefix: { string }? }
+
+function Harness.load(roots: string | { Root }): Game
+	local rootList: { Root } = if type(roots) == "string" then { { Dir = roots } } else roots
 	local game = roblox.Instance.new("DataModel")
 	local scripts = {}
 	local globals: { [string]: any } = {}
@@ -99,7 +104,12 @@ function Harness.load(srcDir: string): Game
 		return current
 	end
 
-	Harness.walk(srcDir, function(parts, filePath, className)
+	for _, root in rootList do
+	Harness.walk(root.Dir, function(relative, filePath, className)
+		local parts = table.clone(root.Prefix or {})
+		for _, part in relative do
+			table.insert(parts, part)
+		end
 		if filePath == nil or className == nil then
 			container(parts)
 			return
@@ -112,6 +122,7 @@ function Harness.load(srcDir: string): Game
 		instance.Parent = container(parentParts)
 		table.insert(scripts, instance)
 	end)
+	end
 
 	local cache: { [string]: { value: any } } = {}
 	local requireModule

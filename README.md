@@ -12,6 +12,10 @@ The full design is in [`GDD.md`](GDD.md) (Thai). It is the source of truth.
   in `build/`, so the world can always be rebuilt from this repo alone.
 - Every gameplay number lives in one module:
   `src/ReplicatedStorage/Shared/Config.luau`.
+- **Two places in one experience.** The Lobby (start place: queue pads,
+  menus) and the Match place (the round). `src/` is the Match place; `lobby/src/`
+  is the Lobby place, which also gets the shared code from
+  `src/ReplicatedStorage` and `src/ServerStorage` (see `tools/lib/Places.luau`).
 
 ## Setup (owner's machine)
 
@@ -44,7 +48,10 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `GDD.md` | Game design document (Thai) |
 | `docs/OWNER_TODO.md` | Things only the owner can do: sound IDs, Robux products, open questions (Thai) |
 | `docs/CLAUDE_CODE_PROMPT.md` | The working agreement / milestone plan |
-| `src/` | Every script, mirroring the DataModel path |
+| `src/` | Match place: every script, mirroring the DataModel path |
+| `src/ServerStorage/ServerShared/` | Server code shared by both places (rate-limited remotes) |
+| `lobby/src/` | Lobby place scripts (queue pads, menus) |
+| `build/lobby/` | Lobby place builders (world + UI) |
 | `src/ReplicatedStorage/Shared/Config.luau` | All tunable numbers and asset-ID placeholders |
 | `src/ReplicatedStorage/Shared/Strings.luau` | All player-facing text (en + th) |
 | `src/ReplicatedStorage/Shared/Rng.luau` | Random interface (seedable for tests) |
@@ -86,6 +93,7 @@ wolf side (`tests/WolfSimulation.spec.luau`): attacks, pup, abilities, hiding,
 and every role (`tests/RoleSimulation.spec.luau`, `tests/RoleAbilities.spec.luau`). It checks
 logic and ordering only — nothing visual, no client, no physics.
 
+`out/WolfVillageLobby.rbxl` is the Lobby place built the same way.
 `out/WolfVillage.rbxl` opens in Roblox Studio and contains the generated map,
 every script in `src/`, and the builder scripts as ModuleScripts under
 `ServerStorage.Builders` (run one from the command bar with

@@ -13,6 +13,7 @@ local process = require("@lune/process")
 
 local FakeEngine = require("./lib/FakeEngine")
 local Harness = require("./lib/Harness")
+local Places = require("./lib/Places")
 
 local passed, failed = 0, 0
 local failures: { string } = {}
@@ -112,6 +113,20 @@ for _, spec in specs do
 			-- Every call gets its own DataModel, so one spec can run several matches.
 			startServer = function(options)
 				return FakeEngine.start(Harness.load("src"), options)
+			end,
+			-- Runs a builder against another loaded place (e.g. the lobby).
+			runBuilderIn = function(other, path: string)
+				return Harness.runBuilder(other, path)
+			end,
+			-- The Lobby place's sources (for its pure rules).
+			loadLobby = function()
+				return Harness.load(Places.Lobby.Roots)
+			end,
+			-- The Lobby place's server on its own fake engine.
+			startLobby = function(options)
+				options.Builders = options.Builders or { "build/lobby/BuildLobby.luau" }
+				options.AutoLoadCharacters = true
+				return FakeEngine.start(Harness.load(Places.Lobby.Roots), options)
 			end,
 			task = require("@lune/task"),
 			readJson = function(path: string)

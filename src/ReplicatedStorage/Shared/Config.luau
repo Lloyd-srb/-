@@ -683,6 +683,27 @@ Config.Products = {
 
 Config.Places = {
 	LobbyPlaceId = 0,
+	MatchPlaceId = 0,
+}
+
+--------------------------------------------------------------------------------
+-- §3 Lobby: queue pads (owner's decision, 17 Nov 2026)
+--------------------------------------------------------------------------------
+
+Config.Lobby = {
+	PadCount = 4, -- [owner] four pads, 12 seats each (Config.Match.MaxPlayers)
+	FullCountdown = 10, -- [owner] seconds once the pad is full; nobody can step off
+	HostIdleStart = 60, -- [default] with 8+ players the match starts by itself if the host waits this long
+	ScanInterval = 0.25, -- seconds between "who stands on which pad" checks
+	LaunchAttempts = 2, -- teleport tries before giving up
+	ReturnCheck = 15, -- seconds after a teleport: anyone still here means it failed
+	PadSize = Vector3.new(14, 1, 14), -- art
+	PadColors = {
+		Color3.fromRGB(110, 200, 255),
+		Color3.fromRGB(255, 170, 90),
+		Color3.fromRGB(150, 230, 120),
+		Color3.fromRGB(230, 130, 230),
+	},
 }
 
 --------------------------------------------------------------------------------

@@ -191,8 +191,29 @@ local function install()
 	roblox.implementProperty("Player", "CharacterAdded", function(self)
 		return signalFor(simOf(self), "CharacterAdded:" .. self.UserId)
 	end)
-	roblox.implementMethod("Player", "GetJoinData", function()
-		return {}
+	roblox.implementMethod("Player", "GetJoinData", function(self)
+		return { TeleportData = simOf(self).joinData[self.UserId] }
+	end)
+
+	-- Teleports are recorded, not performed (players stay in the simulation).
+	roblox.implementMethod("TeleportService", "ReserveServer", function(self)
+		local s = simOf(self)
+		s.reserved += 1
+		return "code-" .. s.reserved, "server-" .. s.reserved
+	end)
+	roblox.implementMethod("TeleportService", "TeleportToPrivateServer", function(self, placeId, code, players, _spawn, data)
+		local ids = {}
+		for _, player in players do
+			table.insert(ids, player.UserId)
+		end
+		table.insert(simOf(self).teleports, { PlaceId = placeId, Code = code, Players = ids, Data = data })
+	end)
+	roblox.implementMethod("TeleportService", "TeleportAsync", function(self, placeId, players)
+		local ids = {}
+		for _, player in players do
+			table.insert(ids, player.UserId)
+		end
+		table.insert(simOf(self).teleports, { PlaceId = placeId, Players = ids })
 	end)
 	roblox.implementMethod("Player", "LoadCharacterAsync", function(self)
 		-- Like Roblox: the old character is removed first. A corpse has been
@@ -286,7 +307,7 @@ export type Options = {
 ]]
 function FakeEngine.start(loaded: Harness.Game, options: Options)
 	install()
-	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0, callbacks = {} }
+	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0, callbacks = {}, joinData = {}, teleports = {}, reserved = 0 }
 	table.insert(sims, sim)
 	loaded.game:SetAttribute("SimId", #sims)
 	local s = sim -- this simulation, even after newer ones start
@@ -319,13 +340,18 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 
 	local server = { Config = Config, game = game, require = loaded.require }
 
-	function server.addPlayer(id: number, name: string)
+	function server.addPlayer(id: number, name: string, teleportData: any?)
+		s.joinData[id] = teleportData
 		local player = roblox.Instance.new("Player")
 		player.Name = name
 		player.DisplayName = name
 		player.UserId = id
 		player.Parent = game:GetService("Players")
 		signalFor(s, "PlayerAdded"):Fire(player)
+		-- Roblox's own CharacterAutoLoads (the Lobby place relies on it).
+		if options.AutoLoadCharacters then
+			player:LoadCharacterAsync()
+		end
 		return player
 	end
 
@@ -428,6 +454,10 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 		signalFor(s, "Died:" .. humanoid:GetFullName()):Fire()
 	end
 
+	function server.teleports(): { any }
+		return s.teleports
+	end
+
 	function server.phase(): string
 		local last = server.last("PhaseChanged", "all")
 		return if last then last[1].Phase else "None"
@@ -440,7 +470,7 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 	end
 
 	for _, entry in options.Players do
-		server.addPlayer(entry.Id, entry.Name)
+		server.addPlayer(entry.Id, entry.Name, entry.TeleportData)
 	end
 
 	local main = game.ServerScriptService.Main

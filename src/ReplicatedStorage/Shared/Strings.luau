@@ -31,6 +31,10 @@ local Strings: { [string]: Entry } = {
 	["Phase.Meeting"] = { en = "Village meeting", th = "ประชุมหมู่บ้าน" },
 	["Phase.FullMoonWarning"] = { en = "Nightfall", th = "ใกล้ค่ำ" },
 	["Phase.GameOver"] = { en = "Game over", th = "จบเกม" },
+	["Phase.NotEnough"] = {
+		en = "Not enough players arrived (need {min:int}). Back to the lobby...",
+		th = "ผู้เล่นมาไม่ถึง {min:int} คน กำลังกลับ Lobby...",
+	},
 	["Phase.Waiting"] = { en = "Waiting for players {count:int}/{needed:int}", th = "รอผู้เล่น {count:int}/{needed:int}" },
 
 	-- Role-selection screen (GDD §4)
@@ -41,6 +45,45 @@ local Strings: { [string]: Entry } = {
 	["RoleSelect.Hint"] = {
 		en = "You get one of your 3 picks. The wolf is chosen at random.",
 		th = "คุณจะได้ 1 ใน 3 บทที่เลือก ส่วนหมาป่าสุ่มจากทุกคน",
+	},
+
+	-- Lobby (GDD §3, owner's rules 17 Nov 2026)
+	["Lobby.PadTitle"] = { en = "Match {id:int}", th = "ห้อง {id:int}" },
+	["Lobby.Waiting"] = { en = "Needs {min:int} to start", th = "ต้องมีอย่างน้อย {min:int} คน" },
+	["Lobby.Ready"] = { en = "Host {name} can start", th = "หัวห้อง {name} กดเริ่มได้" },
+	["Lobby.Countdown"] = { en = "Starting in {seconds:int}", th = "เริ่มในอีก {seconds:int}" },
+	["Lobby.Launching"] = { en = "Going to the village...", th = "กำลังไปหมู่บ้าน..." },
+	["Lobby.InQueue"] = { en = "In queue: Match {id:int}  ({count:int}/{max:int})", th = "อยู่ในคิว: ห้อง {id:int}  ({count:int}/{max:int})" },
+	["Lobby.YouAreHost"] = { en = "You are the host", th = "คุณคือหัวห้อง" },
+	["Lobby.Start"] = { en = "Start", th = "เริ่มเกม" },
+	["Lobby.StepOff"] = { en = "Step off the pad to leave the queue", th = "เดินออกจากแท่นเพื่อออกจากคิว" },
+	["Lobby.Locked"] = { en = "Full! Nobody can leave now", th = "ครบแล้ว! ออกจากคิวไม่ได้แล้ว" },
+	["Lobby.NoTeleport"] = { en = "Teleporting does not work in Studio (or the Match place id is not set).", th = "ใน Studio ส่งไปห้องเกมไม่ได้ (หรือยังไม่ได้ใส่ Place ID ของห้องเกม)" },
+	["Lobby.TeleportFailed"] = { en = "Could not reach the village. Please try again.", th = "ไปหมู่บ้านไม่สำเร็จ ลองใหม่อีกครั้ง" },
+
+	-- Lobby menus
+	["Menu.Shop"] = { en = "Shop", th = "ร้านค้า" },
+	["Menu.Role"] = { en = "Roles", th = "บทบาท" },
+	["Menu.Monster"] = { en = "Monster", th = "มอนสเตอร์" },
+	["Menu.Settings"] = { en = "Settings", th = "ตั้งค่า" },
+	["Menu.News"] = { en = "News", th = "ข่าวสาร" },
+	["Menu.Codes"] = { en = "Codes", th = "โค้ด" },
+	["Menu.Pass"] = { en = "Pass", th = "Pass" },
+	["Menu.Spin"] = { en = "Daily Spin", th = "หมุนรายวัน" },
+	["Menu.Close"] = { en = "Close", th = "ปิด" },
+	["Menu.Soon"] = { en = "Coming soon.", th = "เร็วๆ นี้" },
+	["Menu.Free"] = { en = "Free", th = "ฟรี" },
+	["Menu.Price"] = { en = "{coins:int} coins  ·  {robux:int} R$ / Diamonds", th = "{coins:int} coin  ·  {robux:int} R$ / Diamond" },
+	["Menu.Level"] = { en = "Level {level:int}+", th = "เลเวล {level:int} ขึ้นไป" },
+	["Menu.Werewolf"] = { en = "Werewolf (selected)", th = "หมาป่า (ใช้อยู่)" },
+	["Menu.MonsterInfo"] = { en = "More monsters will come later.", th = "มอนสเตอร์แบบอื่นจะมาในภายหลัง" },
+	["Menu.SettingsInfo"] = {
+		en = "The game uses the language of your Roblox account automatically.",
+		th = "ภาษาในเกมเปลี่ยนตามภาษาของบัญชี Roblox อัตโนมัติ",
+	},
+	["News.Body"] = {
+		en = "Welcome to Wolf Village! Step on a glowing pad to join a match. 8 players can start; 12 starts by itself.",
+		th = "ยินดีต้อนรับสู่ Wolf Village! เดินขึ้นแท่นเรืองแสงเพื่อเข้าคิว ครบ 8 คนเริ่มได้ ครบ 12 คนเริ่มเอง",
 	},
 
 	-- HUD

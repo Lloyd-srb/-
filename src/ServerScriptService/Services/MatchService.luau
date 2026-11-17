@@ -231,7 +231,54 @@ local function setupCharacter(player: Player, character: Model)
 	MatchService.SetCollisionGroup(character, MatchService.CharacterGroup)
 end
 
+local expected: number? = nil -- how many the lobby sent (TeleportData)
+
+local function readJoinData(player: Player)
+	local ok, joinData = pcall(function()
+		return player:GetJoinData()
+	end)
+	local data = if ok and type(joinData) == "table" then joinData.TeleportData else nil
+	if type(data) == "table" and type((data :: any).Expected) == "number" then
+		local count = math.clamp(math.floor((data :: any).Expected), 1, Config.Match.MaxPlayers)
+		expected = math.max(expected or 0, count)
+	end
+end
+
+--[[
+	Waits until the match can begin. Returns false when it cannot (fewer than
+	Config.Match.MinPlayers arrived): the caller sends everyone back.
+	  Studio: waits for Config.Debug.MinPlayers (no teleports there).
+	  Live:   waits for everyone the lobby sent, or Config.Match.ArrivalTimeout
+	          seconds after the first arrival, whichever comes first.
+	`report(count, needed)` is called while waiting.
+]]
+function MatchService.WaitForPlayers(report: (count: number, needed: number) -> ()): boolean
+	if Config.Debug.Enabled then
+		while MatchService.PlayerCount() < MatchService.RequiredPlayers() do
+			report(MatchService.PlayerCount(), MatchService.RequiredPlayers())
+			task.wait(1)
+		end
+		return true
+	end
+	while MatchService.PlayerCount() == 0 do
+		task.wait(0.25)
+	end
+	local deadline = os.clock() + Config.Match.ArrivalTimeout
+	while os.clock() < deadline do
+		local target = expected or Config.Match.MaxPlayers
+		if MatchService.PlayerCount() >= target then
+			break
+		end
+		report(MatchService.PlayerCount(), target)
+		task.wait(0.25)
+	end
+	return MatchService.PlayerCount() >= Config.Match.MinPlayers
+end
+
 local function onPlayerAdded(player: Player)
+	if not MatchService.Started then
+		readJoinData(player)
+	end
 	player.CharacterAdded:Connect(function(character: Model)
 		setupCharacter(player, character)
 	end)

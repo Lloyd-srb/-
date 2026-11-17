@@ -18,8 +18,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
-local TeleportService = game:GetService("TeleportService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
@@ -34,6 +32,7 @@ local MatchService = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 local ProfileService = require(script.Parent.ProfileService)
 local RoundService = require(script.Parent.RoundService)
+local Travel = require(script.Parent.Travel)
 
 export type Summary = {
 	Coins: number,
@@ -145,18 +144,9 @@ local function onLike(player: Player, target: any)
 	end
 end
 
--- Back to the lobby (milestone 8). In Studio teleports do not work.
+-- Back to the lobby. In Studio teleports do not work.
 local function sendHome()
-	local lobby = Config.Places.LobbyPlaceId
-	if lobby == 0 or RunService:IsStudio() then
-		return
-	end
-	local players = Players:GetPlayers()
-	if #players > 0 then
-		pcall(function()
-			TeleportService:TeleportAsync(lobby, players)
-		end)
-	end
+	Travel.toLobby(Players:GetPlayers())
 end
 
 local function closeLikes()
