@@ -120,7 +120,7 @@ test("village wins: roles revealed, likes, MVP, rewards into profiles", function
 	local profile = svc.Profile.Get(server.player(2))
 	expect(profile.Coins).toBe(48)
 	expect(profile.Exp).toBe(60)
-	expect(profile.PassExp).toBe(150)
+	expect(profile.Pass.Exp).toBe(150)
 	expect(profile.Mastery.Villager).toBe(2)
 	expect(svc.Profile.Get(server.player(3)).Mastery.Doctor).toBe(2)
 	expect(svc.End.Granted[-1005]).toBeNil() -- bots get nothing

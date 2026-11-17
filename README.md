@@ -49,18 +49,19 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `docs/OWNER_TODO.md` | Things only the owner can do: sound IDs, Robux products, open questions (Thai) |
 | `docs/CLAUDE_CODE_PROMPT.md` | The working agreement / milestone plan |
 | `src/` | Match place: every script, mirroring the DataModel path |
-| `src/ServerStorage/ServerShared/` | Server code shared by both places (rate-limited remotes) |
-| `lobby/src/` | Lobby place scripts (queue pads, menus) |
+| `src/ServerStorage/ServerShared/` | Server code shared by both places: rate-limited remotes (`Net`), saved profiles with session locking (`Profiles`), Robux receipts (`Purchases`), the secret code list (`CodeList`) |
+| `src/ServerStorage/ServerShared/Logic/` | Pure profile rules: data layout + clean-up, rewards, Season Pass, buying, equipping, Daily Spin, codes |
+| `lobby/src/` | Lobby place scripts (queue pads; shop, roles, skins, Season Pass, Daily Spin and codes menus; titles over heads) |
 | `build/lobby/` | Lobby place builders (world + UI) |
 | `src/ReplicatedStorage/Shared/Config.luau` | All tunable numbers and asset-ID placeholders |
 | `src/ReplicatedStorage/Shared/Strings.luau` | All player-facing text (en + th) |
 | `src/ReplicatedStorage/Shared/Rng.luau` | Random interface (seedable for tests) |
-| `src/ReplicatedStorage/Shared/Logic/` | Pure shared rules: round phases, levels / Season Pass |
+| `src/ReplicatedStorage/Shared/Logic/` | Pure shared rules: round phases, levels / Season Pass, shop prices and "may I buy this" |
 | `src/ServerScriptService/Logic/` | Pure server rules: role assignment, voting, win conditions, rewards, loot, wolf pup |
 | `src/ReplicatedStorage/Shared/Remotes.luau` | The list of RemoteEvents (who may receive what) |
 | `src/ServerScriptService/Main.server.luau` | Server bootstrap (the only Script) |
 | `src/ReplicatedStorage/Shared/WolfAnimData.luau` | Werewolf animations as data (keyframe builder + client fallback animator) |
-| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), inventory + crates, tasks, ghosts, chat channels, end of match (scoreboard, likes, rewards), houses/doors, vote, wolf, combat, hiding, movement, profiles (stub), lighting, net |
+| `src/ServerScriptService/Services/` | Server services: match, round, role select, roles (abilities), inventory + crates, tasks, ghosts, chat channels, end of match (scoreboard, likes, rewards), houses/doors, vote, wolf, combat, hiding, movement, profiles (saved data + skins), lighting, net |
 | `src/StarterPlayer/StarterPlayerScripts/Main.client.luau` | Client bootstrap (the only LocalScript) |
 | `src/StarterPlayer/StarterPlayerScripts/Controllers/` | Client controllers: HUD, role select, vote screen, role / wolf controls, items, tasks, ghosts, chat styling, scoreboard, effects, one-way windows, prompts, highlights, rig animation, hiding camera |
 | `docs/TEST_CHECKLISTS.md` | What to click and what should happen, per milestone (Thai) |
@@ -92,6 +93,11 @@ whole matches: roles, night warp, doors, meeting, vote, exile, win, and the
 wolf side (`tests/WolfSimulation.spec.luau`): attacks, pup, abilities, hiding,
 and every role (`tests/RoleSimulation.spec.luau`, `tests/RoleAbilities.spec.luau`). It checks
 logic and ordering only — nothing visual, no client, no physics.
+The fake engine also has DataStores (shared between simulations of one
+"experience", like the Lobby and Match servers), Robux receipts and server
+shutdown: `tests/Profiles.spec.luau` checks session locking, take-over of
+stale locks, shutdown saves and idempotent receipts; `tests/LobbyEconomy.spec.luau`
+the shop, Daily Spin, codes and a reward going Lobby → Match → Lobby.
 
 `out/WolfVillageLobby.rbxl` is the Lobby place built the same way.
 `out/WolfVillage.rbxl` opens in Roblox Studio and contains the generated map,

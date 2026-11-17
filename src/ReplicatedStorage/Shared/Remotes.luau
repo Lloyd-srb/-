@@ -49,6 +49,10 @@ Remotes.Names = {
 	"PadsChanged", -- every pad's count and state (public)
 	"QueueChanged", -- own pad: am I in a queue, am I the host
 	"LobbyNotice", -- a short message for one player
+	"ProfileView", -- own coins, diamonds, level, owned things, pass, spins (Lobby)
+	"ShopResult", -- own purchase / equip result
+	"SpinResult", -- own Daily Spin prize
+	"CodeResult", -- own code result
 	"Effect", -- visual feedback: shot tracers (everyone), "blocked" / "blessed" (the people involved)
 	-- client -> server
 	"RequestSync",
@@ -58,6 +62,10 @@ Remotes.Names = {
 	"WolfAbility",
 	"HideExit",
 	"RolePicks",
+	"ShopBuy", -- Lobby: buy (kind, id, currency)
+	"Equip", -- Lobby: wear a skin / title (slot, id or "")
+	"SpinRequest", -- Lobby: use a Daily Spin
+	"CodeRedeem", -- Lobby: redeem a code (text)
 	"AbilityUse",
 	"ItemUse",
 	"Like",

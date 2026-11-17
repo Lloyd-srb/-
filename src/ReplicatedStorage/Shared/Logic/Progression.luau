@@ -102,7 +102,7 @@ function Progression.passRewards(level: number, track: Track): { PassReward }
 	end
 
 	if level == 1 then
-		return { { Kind = "Title", Id = if track == "Free" then "PassFree" else "PassPremium" } }
+		return { { Kind = "Title", Id = if track == "Free" then Pass.FreeTitle else Pass.PremiumTitle } }
 	elseif level == Pass.MainLevels then
 		if track == "Free" then
 			return { { Kind = "Skin", Id = "KnifePass" }, { Kind = "Skin", Id = "GunPass" } }

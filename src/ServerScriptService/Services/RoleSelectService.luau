@@ -84,6 +84,12 @@ function RoleSelectService.Start()
 			sendOptions(player)
 		end
 	end)
+	-- The saved profile arrived after the screen opened: show the roles owned.
+	ProfileService.Loaded:Connect(function(player: Player)
+		if isOpen() then
+			sendOptions(player)
+		end
+	end)
 end
 
 return RoleSelectService

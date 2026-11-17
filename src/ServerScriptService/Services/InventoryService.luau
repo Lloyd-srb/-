@@ -42,6 +42,7 @@ local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
+local ProfileService = require(script.Parent.ProfileService)
 local Prompts = require(script.Parent.Prompts)
 local RoleService = require(script.Parent.RoleService)
 local RoundService = require(script.Parent.RoundService)
@@ -137,7 +138,7 @@ local function findTool(id: number, itemId: string): Tool?
 	return nil
 end
 
-local function makeTool(item: Item): Tool
+local function makeTool(item: Item, ownerId: number): Tool
 	local look = (Config.ItemLook :: any)[item.Kind]
 	local tool = Instance.new("Tool")
 	tool.Name = item.Kind -- the client shows the translated name
@@ -150,6 +151,9 @@ local function makeTool(item: Item): Tool
 	handle.Name = "Handle"
 	handle.Size = if look then look.Size else Vector3.new(0.6, 0.6, 0.6)
 	handle.Color = if look then look.Color else Color3.new(1, 1, 1)
+	if item.Kind == "Gun" and ProfileService.Skin(MatchService.PlayerOf(ownerId), "Gun") then
+		handle.Color = RoleService.SkinColor(ownerId, "Gun") -- cosmetic gun skin
+	end
 	handle.Material = Enum.Material.SmoothPlastic
 	handle.CanCollide = false
 	handle.Massless = true
@@ -175,7 +179,7 @@ function InventoryService.Give(id: number, kind: string, itemUses: number?): Ite
 	table.insert(list, item)
 	local backpack = backpackOf(id)
 	if backpack then
-		makeTool(item).Parent = backpack
+		makeTool(item, id).Parent = backpack
 	end
 	local player = MatchService.PlayerOf(id)
 	if player then
@@ -567,7 +571,7 @@ function InventoryService.Start()
 		end
 		for _, item in InventoryService.Items(member.Id) do
 			if not findTool(member.Id, item.Id) then
-				makeTool(item).Parent = backpack
+				makeTool(item, member.Id).Parent = backpack
 			end
 		end
 	end)

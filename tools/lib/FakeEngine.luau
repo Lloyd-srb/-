@@ -75,6 +75,51 @@ local function promptKey(s: any, prompt: any): string
 	return "Prompt:" .. id
 end
 
+--------------------------------------------------------------------------------
+-- DataStores: one set of stores per "experience". Simulations started with the
+-- same options.Experience share them (Lobby and Match servers of one game);
+-- by default every simulation gets its own, so tests never see each other's data.
+--------------------------------------------------------------------------------
+
+local experiences: { [string]: { [string]: { [string]: any } } } = {}
+
+-- What Roblox can store: strings, numbers (not NaN / inf), booleans and
+-- tables that are either arrays or have only string keys.
+local function assertStorable(value: any, path: string)
+	local kind = type(value)
+	if kind == "number" then
+		assert(value == value and value ~= math.huge and value ~= -math.huge, `DataStore: bad number at {path}`)
+	elseif kind == "table" then
+		local count, stringKeys = 0, 0
+		for key, item in value do
+			count += 1
+			if type(key) == "string" then
+				stringKeys += 1
+			else
+				assert(type(key) == "number", `DataStore: bad key type at {path}`)
+			end
+			assertStorable(item, path .. "." .. tostring(key))
+		end
+		assert(stringKeys == 0 or stringKeys == count, `DataStore: mixed table at {path}`)
+		if stringKeys == 0 then
+			assert(#value == count, `DataStore: sparse array at {path}`)
+		end
+	else
+		assert(kind == "string" or kind == "boolean", `DataStore: cannot store a {kind} at {path}`)
+	end
+end
+
+local function deepCopy(value: any): any
+	if type(value) ~= "table" then
+		return value
+	end
+	local copy = {}
+	for key, item in value do
+		copy[key] = deepCopy(item)
+	end
+	return copy
+end
+
 -- A stable key for an instance whose events a script listens to.
 local function instanceKey(s: any, instance: any): string
 	local id = instance:GetAttribute("SimSignalId")
@@ -295,6 +340,60 @@ local function install()
 		return signalFor(s, "DescendantAdded:" .. instanceKey(s, self))
 	end)
 
+	roblox.implementMethod("DataStoreService", "GetDataStore", function(self, name)
+		local s = simOf(self)
+		local stores = experiences[s.experience]
+		stores[name] = stores[name] or {}
+		local records = stores[name]
+		local function call()
+			task.wait() -- a real DataStore call yields
+			if s.dataStoreDown or s.dataStoreFailures > 0 then
+				s.dataStoreFailures = math.max(0, s.dataStoreFailures - 1)
+				error("fake DataStore failure")
+			end
+		end
+		local store = {}
+		function store.UpdateAsync(_, key: string, transform)
+			call()
+			local result = transform(deepCopy(records[key]))
+			if result ~= nil then
+				assertStorable(result, key)
+				records[key] = deepCopy(result)
+			end
+			return deepCopy(result)
+		end
+		function store.GetAsync(_, key: string)
+			call()
+			return deepCopy(records[key])
+		end
+		function store.SetAsync(_, key: string, value)
+			call()
+			assertStorable(value, key)
+			records[key] = deepCopy(value)
+		end
+		return store
+	end)
+
+	roblox.implementMethod("DataModel", "BindToClose", function(self, handler)
+		table.insert(simOf(self).closeHandlers, handler)
+	end)
+
+	roblox.implementMethod("Player", "Kick", function(self, message)
+		local s = simOf(self)
+		s.kicks[self.UserId] = message or ""
+		signalFor(s, "PlayerRemoving"):Fire(self)
+		self.Parent = nil
+	end)
+
+	roblox.implementProperty("MarketplaceService", "ProcessReceipt", function(self)
+		return simOf(self).callbacks.ProcessReceipt
+	end, function(self, callback)
+		simOf(self).callbacks.ProcessReceipt = callback
+	end)
+	roblox.implementMethod("MarketplaceService", "PromptProductPurchase", function(self, player, productId)
+		table.insert(simOf(self).purchasePrompts, { UserId = player.UserId, ProductId = productId })
+	end)
+
 	roblox.implementProperty("Humanoid", "Died", function(self)
 		return signalFor(simOf(self), "Died:" .. self:GetFullName())
 	end)
@@ -320,6 +419,8 @@ export type Options = {
 	Players: { { Id: number, Name: string } },
 	Debug: { [string]: any }?,
 	Builders: { string }?,
+	Experience: string?, -- simulations with the same name share DataStores
+	AutoLoadCharacters: boolean?,
 }
 
 --[[
@@ -328,9 +429,25 @@ export type Options = {
 ]]
 function FakeEngine.start(loaded: Harness.Game, options: Options)
 	install()
-	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0, callbacks = {}, joinData = {}, teleports = {}, reserved = 0 }
+	sim = {
+		game = loaded.game,
+		signals = {},
+		log = {},
+		promptCount = 0,
+		callbacks = {},
+		joinData = {},
+		teleports = {},
+		reserved = 0,
+		closeHandlers = {},
+		kicks = {},
+		purchasePrompts = {},
+		dataStoreDown = false,
+		dataStoreFailures = 0,
+	}
 	table.insert(sims, sim)
 	loaded.game:SetAttribute("SimId", #sims)
+	sim.experience = options.Experience or ("sim" .. #sims)
+	experiences[sim.experience] = experiences[sim.experience] or {}
 	local s = sim -- this simulation, even after newer ones start
 	local game = loaded.game
 
@@ -490,6 +607,45 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 			end
 			node = node.Parent
 		end
+	end
+
+	-- DataStores: a saved record, and making calls fail.
+	function server.savedRecord(storeName: string, key: string): any
+		local store = experiences[s.experience][storeName]
+		return if store then deepCopy(store[key]) else nil
+	end
+	function server.setSavedRecord(storeName: string, key: string, value: any)
+		local stores = experiences[s.experience]
+		stores[storeName] = stores[storeName] or {}
+		stores[storeName][key] = deepCopy(value)
+	end
+	function server.dataStoreDown(down: boolean)
+		s.dataStoreDown = down
+	end
+	function server.failDataStoreCalls(count: number)
+		s.dataStoreFailures = count
+	end
+
+	-- The server shuts down (BindToClose handlers run, like Roblox).
+	function server.close()
+		for _, handler in s.closeHandlers do
+			handler()
+		end
+	end
+
+	function server.kicked(id: number): string?
+		return s.kicks[id]
+	end
+
+	-- Roblox calls ProcessReceipt for a Developer Product purchase.
+	function server.processReceipt(userId: number, productId: number, purchaseId: string): any
+		local callback = s.callbacks.ProcessReceipt
+		assert(callback, "no ProcessReceipt callback was set")
+		return callback({ PlayerId = userId, ProductId = productId, PurchaseId = purchaseId, CurrencySpent = 0 })
+	end
+
+	function server.purchasePrompts(): { any }
+		return s.purchasePrompts
 	end
 
 	function server.teleports(): { any }

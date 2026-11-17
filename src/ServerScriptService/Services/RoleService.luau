@@ -23,6 +23,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -41,6 +42,7 @@ local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local Net = require(script.Parent.Net)
+local ProfileService = require(script.Parent.ProfileService)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
 local Sight = require(script.Parent.Sight)
@@ -161,6 +163,13 @@ end
 -- Sheriff (and, from milestone 5, the gun item)
 --------------------------------------------------------------------------------
 
+-- The colour of a member's gun / knife skin (or the default look).
+function RoleService.SkinColor(memberId: number, slot: string): Color3
+	local skinId = ProfileService.Skin(MatchService.PlayerOf(memberId), slot)
+	local skin = if skinId then Config.Skins[skinId] else nil
+	return (if skin then skin.Color else nil) or (Config.DefaultLook :: any)[slot]
+end
+
 -- What a stun-gun hit does: the Killer dies at once, anyone else is stunned.
 function RoleService.ApplyGunHit(targetId: number, shooterId: number)
 	local target = MatchService.Roster.Members[targetId]
@@ -190,6 +199,7 @@ function RoleService.FireGun(shooterId: number, direction: Vector3)
 		Kind = "Shot",
 		From = origin,
 		To = if hitRoot then hitRoot.CFrame.Position else origin + ray,
+		Color = RoleService.SkinColor(shooterId, "Gun"),
 	})
 	if hitId then
 		RoleService.ApplyGunHit(hitId, shooterId)
@@ -356,8 +366,19 @@ local function stab(player: Player)
 		return -- a miss does not use up the kill
 	end
 	AbilityUses.tryUse(uses, member.Id, "Stab", scopeKey, limit)
+	local targetRoot = MatchService.RootOf(target.Id)
 	CombatService.Damage(target.Id, cfg.KnifeDamage, "Killer", member.Id)
 	sendState(member)
+	-- Only players close by see the slash (in the Killer's knife colour).
+	if targetRoot then
+		local at = targetRoot.CFrame.Position
+		for _, viewer in Players:GetPlayers() do
+			local viewerRoot = viewer.Character and viewer.Character:FindFirstChild("HumanoidRootPart")
+			if viewerRoot and viewerRoot:IsA("BasePart") and (viewerRoot.CFrame.Position - at).Magnitude <= Config.SlashViewRadius then
+				Net.fire(viewer, "Effect", { Kind = "Slash", At = at, Color = RoleService.SkinColor(member.Id, "Knife") })
+			end
+		end
+	end
 end
 
 --------------------------------------------------------------------------------

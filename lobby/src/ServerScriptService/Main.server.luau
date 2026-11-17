@@ -10,9 +10,14 @@ local Services = script.Parent.Services
 
 type Service = { Init: () -> (), Start: () -> () }
 
+local ServerShared = ServerStorage:WaitForChild("ServerShared")
+
 local ordered: { Service } = {
-	require(ServerStorage:WaitForChild("ServerShared"):WaitForChild("Net")),
+	require(ServerShared:WaitForChild("Net")),
+	require(ServerShared:WaitForChild("Profiles")),
+	require(ServerShared:WaitForChild("Purchases")),
 	require(Services.QueueService),
+	require(Services.EconomyService),
 }
 
 if not workspace:FindFirstChild("Lobby") then

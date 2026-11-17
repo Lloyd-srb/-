@@ -493,7 +493,12 @@ Config.SeasonPass = {
 	SpinLevels = { 10, 20, 30, 40, 50 }, -- [GDD]
 	FreeCoinAmount = 50, -- [GDD] every other free level, and every free level after 60
 	PremiumDiamondAmount = 10, -- [GDD] after 60; [ASSUMED] also used for the pre-60 slots
-	PremiumRobuxPrice = 0, -- [ASSUMED] not in the GDD: owner must set a price
+	-- [ASSUMED] not in the GDD (OWNER_TODO 15): a suggestion until the owner
+	-- sets the price. Also the Diamond price (§13: same number).
+	PremiumRobuxPrice = 399,
+	-- Titles on level 1 of each track (GDD §13.2: "Title พิเศษ").
+	FreeTitle = "PassFree",
+	PremiumTitle = "PassPremium",
 }
 
 --------------------------------------------------------------------------------
@@ -517,6 +522,104 @@ Config.DailySpin = {
 	} :: { SpinPrize },
 	DuplicateRoleCoins = 2500, -- [GDD] already own Killer
 	DuplicateSkinDiamonds = 200, -- [default] already own the spin wolf skin
+	ResetHourUtc = 0, -- [ASSUMED] OWNER_TODO 20: the free spin comes back at 00:00 UTC (07:00 Thai time)
+}
+
+--------------------------------------------------------------------------------
+-- §13 Skins and titles (cosmetic only, never change gameplay)
+--   Slot "Gun"   colour of the stun-gun shot and the gun item
+--   Slot "Knife" colour of the Killer's slash
+--   Slot "Wolf"  colours of the werewolf body (keys of Config.WolfRig)
+--   Source "Shop" = sold for Price Robux or the same number of Diamonds;
+--   "Pass" / "Spin" = only from the Season Pass / Daily Spin.
+--------------------------------------------------------------------------------
+
+export type SkinDef = {
+	Slot: "Gun" | "Knife" | "Wolf",
+	Source: "Shop" | "Pass" | "Spin",
+	Price: number?, -- Robux / Diamonds (Source "Shop" only)
+	Color: Color3?, -- Gun / Knife
+	Paint: { [string]: Color3 }?, -- Wolf: overrides Config.WolfRig colours
+}
+
+Config.Skins = {
+	-- [GDD] §13.2 / §13.3 (the looks are [ASSUMED] art choices)
+	GunPass = { Slot = "Gun", Source = "Pass", Color = Color3.fromRGB(120, 230, 255) },
+	KnifePass = { Slot = "Knife", Source = "Pass", Color = Color3.fromRGB(120, 230, 255) },
+	WolfPass = {
+		Slot = "Wolf",
+		Source = "Pass",
+		Paint = { Fur = Color3.fromRGB(236, 236, 242), FurDark = Color3.fromRGB(190, 196, 210), Eye = Color3.fromRGB(90, 200, 255) },
+	},
+	WolfSpin = {
+		Slot = "Wolf",
+		Source = "Spin",
+		Paint = { Fur = Color3.fromRGB(150, 60, 40), FurDark = Color3.fromRGB(100, 36, 28), Eye = Color3.fromRGB(255, 90, 40) },
+	},
+	-- [ASSUMED] OWNER_TODO 19: example shop skins until the owner sends the real list and prices.
+	GunGold = { Slot = "Gun", Source = "Shop", Price = 99, Color = Color3.fromRGB(255, 200, 60) },
+	KnifeGold = { Slot = "Knife", Source = "Shop", Price = 99, Color = Color3.fromRGB(255, 200, 60) },
+	WolfShadow = {
+		Slot = "Wolf",
+		Source = "Shop",
+		Price = 199,
+		Paint = { Fur = Color3.fromRGB(40, 40, 48), FurDark = Color3.fromRGB(24, 24, 30), Belly = Color3.fromRGB(60, 60, 70), Eye = Color3.fromRGB(190, 80, 255) },
+	},
+} :: { [string]: SkinDef }
+
+-- Shop / menu order.
+Config.SkinOrder = { "GunGold", "KnifeGold", "WolfShadow", "GunPass", "KnifePass", "WolfPass", "WolfSpin" }
+
+-- Players this close see the Killer's slash (its colour is the knife skin).
+Config.SlashViewRadius = 60 -- [ASSUMED] studs
+
+-- Without a skin.
+Config.DefaultLook = {
+	Gun = Color3.fromRGB(255, 240, 120), -- [ASSUMED] art
+	Knife = Color3.fromRGB(230, 230, 235), -- [ASSUMED] art
+}
+
+-- Titles a player can show over their head in the lobby.
+Config.Titles = { "PassFree", "PassPremium" }
+
+--------------------------------------------------------------------------------
+-- §3 / §13 Codes: the list itself is secret (clients can read this module),
+-- so it lives in ServerStorage.ServerShared.CodeList.
+--------------------------------------------------------------------------------
+
+Config.CodeMaxLength = 32
+
+--------------------------------------------------------------------------------
+-- §13 Shop rules
+--------------------------------------------------------------------------------
+
+Config.Shop = {
+	-- [ASSUMED] OWNER_TODO 66: a role can only be bought once its level is reached
+	-- (nobody pays for a role they cannot use yet). The Daily Spin can still
+	-- give the Killer early; it becomes usable at its level.
+	LevelGateForBuying = true,
+	-- [ASSUMED] a Robux purchase of something already owned (two quick
+	-- clicks) gives its price back as Diamonds instead.
+	RefundDuplicatesAsDiamonds = true,
+}
+
+--------------------------------------------------------------------------------
+-- Saving (DataStore profiles with session locking)
+--------------------------------------------------------------------------------
+
+Config.Data = {
+	StoreName = "Profiles_v1",
+	StudioStoreName = "Profiles_Studio", -- Studio never touches the live data
+	KeyPrefix = "Player_",
+	AutoSaveInterval = 60, -- seconds; each save also renews this server's lock
+	-- A lock not renewed for this long belongs to a server that crashed.
+	LockStaleAfter = 300,
+	-- Another server still holds the lock (the player just came from there):
+	-- try again every few seconds; after LoadTimeout take the lock over.
+	LoadRetryDelay = 2,
+	LoadTimeout = 30,
+	MaxAttempts = 5, -- tries per DataStore call (waits 1, 2, 4, 8 s in between)
+	ReceiptHistory = 100, -- purchase ids remembered per player (no double grants)
 }
 
 --------------------------------------------------------------------------------
@@ -676,7 +779,10 @@ Config.Products = {
 		RoleEngineer = 0,
 		RoleKiller = 0,
 		RoleFool = 0,
-	},
+		SkinGunGold = 0,
+		SkinKnifeGold = 0,
+		SkinWolfShadow = 0,
+	} :: { [string]: number },
 }
 
 --------------------------------------------------------------------------------

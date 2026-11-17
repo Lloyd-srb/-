@@ -3,6 +3,7 @@ local Rng = require(game.ReplicatedStorage.Shared.Rng)
 local Progression = require(game.ReplicatedStorage.Shared.Logic.Progression)
 local Rewards = require(game.ServerScriptService.Logic.Rewards)
 local Loot = require(game.ServerScriptService.Logic.Loot)
+local DailySpin = require(game.ServerStorage.ServerShared.Logic.DailySpin)
 
 local function reward(nights, won, faction, tasks, mvp)
 	return Rewards.compute({
@@ -134,7 +135,7 @@ test("daily spin: odds and duplicate conversion", function()
 	local rng = Rng.seeded(99)
 	local counts, rolls = {}, 200000
 	for _ = 1, rolls do
-		local grant = Loot.rollSpin(rng, {}, {})
+		local grant = DailySpin.roll(rng, {}, {})
 		local key = grant.Kind .. tostring(grant.Amount or grant.Id)
 		counts[key] = (counts[key] or 0) + 1
 	end
@@ -145,7 +146,7 @@ test("daily spin: odds and duplicate conversion", function()
 
 	local sawRoleDup, sawSkinDup = false, false
 	for _ = 1, 20000 do
-		local grant = Loot.rollSpin(rng, { Killer = true }, { WolfSpin = true })
+		local grant = DailySpin.roll(rng, { Killer = true }, { WolfSpin = true })
 		expect(grant.Kind ~= "Role" and grant.Kind ~= "Skin").toBe(true)
 		if grant.ConvertedFrom == "Killer" then
 			expect(grant).toEqual({ Kind = "Coins", Amount = 2500, ConvertedFrom = "Killer" })
@@ -158,9 +159,16 @@ test("daily spin: odds and duplicate conversion", function()
 	expect(sawRoleDup and sawSkinDup).toBe(true)
 end)
 
-test("free spin resets at 00:00 UTC", function()
+test("free spin resets at 00:00 UTC, extra spins are kept", function()
 	local day = 86400
-	expect(Loot.canFreeSpin(0, 10 * day)).toBe(true)
-	expect(Loot.canFreeSpin(10 * day + 5, 10 * day + 80000)).toBe(false)
-	expect(Loot.canFreeSpin(10 * day + 80000, 11 * day + 1)).toBe(true)
+	local state = { LastFreeDay = -1, Extra = 0 }
+	expect(DailySpin.freeReady(state, 10 * day)).toBe(true)
+	expect(DailySpin.use(state, 10 * day + 5)).toBe("Free")
+	expect(DailySpin.canSpin(state, 10 * day + 80000)).toBe(false)
+	expect(DailySpin.use(state, 10 * day + 80000)).toBeNil()
+	expect(DailySpin.nextFreeAt(10 * day + 5)).toBe(11 * day)
+	state.Extra = 1 -- from the Season Pass
+	expect(DailySpin.use(state, 10 * day + 80001)).toBe("Extra")
+	expect(state.Extra).toBe(0)
+	expect(DailySpin.use(state, 11 * day + 1)).toBe("Free")
 end)

@@ -115,6 +115,7 @@ local function buildRig(name: string, scale: number, parent: Instance): Model
 		part.Name = item.Name
 		part.Size = item.Size * scale
 		part.Color = Config.WolfRig[item.Color]
+		part:SetAttribute("Paint", item.Color) -- wolf skins recolour by this key
 		part.Material = if item.Color == "Eye" then Enum.Material.Neon else Enum.Material.SmoothPlastic
 		part.TopSurface = Enum.SurfaceType.Smooth
 		part.BottomSurface = Enum.SurfaceType.Smooth

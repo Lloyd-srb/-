@@ -1,7 +1,8 @@
 --!strict
 --[[
 	EffectController — small client-side visuals for abilities:
-	  - stun-gun tracers (the server sends the start and end points);
+	  - stun-gun tracers (the server sends the start and end points, and the
+	    shooter's gun skin colour) and the Killer's slash (knife skin colour);
 	  - stars over anyone who is stunned (the server sets the body's
 	    "Stunned" attribute);
 	  - private toasts: "You blessed ...", "The attack was blocked!", "Stunned!".
@@ -11,6 +12,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
@@ -18,6 +20,7 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local TRACER_SECONDS = 0.15
 local TRACER_COLOR = Color3.fromRGB(120, 210, 255)
 local TOAST_SECONDS = 2.5
+local SLASH_SECONDS = 0.35
 local STUN_TAG = "StunStars"
 
 local EffectController = {}
@@ -42,7 +45,7 @@ local function showToast(text: string)
 	end)
 end
 
-local function tracer(from: Vector3, to: Vector3)
+local function tracer(from: Vector3, to: Vector3, color: Color3?)
 	local length = (to - from).Magnitude
 	if length < 0.1 then
 		return
@@ -55,12 +58,33 @@ local function tracer(from: Vector3, to: Vector3)
 	beam.CanTouch = false
 	beam.CastShadow = false
 	beam.Material = Enum.Material.Neon
-	beam.Color = TRACER_COLOR
+	beam.Color = color or TRACER_COLOR
 	beam.Size = Vector3.new(0.15, 0.15, length)
 	beam.CFrame = CFrame.lookAt(from, to) * CFrame.new(0, 0, -length / 2)
 	beam.Parent = workspace
 	task.delay(TRACER_SECONDS, function()
 		beam:Destroy()
+	end)
+end
+
+-- A quick arc where the Killer's knife struck (knife skin colour).
+local function slash(at: Vector3, color: Color3)
+	local arc = Instance.new("Part")
+	arc.Name = "Slash"
+	arc.Anchored = true
+	arc.CanCollide = false
+	arc.CanQuery = false
+	arc.CanTouch = false
+	arc.CastShadow = false
+	arc.Material = Enum.Material.Neon
+	arc.Color = color
+	arc.Transparency = 0.2
+	arc.Size = Vector3.new(0.2, 0.2, 3.5)
+	arc.CFrame = CFrame.new(at) * CFrame.Angles(0, math.rad(45), math.rad(35))
+	arc.Parent = workspace
+	TweenService:Create(arc, TweenInfo.new(SLASH_SECONDS), { Transparency = 1 }):Play()
+	task.delay(SLASH_SECONDS, function()
+		arc:Destroy()
 	end)
 end
 
@@ -144,7 +168,9 @@ local function onEffect(data: any)
 		return
 	end
 	if data.Kind == "Shot" and typeof(data.From) == "Vector3" and typeof(data.To) == "Vector3" then
-		tracer(data.From, data.To)
+		tracer(data.From, data.To, if typeof(data.Color) == "Color3" then data.Color else nil)
+	elseif data.Kind == "Slash" and typeof(data.At) == "Vector3" and typeof(data.Color) == "Color3" then
+		slash(data.At, data.Color)
 	elseif data.Kind == "Blocked" then
 		showToast(Loc.format("Effect.Blocked"))
 	elseif data.Kind == "Blessed" and type(data.Name) == "string" then

@@ -30,6 +30,7 @@ local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
 local Melee = require(script.Parent.Melee)
 local MoveService = require(script.Parent.MoveService)
+local ProfileService = require(script.Parent.ProfileService)
 local Net = require(script.Parent.Net)
 local RoundService = require(script.Parent.RoundService)
 
@@ -150,6 +151,22 @@ local function attachShell(character: Model, form: string): Model?
 	return shell
 end
 
+-- Recolours the costume with the player's equipped wolf skin (cosmetic only).
+local function paintShell(shell: Model, player: Player?)
+	local skinId = ProfileService.Skin(player, "Wolf")
+	local skin = if skinId then Config.Skins[skinId] else nil
+	local paint = if skin then skin.Paint else nil
+	if not paint then
+		return
+	end
+	for _, part in shell:GetDescendants() do
+		local key = part:GetAttribute("Paint")
+		if part:IsA("BasePart") and type(key) == "string" and paint[key] then
+			part.Color = paint[key]
+		end
+	end
+end
+
 local function transform(member: Roster.Member)
 	local character = MatchService.CharacterOf(member.Id)
 	if wolves[member.Id] or not character then
@@ -162,6 +179,9 @@ local function transform(member: Roster.Member)
 		humanoid:UnequipTools()
 	end
 	local shell = attachShell(character, form)
+	if shell then
+		paintShell(shell, MatchService.PlayerOf(member.Id))
+	end
 	setBodyHidden(character, shell, true)
 	character:SetAttribute("Form", form)
 	wolves[member.Id] = {
