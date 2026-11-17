@@ -166,6 +166,7 @@ local Strings: { [string]: Entry } = {
 	["Codes.Reason.Expired"] = { en = "This code has expired.", th = "โค้ดนี้หมดอายุแล้ว" },
 
 	-- HUD
+	["RoleRoll.YouAre"] = { en = "You are {role}!", th = "คุณคือ {role}!" },
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
 	["Hud.Ghost"] = {

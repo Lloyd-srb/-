@@ -149,6 +149,8 @@
 | `Purchase` | ซื้อของสำเร็จ | cash register / purchase | |
 | `SpinTick` | Daily Spin กำลังหมุน | wheel tick / click | |
 | `SpinWin` | Daily Spin ได้รางวัล | prize win / fanfare short | |
+| `RoleRollTick` | ไอคอนบทเลื่อนผ่านตรงกลาง (ตอนเปิดเผยบท) | tick / click short | |
+| `RoleReveal` | หยุดที่บทของคุณ "You are ..." | reveal / magic chime / drum hit | |
 | `WinJingle` | จบเกม ฝ่ายตัวเองชนะ | victory jingle | |
 | `LoseJingle` | จบเกม ฝ่ายตัวเองแพ้ | defeat / sad jingle | |
 

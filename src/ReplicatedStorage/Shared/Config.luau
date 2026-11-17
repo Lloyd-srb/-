@@ -758,6 +758,8 @@ Config.Sounds = {
 	Purchase = 0,
 	SpinTick = 0,
 	SpinWin = 0,
+	RoleRollTick = 0, -- each icon passing the middle of the role reveal
+	RoleReveal = 0, -- the reveal stops on your role
 	WinJingle = 0,
 	LoseJingle = 0,
 }

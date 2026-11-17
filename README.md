@@ -60,6 +60,7 @@ All builders are idempotent: they delete what they built before and rebuild it.
 | `src/ServerScriptService/Logic/` | Pure server rules: role assignment, voting, win conditions, rewards, loot, wolf pup |
 | `src/ReplicatedStorage/Shared/Remotes.luau` | The list of RemoteEvents (who may receive what) |
 | `src/ReplicatedStorage/Shared/Audio.luau` | Client sound playback for both places (silent while a `Config.Sounds` ID is 0) |
+| `src/ReplicatedStorage/Shared/RoleIcons.luau` | Round face icons for every role, the werewolf and the pup, drawn with GUI shapes (no uploads); previews in `docs/role_icons.png`, rendered by `tools/roleicons/` |
 | `src/ReplicatedStorage/Shared/GamepadFocus.luau` | Console: selects the first button when a screen the player must use opens |
 | `src/ServerScriptService/Main.server.luau` | Server bootstrap (the only Script) |
 | `src/ReplicatedStorage/Shared/WolfAnimData.luau` | Werewolf animations as data (keyframe builder + client fallback animator) |

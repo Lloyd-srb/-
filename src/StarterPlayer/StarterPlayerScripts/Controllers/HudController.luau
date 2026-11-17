@@ -96,7 +96,7 @@ local function onRoleAssigned(roleId: any)
 	roleText = Loc.format("Hud.YourRole", { role = name })
 	roleLabel.Text = roleText
 	roleLabel.Visible = true
-	showAnnouncement(name, Color3.new(1, 1, 1), Loc.format("Role." .. roleId .. ".Desc"), ROLE_INTRO_SECONDS)
+	-- The big reveal in the middle of the screen is RoleRollController's.
 end
 
 local function onAnnouncement(data: any)

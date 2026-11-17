@@ -3,6 +3,8 @@
 	BuildUI — (re)builds the Match-place ScreenGuis in StarterGui:
 	  Hud     phase name, timer, own role, announcements
 	  VoteUI  the meeting vote screen (GDD §6.2)
+	  RoleRollUI  the role reveal when the match starts: role icons slide by
+	          left to right and stop on your own role ("You are ...")
 	Run in Studio (command bar / MCP). Idempotent. Scripts only fill these in;
 	they never create layout, so all UI is rebuildable from this file.
 ]]
@@ -592,7 +594,55 @@ local function buildScoreboardUI()
 	maxTextSize(like, 20)
 end
 
+--------------------------------------------------------------------------------
+-- RoleRollUI: the role reveal at the start (RoleRollController fills it)
+--------------------------------------------------------------------------------
+
+local function buildRoleRollUI()
+	local gui = screenGui("RoleRollUI", 9)
+	gui.Enabled = false
+
+	-- A CanvasGroup so the whole panel can fade in and out at once.
+	local panel = Instance.new("CanvasGroup")
+	panel.Name = "Panel"
+	panel.Size = UDim2.new(0.92, 0, 0.52, 0)
+	panel.Position = UDim2.new(0.5, 0, 0.47, 0)
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.BackgroundColor3 = Colors.Panel
+	panel.BackgroundTransparency = 0.08
+	panel.BorderSizePixel = 0
+	panel.Parent = gui
+	corner(panel, 24)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(760, 340)
+	limit.MinSize = Vector2.new(300, 200)
+	limit.Parent = panel
+
+	-- The reel window: icons slide inside it, anything outside is cut off.
+	local window = frame("Window", panel, UDim2.new(1, -40, 0.52, 0), UDim2.new(0.5, 0, 0, 18), Vector2.new(0.5, 0), rgb(14, 15, 24), 0)
+	window.ClipsDescendants = true
+	corner(window, 18)
+	frame("Strip", window, UDim2.fromScale(1, 1), UDim2.fromOffset(0, 0), Vector2.new(0, 0), Colors.Panel, 1)
+
+	-- A gold ring that marks the middle of the reel.
+	local marker = frame("Marker", window, UDim2.fromOffset(150, 150), UDim2.fromScale(0.5, 0.5), Vector2.new(0.5, 0.5), Colors.Panel, 1)
+	marker.ZIndex = 50
+	local markerRound = Instance.new("UICorner")
+	markerRound.CornerRadius = UDim.new(0.5, 0)
+	markerRound.Parent = marker
+	local ring = Instance.new("UIStroke")
+	ring.Color = rgb(255, 205, 60)
+	ring.Thickness = 6
+	ring.Parent = marker
+
+	local title = label("TitleLabel", panel, UDim2.new(1, -40, 0.2, 0), UDim2.new(0.5, 0, 0.6, 0), Vector2.new(0.5, 0), TITLE_FONT, 46)
+	textStroke(title, 2)
+	local desc = label("DescLabel", panel, UDim2.new(1, -60, 0.14, 0), UDim2.new(0.5, 0, 0.82, 0), Vector2.new(0.5, 0), BODY_FONT, 20)
+	desc.TextColor3 = Colors.SubText
+end
+
 buildHud()
+buildRoleRollUI()
 buildVoteUI()
 buildRoleSelectUI()
 buildPickerUI()
