@@ -46,6 +46,12 @@ local Strings: { [string]: Entry } = {
 	-- HUD
 	["Hud.YourRole"] = { en = "You are: {role}", th = "คุณคือ: {role}" },
 	["Hud.Dead"] = { en = "You are dead", th = "คุณตายแล้ว" },
+	["Hud.Ghost"] = {
+		en = "You are a ghost now. Only ghosts and the wolves can read what you write.",
+		th = "ตอนนี้คุณเป็นผี ผีด้วยกันและฝ่ายหมาป่าเท่านั้นที่อ่านแชทของคุณได้",
+	},
+	["Chat.WolfTag"] = { en = "[Wolf]", th = "[หมาป่า]" },
+	["Chat.GhostTag"] = { en = "[Ghost]", th = "[ผี]" },
 	["Hud.Pack"] = { en = "Pack: {names}", th = "ฝูง: {names}" },
 
 	-- Ability buttons (GDD §8)

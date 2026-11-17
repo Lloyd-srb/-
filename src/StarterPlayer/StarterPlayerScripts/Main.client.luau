@@ -25,6 +25,8 @@ local names = {
 	"EffectController",
 	"TaskController",
 	"ItemController",
+	"GhostController",
+	"ChatController",
 	"HighlightController",
 	"ShellAnimator",
 	"HideController",

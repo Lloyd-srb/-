@@ -14,6 +14,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(ReplicatedStorage.Shared.Config)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ClientState = require(script.Parent.ClientState)
+
 local FILL_TRANSPARENCY = 0.6
 
 -- Highlight kind -> key in Config.Highlights
@@ -89,12 +91,20 @@ function HighlightController.Start()
 		end
 		show(data.Kind, data.Ids, if type(data.Duration) == "number" then data.Duration else nil)
 	end)
-	-- Back to human in the morning: nothing stays outlined.
+	-- Back to human in the morning, or dead: nothing stays outlined.
+	local function clearAll()
+		for kind in active do
+			clear(kind)
+		end
+	end
 	Remotes.get("FormChanged").OnClientEvent:Connect(function(form: any)
 		if form == "Human" then
-			for kind in active do
-				clear(kind)
-			end
+			clearAll()
+		end
+	end)
+	ClientState.Changed:Connect(function(key: string)
+		if key == "Alive" and not ClientState.Alive then
+			clearAll()
 		end
 	end)
 end

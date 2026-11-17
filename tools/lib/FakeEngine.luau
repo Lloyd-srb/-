@@ -181,9 +181,11 @@ local function install()
 		return {}
 	end)
 	roblox.implementMethod("Player", "LoadCharacterAsync", function(self)
-		-- Like Roblox: the old character is removed first.
+		-- Like Roblox: the old character is removed first. A corpse has been
+		-- detached by the game (Player.Character = nil, which this runtime
+		-- cannot store), so it stays.
 		local old = self.Character
-		if old then
+		if old and not old:GetAttribute("Corpse") then
 			old:Destroy()
 		end
 		local character = roblox.Instance.new("Model")
@@ -229,6 +231,21 @@ local function install()
 
 	roblox.implementMethod("Humanoid", "UnequipTools", function() end)
 
+	-- TextChatService: channels keep their delivery callback on the side.
+	roblox.implementProperty("TextChannel", "ShouldDeliverCallback", function(self)
+		return sim.callbacks[self:GetFullName()]
+	end, function(self, callback)
+		sim.callbacks[self:GetFullName()] = callback
+	end)
+	roblox.implementMethod("TextChannel", "AddUserAsync", function(self, userId)
+		local source = roblox.Instance.new("TextSource")
+		source.Name = tostring(userId)
+		source.UserId = userId
+		source.CanSend = true
+		source.Parent = self
+		return source, true
+	end)
+
 	roblox.implementProperty("Humanoid", "Died", function(self)
 		return signalFor("Died:" .. self:GetFullName())
 	end)
@@ -261,7 +278,7 @@ export type Options = {
 ]]
 function FakeEngine.start(loaded: Harness.Game, options: Options)
 	install()
-	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0 }
+	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0, callbacks = {} }
 	local game = loaded.game
 
 	loaded.globals.Random = { new = fakeRandom }
@@ -368,6 +385,30 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 	function server.blockSight(blocked: boolean, distance: number?)
 		sim.blockRays = blocked
 		sim.wallDistance = distance
+	end
+
+	local function channel(name: string)
+		return game:GetService("TextChatService").WolfVillageChannels[name]
+	end
+
+	-- "Send", "Read" or nil: this user's place in a chat channel.
+	function server.chatAccess(channelName: string, userId: number): string?
+		for _, source in channel(channelName):GetChildren() do
+			if source.ClassName == "TextSource" and source.UserId == userId then
+				return if source.CanSend then "Send" else "Read"
+			end
+		end
+		return nil
+	end
+
+	-- Would a message typed by `speakerId` in the channel reach `targetId`?
+	-- (Both must be in the channel; this asks the channel's delivery rule.)
+	function server.chatDelivers(channelName: string, speakerId: number, targetId: number): boolean
+		if server.chatAccess(channelName, speakerId) ~= "Send" or server.chatAccess(channelName, targetId) == nil then
+			return false
+		end
+		local callback = sim.callbacks[channel(channelName):GetFullName()]
+		return callback({ TextSource = { UserId = speakerId } }, { UserId = targetId })
 	end
 
 	-- The player's Humanoid dies by itself (reset button, physics).

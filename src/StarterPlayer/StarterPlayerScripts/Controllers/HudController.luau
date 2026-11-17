@@ -13,6 +13,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
+local ClientState = require(script.Parent.ClientState)
+
 local ANNOUNCE_SECONDS = 6
 local ROLE_INTRO_SECONDS = 8
 
@@ -131,6 +133,14 @@ function HudController.Start()
 	phaseLabel = label(topBar, "PhaseLabel")
 	timerLabel = label(topBar, "TimerLabel")
 	roleLabel = label(hud, "RoleLabel")
+	-- Dead: say so, once, and keep it on the role line.
+	ClientState.Changed:Connect(function(key: string)
+		if key == "Alive" and not ClientState.Alive then
+			roleLabel.Text = Loc.format("Hud.Dead")
+			roleLabel.Visible = true
+			showAnnouncement(Loc.format("Hud.Dead"), Color3.fromRGB(180, 180, 180), Loc.format("Hud.Ghost"), ROLE_INTRO_SECONDS)
+		end
+	end)
 	announcement = label(hud, "Announcement")
 	subAnnouncement = label(hud, "SubAnnouncement")
 

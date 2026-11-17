@@ -24,7 +24,12 @@ local PromptController = {}
 local watched: { [ProximityPrompt]: boolean } = {}
 
 local function isForMe(prompt: ProximityPrompt, audience: string): boolean
-	if audience == "Owner" then
+	if not ClientState.Alive then
+		return false -- ghosts cannot use anything
+	end
+	if audience == "Alive" then
+		return true
+	elseif audience == "Owner" then
 		return prompt:GetAttribute("HouseId") == ClientState.HouseId
 	elseif audience == "Human" then
 		return ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden

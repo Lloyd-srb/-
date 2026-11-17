@@ -103,6 +103,7 @@ function CombatService.Damage(victimId: number, amount: number, cause: Roster.De
 		return "None"
 	end
 	if body then
+		MatchService.MarkCorpse(victimId, body)
 		Ragdoll.apply(body)
 		CombatService.CorpseCreated:Fire(roster.Members[victimId], body)
 	end

@@ -109,7 +109,7 @@ end
 
 local function refresh()
 	for _, action in ACTIONS do
-		if table.find(action.Forms, ClientState.Form) then
+		if ClientState.Alive and table.find(action.Forms, ClientState.Form) then
 			bind(action)
 		else
 			unbind(action)
@@ -153,6 +153,11 @@ function WolfController.Start()
 	Remotes.get("FormChanged").OnClientEvent:Connect(function(form: any)
 		if type(form) == "string" then
 			ClientState.set("Form", form)
+			refresh()
+		end
+	end)
+	ClientState.Changed:Connect(function(key: string)
+		if key == "Alive" then
 			refresh()
 		end
 	end)

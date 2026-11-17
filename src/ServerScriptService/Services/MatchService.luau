@@ -45,6 +45,7 @@ local rng = Rng.wrap(Random.new())
 local nightsStarted = 0
 local isNight = false
 local botBodies: { [number]: Model } = {} -- debug bots have no Player
+local corpses: { [number]: Model } = {} -- bodies of the dead (a dead player's character is their ghost)
 local picks: { [number]: { Config.RoleId } } = {} -- confirmed on the role screen
 
 --------------------------------------------------------------------------------
@@ -85,7 +86,7 @@ end
 
 -- The member's body, alive or dead (a corpse stays in the world).
 function MatchService.BodyOf(id: number): Model?
-	local body: Model? = botBodies[id]
+	local body: Model? = corpses[id] or botBodies[id]
 	if not body then
 		local player = MatchService.PlayerOf(id)
 		body = if player then player.Character else nil
@@ -96,8 +97,17 @@ function MatchService.BodyOf(id: number): Model?
 	return nil
 end
 
--- The member's living, controllable character (nil once removed or a corpse).
+-- The body a death left behind (set by CombatService before the ragdoll).
+function MatchService.MarkCorpse(id: number, body: Model)
+	corpses[id] = body
+end
+
+-- The member's living, controllable character (nil once removed, a corpse or a ghost).
 function MatchService.CharacterOf(id: number): Model?
+	local member = MatchService.Roster.Members[id]
+	if member and not member.Alive then
+		return nil
+	end
 	local body = MatchService.BodyOf(id)
 	if body and not body:GetAttribute("Corpse") then
 		return body
@@ -179,6 +189,7 @@ end
 -- through people (GDD §9).
 MatchService.CharacterGroup = "Characters"
 MatchService.DashGroup = "Dash"
+MatchService.GhostGroup = "Ghosts"
 
 function MatchService.SetCollisionGroup(body: Model, group: string)
 	for _, part in body:GetDescendants() do
@@ -191,6 +202,11 @@ end
 local respawnInPlace: (player: Player, character: Model) -> ()
 
 local function setupCharacter(player: Player, character: Model)
+	-- Ghost bodies are set up by GhostService.
+	local member = MatchService.MemberOf(player)
+	if MatchService.Started and member and not member.Alive then
+		return
+	end
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid and humanoid:IsA("Humanoid") then
 		humanoid.WalkSpeed = Config.Human.WalkSpeed
@@ -286,10 +302,10 @@ function MatchService.Exile(id: number)
 		return
 	end
 	local exiledRole = if member.IsPup then "Pup" else member.Role
+	local character = MatchService.CharacterOf(id) -- taken before the death is recorded
 	MatchService.Kill(id, "Exile")
 
-	-- Body handling for the dead becomes "ghosts" in milestone 6.
-	local character = MatchService.CharacterOf(id)
+	-- The exiled leave no body: they come back as a ghost (GhostService).
 	if character then
 		character:Destroy()
 	end
@@ -352,8 +368,9 @@ function MatchService.Revive(id: number, where: CFrame): boolean
 	if not member or MatchService.Winner or not Roster.revive(MatchService.Roster, id) then
 		return false
 	end
-	local corpse = MatchService.BodyOf(id)
-	if corpse then
+	local corpse = corpses[id] or MatchService.BodyOf(id)
+	corpses[id] = nil
+	if corpse and not corpse:HasTag("Ghost") then
 		corpse:Destroy()
 	end
 	if member.IsBot then
@@ -517,9 +534,14 @@ function MatchService.Init()
 	pcall(function()
 		PhysicsService:RegisterCollisionGroup(MatchService.CharacterGroup)
 		PhysicsService:RegisterCollisionGroup(MatchService.DashGroup)
+		PhysicsService:RegisterCollisionGroup(MatchService.GhostGroup)
 	end)
 	pcall(function()
 		PhysicsService:CollisionGroupSetCollidable(MatchService.DashGroup, MatchService.CharacterGroup, false)
+		-- Ghosts walk on the map but never push (or block) anyone, nor each other.
+		for _, group in { MatchService.CharacterGroup, MatchService.DashGroup, MatchService.GhostGroup } do
+			PhysicsService:CollisionGroupSetCollidable(MatchService.GhostGroup, group, false)
+		end
 	end)
 end
 

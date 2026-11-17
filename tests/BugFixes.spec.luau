@@ -109,7 +109,12 @@ test("bug: resetting left a living player with no body forever (and must not hea
 end)
 
 test("bug: instance streaming unloaded the house around a hiding player", function()
+	-- Every Roblox place already has this object under TextChatService.
+	Instance.new("ChannelTabsConfiguration").Parent = game:GetService("TextChatService")
 	runBuilder("build/BuildSettings.luau")
 	expect(workspace.StreamingEnabled).toBe(false)
+	local TextChatService = game:GetService("TextChatService")
+	expect(TextChatService.CreateDefaultTextChannels).toBe(false) -- no channel where ghosts reach the living
+	expect(TextChatService:FindFirstChildOfClass("ChannelTabsConfiguration").Enabled).toBe(true)
 	expect(game:GetService("Players").CharacterAutoLoads).toBe(false)
 end)

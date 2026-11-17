@@ -170,6 +170,7 @@ end
 
 local function setBell(enabled: boolean)
 	if bellPrompt then
+		bellPrompt:SetAttribute("Active", enabled)
 		bellPrompt.Enabled = enabled
 	end
 end
@@ -183,6 +184,7 @@ function VoteService.Init()
 			"Prompt.CallMeeting",
 			Config.Vote.CallHold
 		)
+		prompt:SetAttribute("Audience", "Alive") -- ghosts cannot ring it
 		prompt.Triggered:Connect(function(player: Player)
 			if RoundService.CallMeeting(player) then
 				setBell(false)
