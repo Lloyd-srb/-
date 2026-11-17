@@ -6,6 +6,8 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local StarterGui = game:GetService("StarterGui")
+
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local Controllers = script.Parent:WaitForChild("Controllers")
@@ -36,5 +38,16 @@ for _, name in names do
 		end)
 	end)
 end
+
+-- No reset button: deaths are decided by the game. SetCore can fail while
+-- the core scripts are still loading, so retry for a few seconds.
+task.spawn(function()
+	for _ = 1, 20 do
+		if pcall(StarterGui.SetCore, StarterGui, "ResetButtonCallback", false) then
+			return
+		end
+		task.wait(0.5)
+	end
+end)
 
 Remotes.get("RequestSync"):FireServer()

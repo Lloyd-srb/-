@@ -175,6 +175,11 @@ function CombatService.Start()
 		CombatService.Heal(member.Id)
 		MoveService.Refresh(member.Id)
 	end)
+	-- A new body keeps the old health (resetting must not heal you).
+	MatchService.BodyReplaced:Connect(function(member: Roster.Member)
+		mirror(member.Id)
+		MoveService.Refresh(member.Id)
+	end)
 end
 
 return CombatService

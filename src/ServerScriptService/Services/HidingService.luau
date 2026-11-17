@@ -20,6 +20,7 @@ local Logic = script.Parent.Parent.Logic
 local HidingState = require(Logic.HidingState)
 local Roster = require(Logic.Roster)
 
+local HouseService = require(script.Parent.HouseService)
 local MatchService = require(script.Parent.MatchService)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
@@ -27,6 +28,7 @@ local RoundService = require(script.Parent.RoundService)
 
 type Spot = {
 	Key: string,
+	HouseId: number,
 	Model: Model,
 	Anchor: BasePart,
 	HidePrompt: ProximityPrompt,
@@ -61,10 +63,24 @@ local function spotCFrame(spot: Spot, attachmentName: string): CFrame
 	return spot.Anchor.CFrame
 end
 
+-- Close to the spot AND inside its house: prompts do not need line of sight,
+-- so without the house check a wolf could search a bed through the back wall.
 local function near(id: number, spot: Spot): boolean
 	local root = MatchService.RootOf(id)
-	return root ~= nil
-		and (root.CFrame.Position - spot.Anchor.CFrame.Position).Magnitude <= Config.Human.InteractDistance + 4
+	if not root then
+		return false
+	end
+	local position = root.CFrame.Position
+	return (position - spot.Anchor.CFrame.Position).Magnitude <= Config.Human.InteractDistance + 4
+		and HouseService.HouseAt(position) == spot.HouseId
+end
+
+-- Streaming focus follows the hiding spot while hidden (nil = the body again).
+-- pcall: offline tooling cannot store a nil reference; Roblox can.
+local function setFocus(player: Player, target: Instance?)
+	pcall(function()
+		player.ReplicationFocus = target
+	end)
 end
 
 -- Puts a hidden member back into the world next to their spot.
@@ -80,6 +96,7 @@ local function release(id: number, spot: Spot?)
 	end
 	local player = MatchService.PlayerOf(id)
 	if player then
+		setFocus(player, nil)
 		Net.fire(player, "HideChanged", nil)
 	end
 end
@@ -100,7 +117,9 @@ local function onHide(player: Player, spot: Spot)
 		root.Anchored = true
 		character:PivotTo(CFrame.new(nextSlot * Config.Hiding.HoldingSpacing, Config.Hiding.HoldingHeight, 0))
 	end
-	-- Only the hider learns the spot (their camera moves there).
+	-- Only the hider learns the spot (their camera moves there). The body is
+	-- parked far away, so keep streaming focused on the spot, not the body.
+	setFocus(player, spot.Anchor)
 	Net.fire(player, "HideChanged", spot.Anchor)
 end
 
@@ -148,6 +167,7 @@ local function register(model: Instance)
 	local promptParent = anchor:FindFirstChild("PromptAnchor") or anchor
 	local spot: Spot = {
 		Key = HidingState.spotKey(houseId, kind),
+		HouseId = houseId,
 		Model = model,
 		Anchor = anchor,
 		HidePrompt = Prompts.create(promptParent, "HidePrompt", "Prompt.Hide", Config.Human.HideHold),
@@ -190,6 +210,13 @@ function HidingService.Start()
 	MatchService.MemberDied:Connect(function(member: Roster.Member)
 		HidingState.leave(state, member.Id)
 		parked[member.Id] = nil
+	end)
+	-- A fresh body is never inside a hiding spot.
+	MatchService.BodyReplaced:Connect(function(member: Roster.Member)
+		local key = HidingState.leave(state, member.Id)
+		if key then
+			release(member.Id, spots[key])
+		end
 	end)
 	MatchService.MemberConverted:Connect(function(member: Roster.Member)
 		local key = HidingState.leave(state, member.Id)

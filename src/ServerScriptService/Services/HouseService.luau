@@ -332,7 +332,7 @@ local function register(model: Instance)
 
 	if Config.Debug.Enabled and Config.Debug.DoorHitPrompt then
 		local debugPrompt = Prompts.create(anchor, "DebugHitPrompt", "Prompt.DebugHitDoor", 0)
-		debugPrompt.KeyboardKeyCode = Enum.KeyCode.F
+		debugPrompt.KeyboardKeyCode = Enum.KeyCode.G
 		debugPrompt.UIOffset = Vector2.new(0, 80)
 		debugPrompt.Triggered:Connect(function()
 			HouseService.DamageDoor(id, Config.Wolf.DoorDamage)

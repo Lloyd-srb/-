@@ -1,0 +1,115 @@
+--[[
+	Regression tests for bugs found while reviewing milestones 1-4.
+	Each test names the bug it guards against.
+]]
+
+local function start(scale, roles)
+	local server = startServer({
+		Players = { { Id = 1, Name = "Alice" }, { Id = 2, Name = "Bob" }, { Id = 3, Name = "Cara" } },
+		Debug = { TimerScale = scale, MinPlayers = 3, FillWithBots = true, UnlockAllRoles = false, ForceRoles = roles },
+	})
+	local folder = server.game.ServerScriptService.Services
+	local svc = setmetatable({}, {
+		__index = function(_, name)
+			return server.require(folder[name .. "Service"])
+		end,
+	})
+	return server, svc
+end
+
+local function waitFor(server, phase, number)
+	server.waitFor(phase .. " " .. number, function()
+		local last = server.last("PhaseChanged", "all")
+		return last and last[1].Phase == phase and (if phase == "Night" then last[1].Night else last[1].Day) == number
+	end, 10)
+end
+
+local function house(server, houseId)
+	return server.game.Workspace.Map.Houses[string.format("House%02d", houseId)]
+end
+
+-- A point in a house's own frame (x right, z towards the back, y up from the floor).
+local function housePoint(model, x, y, z)
+	return (model.Floor.CFrame * CFrame.new(x, y, z)).Position
+end
+
+test("bug: hide / search worked through the back wall (prompts ignore walls)", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Night", 1)
+	local bobHouse = house(server, server.last("HouseAssigned", 2)[1])
+	local caraHouse = house(server, server.last("HouseAssigned", 3)[1])
+	local bed = bobHouse.Bed.Frame.PromptAnchor
+	server.trigger(bed.HidePrompt, 2)
+	expect(svc.Hiding.IsHidden(2)).toBe(true)
+	expect(server.player(2).ReplicationFocus).toBe(bed.Parent) -- the spot stays loaded for the hider
+
+	-- The wolf stands outside, right behind the back wall next to the bed.
+	local outside = housePoint(bobHouse, -6, 3, 11)
+	expect(svc.House.HouseAt(outside)).toBeNil()
+	expect((outside - bed.Parent.CFrame.Position).Magnitude < 14).toBe(true) -- close enough for the old check
+	svc.Match.RootOf(1).CFrame = CFrame.new(outside)
+	server.trigger(bed.SearchPrompt, 1)
+	expect(svc.Hiding.IsHidden(2)).toBe(true) -- not found from outside
+
+	-- From inside the room the search works.
+	svc.Match.RootOf(1).CFrame = CFrame.new(housePoint(bobHouse, -2, 3, 2))
+	server.trigger(bed.SearchPrompt, 1)
+	expect(svc.Hiding.IsHidden(2)).toBe(false)
+	expect(server.last("HideChanged", 2)[1]).toBeNil() -- the hider is told they are out
+
+	-- A villager outside cannot slip into a bed through the wall either.
+	local caraBed = caraHouse.Bed.Frame.PromptAnchor
+	svc.Match.RootOf(3).CFrame = CFrame.new(housePoint(caraHouse, -6, 3, 11))
+	server.trigger(caraBed.HidePrompt, 3)
+	expect(svc.Hiding.IsHidden(3)).toBe(false)
+
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: a dead wolf's body turned back into a person in the morning (revealing them)", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Killer", [3] = "Doctor" })
+	waitFor(server, "Night", 1)
+	svc.Combat.Damage(1, 100, "Killer", 2)
+	expect(svc.Match.Roster.Members[1].Alive).toBe(false)
+	waitFor(server, "Day", 2)
+	local corpse = svc.Match.BodyOf(1)
+	expect(corpse:FindFirstChild("WolfShell") ~= nil).toBe(true)
+	expect(corpse:GetAttribute("Form")).toBe("Wolf")
+	server.removePlayer(2)
+	server.removePlayer(3)
+end)
+
+test("bug: resetting left a living player with no body forever (and must not heal)", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Doctor" })
+	waitFor(server, "Day", 1)
+	expect(server.humanoid(2).NameOcclusion).toBe(Enum.NameOcclusion.OccludeAll) -- no names through walls
+	expect(svc.Combat.Damage(2, 50, "Pup", nil)).toBe("Hurt")
+	local before = server.player(2).Character
+	svc.Match.RootOf(2).CFrame = CFrame.new(40, 3, 10)
+
+	server.killHumanoid(2)
+	local after = server.player(2).Character
+	expect(after ~= nil and after ~= before).toBe(true)
+	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
+	expect((svc.Match.RootOf(2).CFrame.Position - Vector3.new(40, 5, 10)).Magnitude < 0.01).toBe(true)
+	expect(svc.Combat.Health(2)).toBe(50) -- still hurt
+	expect(server.humanoid(2).Health).toBe(50)
+	expect(after:HasTag("MemberBody")).toBe(true)
+
+	-- A corpse's humanoid dying is not a reset.
+	svc.Combat.Damage(3, 100, "Killer", nil)
+	local corpse = svc.Match.BodyOf(3)
+	server.killHumanoid(3)
+	expect(svc.Match.BodyOf(3)).toBe(corpse)
+	expect(svc.Match.Roster.Members[3].Alive).toBe(false)
+
+	server.removePlayer(1)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("bug: instance streaming unloaded the house around a hiding player", function()
+	runBuilder("build/BuildSettings.luau")
+	expect(workspace.StreamingEnabled).toBe(false)
+	expect(game:GetService("Players").CharacterAutoLoads).toBe(false)
+end)

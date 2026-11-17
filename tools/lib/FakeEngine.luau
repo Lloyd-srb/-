@@ -181,6 +181,11 @@ local function install()
 		return {}
 	end)
 	roblox.implementMethod("Player", "LoadCharacterAsync", function(self)
+		-- Like Roblox: the old character is removed first.
+		local old = self.Character
+		if old then
+			old:Destroy()
+		end
 		local character = roblox.Instance.new("Model")
 		character.Name = self.Name
 		local humanoid = roblox.Instance.new("Humanoid")
@@ -217,6 +222,10 @@ local function install()
 		if isCurrent(self) then
 			table.insert(sim.log, { Remote = self.Name, To = "all", Args = { ... } })
 		end
+	end)
+
+	roblox.implementProperty("Humanoid", "Died", function(self)
+		return signalFor("Died:" .. self:GetFullName())
 	end)
 
 	roblox.implementProperty("ProximityPrompt", "Triggered", function(self)
@@ -354,6 +363,12 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 	function server.blockSight(blocked: boolean, distance: number?)
 		sim.blockRays = blocked
 		sim.wallDistance = distance
+	end
+
+	-- The player's Humanoid dies by itself (reset button, physics).
+	function server.killHumanoid(id: number)
+		local humanoid = server.humanoid(id)
+		signalFor("Died:" .. humanoid:GetFullName()):Fire()
 	end
 
 	function server.phase(): string

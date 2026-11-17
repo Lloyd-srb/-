@@ -180,7 +180,13 @@ local function revert(id: number)
 		return
 	end
 	wolves[id] = nil
+	local member = MatchService.Roster.Members[id]
 	local character = MatchService.BodyOf(id)
+	-- A dead wolf's body stays a wolf: turning back into a person in the
+	-- morning would tell everyone who the wolf was.
+	if member and not member.Alive then
+		character = nil
+	end
 	if character then
 		if wolf.Shell then
 			wolf.Shell:Destroy()
@@ -433,13 +439,15 @@ function WolfService.Start()
 		end
 	end)
 
-	-- Revived by the Doctor: the old body (and costume) is gone.
-	MatchService.MemberRevived:Connect(function(member: Roster.Member)
+	-- Revived, or a fresh body after a reset: the old body (and costume) is gone.
+	local function onNewBody(member: Roster.Member)
 		wolves[member.Id] = nil
 		if Roster.isWolfSide(member) and RoundService.IsNight() then
 			transform(member)
 		end
-	end)
+	end
+	MatchService.MemberRevived:Connect(onNewBody)
+	MatchService.BodyReplaced:Connect(onNewBody)
 
 	MatchService.SyncRequested:Connect(function(player: Player)
 		local wolf = wolves[player.UserId]

@@ -37,6 +37,7 @@ MatchService.MatchStarted = Signal.new() -- ()
 MatchService.MemberDied = Signal.new() -- (member, cause)
 MatchService.MemberConverted = Signal.new() -- (member) a villager became the wolf pup
 MatchService.MemberRevived = Signal.new() -- (member)
+MatchService.BodyReplaced = Signal.new() -- (member) a living member got a new body (not a revive: no healing)
 MatchService.GameOver = Signal.new() -- (winner)
 MatchService.SyncRequested = Signal.new() -- (player) a client asks for the current state
 
@@ -187,13 +188,21 @@ function MatchService.SetCollisionGroup(body: Model, group: string)
 	end
 end
 
-local function setupCharacter(character: Model)
+local respawnInPlace: (player: Player, character: Model) -> ()
+
+local function setupCharacter(player: Player, character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid and humanoid:IsA("Humanoid") then
 		humanoid.WalkSpeed = Config.Human.WalkSpeed
 		humanoid.MaxHealth = Config.Human.MaxHealth
 		humanoid.Health = Config.Human.MaxHealth
 		humanoid.BreakJointsOnDeath = false
+		-- Names must not show through walls: they would give away who is in
+		-- which house at night.
+		humanoid.NameOcclusion = Enum.NameOcclusion.OccludeAll
+		humanoid.Died:Connect(function()
+			respawnInPlace(player, character)
+		end)
 	end
 	-- No passive healing: a pup must always need exactly 2 hits (GDD §8.2).
 	local regen = character:WaitForChild("Health", 5)
@@ -220,7 +229,9 @@ local function onPlayerAdded(player: Player)
 	if not MatchService.Started and not (Config.Debug.Enabled and Config.Debug.Mode) then
 		readMode(player) -- no TeleportData (Studio) keeps Config.DefaultMode
 	end
-	player.CharacterAdded:Connect(setupCharacter)
+	player.CharacterAdded:Connect(function(character: Model)
+		setupCharacter(player, character)
+	end)
 	-- Late joiners spectate: only players present at the start get a body.
 	if not MatchService.Started then
 		player:LoadCharacterAsync()
@@ -305,6 +316,31 @@ function MatchService.ConvertToPup(id: number, wolfId: number?): boolean
 	MatchService.SendPack()
 	MatchService.CheckWin()
 	return true
+end
+
+--[[
+	Deaths only happen through MatchService.Kill. If a living player's Humanoid
+	dies anyway (reset button, a physics glitch), they would be stuck "alive"
+	with no body, because characters never auto-respawn. Give them a fresh
+	body where the old one was.
+]]
+function respawnInPlace(player: Player, character: Model)
+	local member = MatchService.MemberOf(player)
+	if not MatchService.Started or not member or not member.Alive or character:GetAttribute("Corpse") then
+		return
+	end
+	if player.Character ~= character then
+		return
+	end
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local where = if root and root:IsA("BasePart") then root.CFrame else nil
+	player:LoadCharacterAsync()
+	local fresh = player.Character
+	if fresh and where then
+		fresh:PivotTo(where + Vector3.new(0, 2, 0))
+		markBody(fresh, member.Id)
+	end
+	MatchService.BodyReplaced:Fire(member)
 end
 
 --[[

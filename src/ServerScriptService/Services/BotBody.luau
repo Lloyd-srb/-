@@ -45,6 +45,7 @@ function BotBody.create(name: string, seat: number, seats: number, at: Vector3?)
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.DisplayName = name
+	humanoid.NameOcclusion = Enum.NameOcclusion.OccludeAll
 	humanoid.Parent = body
 
 	body:SetAttribute("IsBot", true)

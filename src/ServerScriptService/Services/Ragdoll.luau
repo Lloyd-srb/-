@@ -14,6 +14,7 @@ function Ragdoll.apply(body: Model)
 
 	local humanoid = body:FindFirstChildOfClass("Humanoid")
 	if humanoid then
+		humanoid.RequiresNeck = false
 		humanoid.PlatformStand = true
 		humanoid.WalkSpeed = 0
 		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
@@ -46,6 +47,15 @@ function Ragdoll.apply(body: Model)
 	local root = body:FindFirstChild("HumanoidRootPart")
 	if joints == 0 and root and root:IsA("BasePart") then
 		body:PivotTo(CFrame.new(root.CFrame.Position - Vector3.new(0, 2, 0)) * CFrame.Angles(math.rad(90), 0, 0))
+	end
+
+	-- The dead player's client must not keep simulating (and moving) the body.
+	for _, part in body:GetDescendants() do
+		if part:IsA("BasePart") and not part.Anchored then
+			pcall(function()
+				part:SetNetworkOwner(nil)
+			end)
+		end
 	end
 end
 
