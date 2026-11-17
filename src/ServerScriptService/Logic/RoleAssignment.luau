@@ -4,14 +4,13 @@
 
 	1. The wolf is random; nobody can choose it.
 	2. Everyone else gets one of the 3 roles they picked. No duplicates except Villager.
-	3. Special roles are capped by the mode's special slots (Casual 6, Turbo 5).
-	   Killer and Fool are their own factions: they do not use a special slot,
-	   they replace a villager (so they only exist in modes that have villagers).
+	3. Special roles are capped by the match's special slots (by player count,
+	   Config.Match.SpecialSlots). Killer and Fool are their own factions: they
+	   do not use a special slot, they replace a villager; both together only
+	   with 11-12 players (owner, 17 Nov 2026).
 	4. When all of a player's picks are gone:
 	     a) a random other role they own that is still free, else
-	     b) Villager (in modes that allow villagers), else
-	     c) a random leftover special role, even if not owned
-	        (Turbo: everybody except the wolf must have a role).
+	     b) Villager.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,6 +28,18 @@ export type Candidate = {
 }
 
 local RoleAssignment = {}
+
+-- How many of each kind of role a match of `players` has.
+function RoleAssignment.composition(players: number): ModeDef
+	local cfg = Config.Match
+	local special = cfg.SpecialSlots[players] or math.floor(players / 2)
+	return {
+		Players = players,
+		Wolves = cfg.Wolves,
+		SpecialSlots = special,
+		MaxSolo = if players >= cfg.BothSoloFrom then 2 else 1,
+	}
+end
 
 -- Roles a player may pick: owned and level gate passed (§4.6).
 function RoleAssignment.usableRoles(owned: { [RoleId]: boolean }, level: number): { [RoleId]: boolean }
@@ -91,15 +102,16 @@ function RoleAssignment.assign(
 	local taken: { [RoleId]: boolean } = {}
 	local wolves = 0
 	local specialUsed = 0
+	local soloUsed = 0
 
 	local function isFree(roleId: RoleId): boolean
 		local def = Config.Roles[roleId]
 		if def.Kind == "Special" then
 			return not taken[roleId] and specialUsed < mode.SpecialSlots
 		elseif def.Kind == "Filler" then
-			return mode.AllowVillager
+			return true
 		elseif def.Kind == "Solo" then
-			return mode.AllowSolo and not taken[roleId]
+			return not taken[roleId] and soloUsed < mode.MaxSolo
 		end
 		return false -- Wolf is never picked
 	end
@@ -114,6 +126,7 @@ function RoleAssignment.assign(
 			specialUsed += 1
 		elseif def.Kind == "Solo" then
 			taken[roleId] = true
+			soloUsed += 1
 		end
 	end
 
@@ -157,30 +170,16 @@ function RoleAssignment.assign(
 		end
 	end
 
-	-- 3) Fallbacks for players whose picks were all taken.
+	-- 3) Fallbacks for players whose picks were all taken: another role they
+	--    own that is still free, else Villager.
 	for _, candidate in unplaced do
 		local owned: { RoleId } = {}
-		local leftoverSpecial: { RoleId } = {}
 		for _, roleId in Config.RoleOrder do
-			if roleId ~= "Villager" and isFree(roleId) then
-				if candidate.Usable[roleId] then
-					table.insert(owned, roleId)
-				end
-				if Config.Roles[roleId].Kind == "Special" then
-					table.insert(leftoverSpecial, roleId)
-				end
+			if roleId ~= "Villager" and candidate.Usable[roleId] and isFree(roleId) then
+				table.insert(owned, roleId)
 			end
 		end
-
-		if #owned > 0 then
-			give(candidate.Id, Rng.pick(owned, rng))
-		elseif isFree("Villager") then
-			give(candidate.Id, "Villager")
-		elseif #leftoverSpecial > 0 then
-			give(candidate.Id, Rng.pick(leftoverSpecial, rng))
-		else
-			give(candidate.Id, "Villager") -- only reachable with debug player counts
-		end
+		give(candidate.Id, if #owned > 0 then Rng.pick(owned, rng) else "Villager")
 	end
 
 	return result

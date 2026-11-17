@@ -21,8 +21,6 @@ export type RoleId = string
 -- "Village" | "Wolf" | "Killer" | "Fool"
 export type Faction = string
 
--- "Casual" | "Turbo" (keys of Config.Modes)
-export type ModeId = string
 
 export type SpinPrize = {
 	Kind: string, -- "Coins" | "Diamonds" | "Role" | "Skin"
@@ -42,12 +40,12 @@ export type RoleDef = {
 	Free: boolean,
 }
 
+-- How many of each kind of role a match of N players has (see Config.Match).
 export type ModeDef = {
 	Players: number,
 	Wolves: number,
 	SpecialSlots: number, -- max players holding a "Special" role
-	AllowVillager: boolean, -- plain villagers fill whatever is left
-	AllowSolo: boolean, -- Killer / Fool may appear (they take a villager slot)
+	MaxSolo: number, -- max Killer / Fool (they take a villager slot)
 }
 
 export type DebugConfig = {
@@ -57,7 +55,7 @@ export type DebugConfig = {
 	BotBodies: boolean,
 	ForceTask: string?,
 	UnlockAllRoles: boolean,
-	Mode: ModeId?,
+	FillTo: number?,
 	DoorHitPrompt: boolean,
 	ForceRole: RoleId?,
 	ForceRoleUserId: number?,
@@ -69,20 +67,20 @@ export type DebugConfig = {
 local Config = {}
 
 --------------------------------------------------------------------------------
--- §2 Game modes
+-- §2 Players and roles per match (owner's decision, 17 Nov 2026: Turbo removed,
+-- one 12-seat mode that can start from 8 players; roles scale with the count)
 --------------------------------------------------------------------------------
 
-Config.Modes = {
-	-- [GDD] 1 wolf + up to 6 special + villagers as filler (5 when all special slots
-	-- are used). Killer / Fool are not "special": they replace a villager slot.
-	Casual = { Players = 12, Wolves = 1, SpecialSlots = 6, AllowVillager = true, AllowSolo = true } :: ModeDef,
-	-- [GDD] 1 wolf + 5 special, nobody is a plain villager.
-	-- [ASSUMED] no villager slots means Killer / Fool cannot appear in Turbo.
-	Turbo = { Players = 6, Wolves = 1, SpecialSlots = 5, AllowVillager = false, AllowSolo = false } :: ModeDef,
+Config.Match = {
+	MinPlayers = 8, -- [owner] a match can start with 8 or more
+	MaxPlayers = 12, -- [owner]
+	Wolves = 1, -- [GDD]
+	-- [default] special roles by player count (about half); villagers fill the rest.
+	-- Killer / Fool are not "special": they replace a villager.
+	SpecialSlots = { [8] = 4, [9] = 4, [10] = 5, [11] = 5, [12] = 6 },
+	BothSoloFrom = 11, -- [owner] Killer and Fool in the same match only with 11-12 players
+	ArrivalTimeout = 20, -- [default] seconds the match server waits for teleported players
 }
-
--- Used by the Match place when there is no TeleportData (Studio testing).
-Config.DefaultMode = "Casual" :: ModeId
 
 --------------------------------------------------------------------------------
 -- §4 Role selection
@@ -698,7 +696,7 @@ Config.Debug = {
 	BotBodies = true, -- bots get a simple dummy body the wolf can chase and attack
 	ForceTask = nil, -- e.g. "PickApples": everyone gets this task (if it is available that day)
 	UnlockAllRoles = true, -- every role is owned and level gates are ignored
-	Mode = nil, -- "Turbo" to test the 6-player mode (no TeleportData in Studio)
+	FillTo = nil, -- bots fill the match up to this many seats (nil = Config.Match.MaxPlayers)
 	DoorHitPrompt = true, -- adds a "hit door" prompt at night to test door HP without a wolf
 	ForceRole = nil, -- e.g. "Wolf" to always get that role
 	ForceRoleUserId = nil, -- nil = the first player in the server

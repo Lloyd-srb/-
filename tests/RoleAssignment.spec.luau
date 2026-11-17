@@ -39,7 +39,7 @@ test("Casual, 12 new players: 1 wolf, unique Sheriff/Doctor, the rest villagers"
 	for seed = 1, 200 do
 		local result = RoleAssignment.assign(
 			candidates(12, { "Villager", "Sheriff", "Doctor" }, STARTER),
-			Config.Modes.Casual,
+			RoleAssignment.composition(12),
 			Rng.seeded(seed)
 		)
 		local counts, total = summarize(result)
@@ -55,7 +55,7 @@ test("Casual, everyone owns everything: no duplicates, at most 6 special roles",
 	for seed = 1, 200 do
 		local result = RoleAssignment.assign(
 			candidates(12, { "Seer", "Chief", "Bodyguard" }, ALL),
-			Config.Modes.Casual,
+			RoleAssignment.composition(12),
 			Rng.seeded(seed)
 		)
 		local counts, total = summarize(result)
@@ -72,22 +72,28 @@ test("Casual, everyone owns everything: no duplicates, at most 6 special roles",
 	end
 end)
 
-test("Turbo, 6 new players: 1 wolf + 5 different special roles, nobody is a villager", function()
-	for seed = 1, 200 do
-		local result = RoleAssignment.assign(
-			candidates(6, { "Villager", "Sheriff", "Doctor" }, STARTER),
-			Config.Modes.Turbo,
-			Rng.seeded(seed)
-		)
-		local counts, total = summarize(result)
-		expect(total).toBe(6)
-		expect(counts.Wolf).toBe(1)
-		expect(counts.Villager).toBeNil()
-		expect(counts.Killer).toBeNil()
-		expect(counts.Fool).toBeNil()
-		expect(specialCount(counts)).toBe(5)
-		expect(counts.Sheriff).toBe(1)
-		expect(counts.Doctor).toBe(1)
+test("roles follow the player count: 8 to 12", function()
+	local expected = { [8] = 4, [9] = 4, [10] = 5, [11] = 5, [12] = 6 }
+	for players, special in expected do
+		local composition = RoleAssignment.composition(players)
+		expect(composition.Wolves).toBe(1)
+		expect(composition.SpecialSlots).toBe(special)
+		expect(composition.MaxSolo).toBe(if players >= 11 then 2 else 1)
+		for seed = 1, 60 do
+			local result = RoleAssignment.assign(
+				candidates(players, { "Killer", "Fool", "Seer" }, ALL),
+				composition,
+				Rng.seeded(seed * players)
+			)
+			local counts, total = summarize(result)
+			expect(total).toBe(players)
+			expect(counts.Wolf).toBe(1)
+			expect(specialCount(counts) <= special).toBe(true)
+			local solo = (counts.Killer or 0) + (counts.Fool or 0)
+			-- Killer and Fool together only with 11-12 players (owner, 17 Nov 2026).
+			expect(solo).toBe(if players >= 11 then 2 else 1)
+			expect((counts.Killer or 0) <= 1 and (counts.Fool or 0) <= 1).toBe(true)
+		end
 	end
 end)
 
@@ -98,7 +104,7 @@ test("a player gets one of their own picks when it is free", function()
 			{ Id = 2, Picks = { "Chief", "Bodyguard", "Doctor" }, Usable = ALL },
 			{ Id = 3, Picks = { "Killer", "Fool", "Sheriff" }, Usable = ALL },
 		}
-		local result = RoleAssignment.assign(list, Config.Modes.Casual, Rng.seeded(seed))
+		local result = RoleAssignment.assign(list, RoleAssignment.composition(12), Rng.seeded(seed))
 		for _, candidate in list do
 			local roleId = result[candidate.Id]
 			if roleId ~= "Wolf" then
@@ -113,7 +119,7 @@ test("the wolf is spread evenly (random, not chosen)", function()
 	for seed = 1, 1200 do
 		local result = RoleAssignment.assign(
 			candidates(12, { "Villager", "Sheriff", "Doctor" }, STARTER),
-			Config.Modes.Casual,
+			RoleAssignment.composition(12),
 			Rng.seeded(seed * 7919)
 		)
 		for id, roleId in result do
@@ -130,7 +136,7 @@ end)
 test("forced debug role is honoured", function()
 	local result = RoleAssignment.assign(
 		candidates(3, { "Villager", "Sheriff", "Doctor" }, STARTER),
-		Config.Modes.Casual,
+		RoleAssignment.composition(12),
 		Rng.seeded(5),
 		{ [2] = "Wolf" }
 	)

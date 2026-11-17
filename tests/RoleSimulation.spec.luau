@@ -1,6 +1,6 @@
 --[[
 	Role simulations: the real server scripts on the fake engine.
-	Role selection (GDD §4) and Turbo mode here; role abilities further down.
+	Role selection (GDD §4) and roles scaled to the player count.
 ]]
 
 local function start(debug)
@@ -113,25 +113,22 @@ test("role screen: new players only see and can only pick the three free roles",
 	finish(server, svc)
 end)
 
-test("Turbo: 6 seats, 1 wolf + 5 different special roles, no villager, no solo role", function()
-	local server, svc = start({ TimerScale = 0.01, Mode = "Turbo", UnlockAllRoles = false })
+test("an 8-player match: 1 wolf, at most 4 special roles, at most one of Killer / Fool", function()
+	local server, svc = start({ TimerScale = 0.01, FillTo = 8, UnlockAllRoles = true })
 	server.waitFor("day 1", function()
 		return server.phase() == "Day"
 	end, 5)
-	expect(svc.Match.ModeId).toBe("Turbo")
-	local counts, total = {}, 0
+	local counts, total, special = {}, 0, 0
 	for _, member in svc.Match.Roster.Members do
 		counts[member.Role] = (counts[member.Role] or 0) + 1
 		total += 1
+		if server.Config.Roles[member.Role].Kind == "Special" then
+			special += 1
+		end
 	end
-	expect(total).toBe(6)
+	expect(total).toBe(8)
 	expect(counts.Wolf).toBe(1)
-	expect(counts.Villager).toBeNil()
-	expect(counts.Killer).toBeNil()
-	expect(counts.Fool).toBeNil()
-	for role, count in counts do
-		expect(count).toBe(1)
-		expect(server.Config.Roles[role] ~= nil).toBe(true)
-	end
+	expect(special <= 4).toBe(true)
+	expect((counts.Killer or 0) + (counts.Fool or 0) <= 1).toBe(true)
 	finish(server, svc)
 end)

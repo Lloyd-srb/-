@@ -28,7 +28,6 @@ local BOT_ID_BASE = -1000 -- Studio test clients already use small negative User
 local MatchService = {}
 
 MatchService.Roster = Roster.new()
-MatchService.ModeId = Config.DefaultMode
 MatchService.Started = false
 MatchService.Winner = nil :: string?
 MatchService.DeathsThisNight = 0
@@ -52,8 +51,12 @@ local picks: { [number]: { Config.RoleId } } = {} -- confirmed on the role scree
 -- Queries
 --------------------------------------------------------------------------------
 
-function MatchService.Mode(): Config.ModeDef
-	return Config.Modes[MatchService.ModeId]
+-- Seats in this match: the players present, plus debug bots in Studio.
+function MatchService.Seats(): number
+	if Config.Debug.Enabled and Config.Debug.FillWithBots then
+		return math.max(#Players:GetPlayers(), Config.Debug.FillTo or Config.Match.MaxPlayers)
+	end
+	return #Players:GetPlayers()
 end
 
 function MatchService.PlayerCount(): number
@@ -62,9 +65,9 @@ end
 
 function MatchService.RequiredPlayers(): number
 	if Config.Debug.Enabled then
-		return math.min(Config.Debug.MinPlayers, MatchService.Mode().Players)
+		return Config.Debug.MinPlayers
 	end
-	return MatchService.Mode().Players
+	return Config.Match.MinPlayers
 end
 
 function MatchService.MemberOf(player: Player): Roster.Member?
@@ -228,23 +231,7 @@ local function setupCharacter(player: Player, character: Model)
 	MatchService.SetCollisionGroup(character, MatchService.CharacterGroup)
 end
 
-local function readMode(player: Player)
-	local ok, joinData = pcall(function()
-		return player:GetJoinData()
-	end)
-	local teleportData = if ok and joinData then joinData.TeleportData else nil
-	if type(teleportData) == "table" then
-		local mode = (teleportData :: any).Mode
-		if type(mode) == "string" and Config.Modes[mode] ~= nil then
-			MatchService.ModeId = mode
-		end
-	end
-end
-
 local function onPlayerAdded(player: Player)
-	if not MatchService.Started and not (Config.Debug.Enabled and Config.Debug.Mode) then
-		readMode(player) -- no TeleportData (Studio) keeps Config.DefaultMode
-	end
 	player.CharacterAdded:Connect(function(character: Model)
 		setupCharacter(player, character)
 	end)
@@ -438,7 +425,7 @@ end
 -- Builds the roster from the players in the server and hands out roles.
 function MatchService.BeginMatch()
 	local roster = MatchService.Roster
-	local mode = MatchService.Mode()
+	local seats = MatchService.Seats()
 	local starterRoles = RoleAssignment.usableRoles({}, Config.PlayerLevel.StartLevel)
 	local candidates: { RoleAssignment.Candidate } = {}
 
@@ -461,11 +448,11 @@ function MatchService.BeginMatch()
 		end
 	end
 	if Config.Debug.Enabled and Config.Debug.FillWithBots then
-		for seat = #candidates + 1, mode.Players do
+		for seat = #candidates + 1, seats do
 			local id = BOT_ID_BASE - seat
 			join(id, "Bot " .. seat, true, starterRoles)
 			if Config.Debug.BotBodies then
-				local body = BotBody.create("Bot " .. seat, seat, mode.Players)
+				local body = BotBody.create("Bot " .. seat, seat, seats)
 				markBody(body, id)
 				botBodies[id] = body
 			end
@@ -489,7 +476,9 @@ function MatchService.BeginMatch()
 		end
 	end
 
-	Roster.setRoles(roster, RoleAssignment.assign(candidates, mode, rng, forced))
+	-- The roles follow the number of people actually in the match (8-12).
+	local composition = RoleAssignment.composition(#candidates)
+	Roster.setRoles(roster, RoleAssignment.assign(candidates, composition, rng, forced))
 	MatchService.Started = true
 
 	for _, player in Players:GetPlayers() do
@@ -527,9 +516,6 @@ end
 
 function MatchService.Init()
 	Players.CharacterAutoLoads = false -- the match decides who has a body
-	if Config.Debug.Enabled and Config.Debug.Mode and Config.Modes[Config.Debug.Mode] then
-		MatchService.ModeId = Config.Debug.Mode
-	end
 	-- pcall: the groups already exist when the server script restarts in Studio.
 	pcall(function()
 		PhysicsService:RegisterCollisionGroup(MatchService.CharacterGroup)
