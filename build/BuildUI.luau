@@ -502,8 +502,99 @@ local function buildPickerUI()
 	maxTextSize(option, 22)
 end
 
+--------------------------------------------------------------------------------
+-- ScoreboardUI: end of match (GDD §7)
+--------------------------------------------------------------------------------
+
+local function buildScoreboardUI()
+	local gui = screenGui("ScoreboardUI", 8)
+	gui.Enabled = false
+
+	local panel = frame(
+		"Panel",
+		gui,
+		UDim2.new(0.88, 0, 0.86, 0),
+		UDim2.new(0.5, 0, 0.53, 0),
+		Vector2.new(0.5, 0.5),
+		Colors.Panel,
+		0.05
+	)
+	corner(panel, 18)
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(900, 700)
+	limit.Parent = panel
+
+	label("Title", panel, UDim2.new(1, -40, 0, 44), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), TITLE_FONT, 34)
+	local hint = label("Hint", panel, UDim2.new(1, -40, 0, 22), UDim2.new(0.5, 0, 0, 56), Vector2.new(0.5, 0), BODY_FONT, 16)
+	hint.TextColor3 = Colors.SubText
+
+	local list = Instance.new("ScrollingFrame")
+	list.Name = "List"
+	list.Size = UDim2.new(1, -32, 1, -190)
+	list.Position = UDim2.new(0.5, 0, 0, 84)
+	list.AnchorPoint = Vector2.new(0.5, 0)
+	list.BackgroundTransparency = 1
+	list.BorderSizePixel = 0
+	list.ScrollBarThickness = 6
+	list.CanvasSize = UDim2.new(0, 0, 0, 0)
+	list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	list.Parent = panel
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = list
+
+	local reward = label("RewardLabel", panel, UDim2.new(1, -40, 0, 30), UDim2.new(0.5, 0, 1, -66), Vector2.new(0.5, 1), TITLE_FONT, 26)
+	reward.TextColor3 = rgb(255, 220, 110)
+	local detail = label("DetailLabel", panel, UDim2.new(1, -40, 0, 40), UDim2.new(0.5, 0, 1, -18), Vector2.new(0.5, 1), BODY_FONT, 18)
+	detail.TextColor3 = Colors.SubText
+
+	local templates = Instance.new("Folder")
+	templates.Name = "Templates"
+	templates.Parent = gui
+
+	local row = frame("Row", templates, UDim2.new(1, -8, 0, 52), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Colors.PanelLight, 0)
+	row.Visible = false
+	corner(row, 10)
+	local headshot = Instance.new("ImageLabel")
+	headshot.Name = "Headshot"
+	headshot.Size = UDim2.new(0, 44, 0, 44)
+	headshot.Position = UDim2.new(0, 6, 0.5, 0)
+	headshot.AnchorPoint = Vector2.new(0, 0.5)
+	headshot.BackgroundColor3 = Colors.Panel
+	headshot.BorderSizePixel = 0
+	headshot.Parent = row
+	corner(headshot, 22)
+	local name = label("NameLabel", row, UDim2.new(0.3, -60, 1, -12), UDim2.new(0, 58, 0.5, 0), Vector2.new(0, 0.5), BODY_FONT, 20)
+	name.TextXAlignment = Enum.TextXAlignment.Left
+	local role = label("RoleLabel", row, UDim2.new(0.25, 0, 1, -12), UDim2.new(0.3, 0, 0.5, 0), Vector2.new(0, 0.5), TITLE_FONT, 20)
+	role.TextXAlignment = Enum.TextXAlignment.Left
+	local status = label("StatusLabel", row, UDim2.new(0.17, 0, 1, -12), UDim2.new(0.55, 0, 0.5, 0), Vector2.new(0, 0.5), BODY_FONT, 18)
+	status.TextXAlignment = Enum.TextXAlignment.Left
+	local mvp = label("MvpLabel", row, UDim2.new(0, 56, 1, -16), UDim2.new(0.72, 0, 0.5, 0), Vector2.new(0, 0.5), TITLE_FONT, 20)
+	mvp.TextColor3 = rgb(255, 210, 70)
+	mvp.Visible = false
+	local count = label("LikeCount", row, UDim2.new(0, 40, 1, -16), UDim2.new(1, -136, 0.5, 0), Vector2.new(1, 0.5), TITLE_FONT, 22)
+	count.Text = "0"
+	local like = Instance.new("TextButton")
+	like.Name = "LikeButton"
+	like.Size = UDim2.new(0, 120, 0, 38)
+	like.Position = UDim2.new(1, -8, 0.5, 0)
+	like.AnchorPoint = Vector2.new(1, 0.5)
+	like.BackgroundColor3 = rgb(230, 90, 120)
+	like.BorderSizePixel = 0
+	like.FontFace = TITLE_FONT
+	like.Text = "Like"
+	like.TextColor3 = Colors.Text
+	like.TextScaled = true
+	like.Parent = row
+	corner(like, 10)
+	maxTextSize(like, 20)
+end
+
 buildHud()
 buildVoteUI()
 buildRoleSelectUI()
 buildPickerUI()
+buildScoreboardUI()
 print("[BuildUI] done")

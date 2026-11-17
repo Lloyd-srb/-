@@ -79,6 +79,21 @@ test("PickerUI has everything RoleController looks up", function()
 	expect(path(gui, { "Templates", "Option" }):IsA("TextButton")).toBe(true)
 end)
 
+test("ScoreboardUI has everything ScoreboardController looks up", function()
+	local gui = StarterGui:FindFirstChild("ScoreboardUI")
+	expect(gui ~= nil and gui.Enabled == false).toBe(true)
+	for _, name in { "Title", "Hint", "RewardLabel", "DetailLabel" } do
+		expect(path(gui, { "Panel", name }):IsA("TextLabel")).toBe(true)
+	end
+	expect(path(gui, { "Panel", "List" }) ~= nil).toBe(true)
+	local row = path(gui, { "Templates", "Row" })
+	for _, name in { "NameLabel", "RoleLabel", "StatusLabel", "MvpLabel", "LikeCount" } do
+		expect(row:FindFirstChild(name):IsA("TextLabel")).toBe(true)
+	end
+	expect(row:FindFirstChild("Headshot"):IsA("ImageLabel")).toBe(true)
+	expect(row:FindFirstChild("LikeButton"):IsA("TextButton")).toBe(true)
+end)
+
 test("every remote the scripts use is declared in Remotes.Names", function()
 	local used = {}
 	for _, instance in game:GetDescendants() do

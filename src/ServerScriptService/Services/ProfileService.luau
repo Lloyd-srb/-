@@ -19,6 +19,18 @@ local RoleAssignment = require(script.Parent.Parent.Logic.RoleAssignment)
 export type Profile = {
 	Roles: { [Config.RoleId]: boolean }, -- bought / won roles (free roles are implicit)
 	Exp: number,
+	Coins: number,
+	Diamonds: number,
+	PassExp: number,
+	Mastery: { [Config.RoleId]: number }, -- mastery points per role
+}
+
+export type Grant = {
+	Coins: number,
+	Exp: number,
+	PassExp: number,
+	MasteryRole: Config.RoleId,
+	MasteryPoints: number,
 }
 
 local DEBUG_LEVEL = 99
@@ -30,7 +42,7 @@ local profiles: { [number]: Profile } = {}
 function ProfileService.Get(player: Player): Profile
 	local profile = profiles[player.UserId]
 	if not profile then
-		profile = { Roles = {}, Exp = 0 }
+		profile = { Roles = {}, Exp = 0, Coins = 0, Diamonds = 0, PassExp = 0, Mastery = {} }
 		profiles[player.UserId] = profile
 	end
 	return profile
@@ -55,11 +67,31 @@ function ProfileService.UsableRoles(player: Player): { [Config.RoleId]: boolean 
 	return RoleAssignment.usableRoles(owned, ProfileService.Level(player))
 end
 
+--[[
+	Adds a match reward to a profile. Returns the diamonds earned from new
+	mastery levels (GDD §13: 20 points = 1 mastery = 20 diamonds).
+]]
+function ProfileService.Grant(player: Player, grant: Grant): number
+	local profile = ProfileService.Get(player)
+	profile.Coins += grant.Coins
+	profile.Exp += grant.Exp
+	profile.PassExp += grant.PassExp
+	local before = profile.Mastery[grant.MasteryRole] or 0
+	local after = before + grant.MasteryPoints
+	profile.Mastery[grant.MasteryRole] = after
+	local diamonds = Progression.masteryDiamonds(before, after)
+	profile.Diamonds += diamonds
+	return diamonds
+end
+
 function ProfileService.Init() end
 
 function ProfileService.Start()
 	Players.PlayerRemoving:Connect(function(player: Player)
-		profiles[player.UserId] = nil
+		-- Deferred: a player who leaves mid-match is given their reward first.
+		task.defer(function()
+			profiles[player.UserId] = nil
+		end)
 	end)
 end
 

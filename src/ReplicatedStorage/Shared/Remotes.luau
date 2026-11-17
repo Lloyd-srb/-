@@ -41,6 +41,10 @@ Remotes.Names = {
 	"RolePicksAck", -- own accepted picks
 	"DashStart", -- own dash (the client moves its own character)
 	"TaskChanged", -- own task of the day
+	"Scoreboard", -- game over: everyone's role (public once the game is over)
+	"LikeCounts", -- likes per player on the scoreboard
+	"Results", -- the MVP
+	"RewardSummary", -- own reward
 	"Effect", -- visual feedback: shot tracers (everyone), "blocked" / "blessed" (the people involved)
 	-- client -> server
 	"RequestSync",
@@ -52,6 +56,7 @@ Remotes.Names = {
 	"RolePicks",
 	"AbilityUse",
 	"ItemUse",
+	"Like",
 }
 
 function Remotes.createAll()

@@ -97,6 +97,23 @@ local Strings: { [string]: Entry } = {
 	["Ending.Killer"] = { en = "No one lived happily ever after.", th = "ไม่มีใครได้อยู่อย่างมีความสุขอีกเลย" },
 	["Ending.Fool"] = { en = "The fool laughs last.", th = "คนบ้าได้หัวเราะเป็นคนสุดท้าย" },
 	["End.Like"] = { en = "Like", th = "ถูกใจ" },
+	["End.Liked"] = { en = "Liked", th = "ถูกใจแล้ว" },
+	["End.LikeHint"] = {
+		en = "Give your one like to the player you enjoyed most",
+		th = "กดถูกใจให้ผู้เล่นที่ชอบที่สุด (1 คน)",
+	},
+	["End.Alive"] = { en = "Alive", th = "รอด" },
+	["End.Dead"] = { en = "Dead", th = "ตาย" },
+	["End.Won"] = { en = "Won", th = "ชนะ" },
+	["End.Lost"] = { en = "Lost", th = "แพ้" },
+	["End.You"] = { en = "{name} (you)", th = "{name} (คุณ)" },
+	["End.Reward"] = { en = "+{coins:int} coins   +{exp:int} EXP   +{pass:int} Pass EXP", th = "+{coins:int} coin   +{exp:int} EXP   +{pass:int} Pass EXP" },
+	["End.RewardDetail"] = {
+		en = "Nights survived: {nights:int}   Tasks: {tasks:int}   {role} mastery +{points:int}",
+		th = "รอดมา {nights:int} คืน   ภารกิจ {tasks:int}   Mastery {role} +{points:int}",
+	},
+	["End.Diamonds"] = { en = "+{diamonds:int} diamonds (mastery up!)", th = "+{diamonds:int} Diamond (Mastery เพิ่ม!)" },
+	["End.MvpBonus"] = { en = "MVP: +20%!", th = "MVP: +20%!" },
 	["End.Mvp"] = { en = "MVP", th = "MVP" },
 	["End.Leave"] = { en = "Back to lobby", th = "กลับ Lobby" },
 

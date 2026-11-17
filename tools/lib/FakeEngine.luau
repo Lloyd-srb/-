@@ -16,8 +16,21 @@ local Harness = require("./Harness")
 
 local FakeEngine = {}
 
--- State of the simulation that is currently running (one at a time).
-local sim: any = nil
+-- Every simulation started so far, by id. Servers from earlier tests can still
+-- be running (their timers); each engine call works out which simulation it
+-- belongs to from the DataModel its instance lives in, so simulations never
+-- see each other's players, remotes or bodies.
+local sims: { [number]: any } = {}
+local sim: any = nil -- the newest one (for instances not in any DataModel yet)
+
+local function simOf(instance: any): any
+	local node = instance
+	while node and node.Parent do
+		node = node.Parent
+	end
+	local id = node and node.ClassName == "DataModel" and node:GetAttribute("SimId")
+	return (id and sims[id]) or sim
+end
 
 local function newSignal()
 	local handlers = {}
@@ -43,28 +56,28 @@ end
 
 -- Lune hands out a new userdata per reference, so signals are stored by a
 -- stable string key instead of by instance.
-local function signalFor(key: string)
-	local signal = sim.signals[key]
+local function signalFor(s: any, key: string)
+	local signal = s.signals[key]
 	if not signal then
 		signal = newSignal()
-		sim.signals[key] = signal
+		s.signals[key] = signal
 	end
 	return signal
 end
 
-local function promptKey(prompt: any): string
+local function promptKey(s: any, prompt: any): string
 	local id = prompt:GetAttribute("SimId")
 	if not id then
-		sim.promptCount += 1
-		id = sim.promptCount
+		s.promptCount += 1
+		id = s.promptCount
 		prompt:SetAttribute("SimId", id)
 	end
 	return "Prompt:" .. id
 end
 
-local function players(): { any }
+local function players(service: any): { any }
 	local list = {}
-	for _, child in sim.game:GetService("Players"):GetChildren() do
+	for _, child in service:GetChildren() do
 		if child.ClassName == "Player" then
 			table.insert(list, child)
 		end
@@ -88,9 +101,9 @@ local function install()
 	roblox.implementMethod("Workspace", "GetServerTimeNow", function()
 		return os.clock()
 	end)
-	roblox.implementMethod("CollectionService", "GetTagged", function(_, tag)
+	roblox.implementMethod("CollectionService", "GetTagged", function(self, tag)
 		local found = {}
-		for _, instance in sim.game:GetDescendants() do
+		for _, instance in simOf(self).game:GetDescendants() do
 			if instance:HasTag(tag) then
 				table.insert(found, instance)
 			end
@@ -115,19 +128,20 @@ local function install()
 		The closest one along the ray is returned.
 	]]
 	local BODY_RADIUS = 2.5
-	roblox.implementMethod("Workspace", "Raycast", function(_, origin, direction, params)
+	roblox.implementMethod("Workspace", "Raycast", function(self, origin, direction, params)
+		local s = simOf(self)
 		local length = direction.Magnitude
 		if length < 1e-9 then
 			return nil
 		end
 		local unit = direction.Unit
 		local best = nil
-		if sim.blockRays then
-			local distance = math.min(sim.wallDistance or 0, length)
-			best = { Instance = sim.game:GetService("Workspace"), Distance = distance, Position = origin + unit * distance }
+		if s.blockRays then
+			local distance = math.min(s.wallDistance or 0, length)
+			best = { Instance = s.game:GetService("Workspace"), Distance = distance, Position = origin + unit * distance }
 		end
 		local excluded = (params and params.FilterDescendantsInstances) or {}
-		for _, body in sim.game:GetDescendants() do
+		for _, body in s.game:GetDescendants() do
 			if body:HasTag("MemberBody") then
 				local skip = false
 				for _, exclude in excluded do
@@ -156,17 +170,17 @@ local function install()
 		end
 	end)
 
-	roblox.implementProperty("Players", "PlayerAdded", function()
-		return signalFor("PlayerAdded")
+	roblox.implementProperty("Players", "PlayerAdded", function(self)
+		return signalFor(simOf(self), "PlayerAdded")
 	end)
-	roblox.implementProperty("Players", "PlayerRemoving", function()
-		return signalFor("PlayerRemoving")
+	roblox.implementProperty("Players", "PlayerRemoving", function(self)
+		return signalFor(simOf(self), "PlayerRemoving")
 	end)
-	roblox.implementMethod("Players", "GetPlayers", function()
-		return players()
+	roblox.implementMethod("Players", "GetPlayers", function(self)
+		return players(self)
 	end)
-	roblox.implementMethod("Players", "GetPlayerByUserId", function(_, userId)
-		for _, player in players() do
+	roblox.implementMethod("Players", "GetPlayerByUserId", function(self, userId)
+		for _, player in players(self) do
 			if player.UserId == userId then
 				return player
 			end
@@ -175,7 +189,7 @@ local function install()
 	end)
 
 	roblox.implementProperty("Player", "CharacterAdded", function(self)
-		return signalFor("CharacterAdded:" .. self.UserId)
+		return signalFor(simOf(self), "CharacterAdded:" .. self.UserId)
 	end)
 	roblox.implementMethod("Player", "GetJoinData", function()
 		return {}
@@ -205,37 +219,30 @@ local function install()
 		local regen = roblox.Instance.new("Script")
 		regen.Name = "Health"
 		regen.Parent = character
-		character.Parent = sim.game:GetService("Workspace")
+		local s = simOf(self)
+		character.Parent = s.game:GetService("Workspace")
 		self.Character = character
-		signalFor("CharacterAdded:" .. self.UserId):Fire(character)
+		signalFor(s, "CharacterAdded:" .. self.UserId):Fire(character)
 	end)
 
 	roblox.implementProperty("RemoteEvent", "OnServerEvent", function(self)
-		return signalFor("Remote:" .. self.Name)
+		return signalFor(simOf(self), "Remote:" .. self.Name)
 	end)
-	-- Servers from earlier simulations may still be winding down: only record
-	-- what the current simulation's own remotes send.
-	local function isCurrent(remote): boolean
-		return remote:IsDescendantOf(sim.game)
-	end
+	-- Each simulation records what its own remotes send.
 	roblox.implementMethod("RemoteEvent", "FireClient", function(self, player, ...)
-		if isCurrent(self) then
-			table.insert(sim.log, { Remote = self.Name, To = player.UserId, Args = { ... } })
-		end
+		table.insert(simOf(self).log, { Remote = self.Name, To = player.UserId, Args = { ... } })
 	end)
 	roblox.implementMethod("RemoteEvent", "FireAllClients", function(self, ...)
-		if isCurrent(self) then
-			table.insert(sim.log, { Remote = self.Name, To = "all", Args = { ... } })
-		end
+		table.insert(simOf(self).log, { Remote = self.Name, To = "all", Args = { ... } })
 	end)
 
 	roblox.implementMethod("Humanoid", "UnequipTools", function() end)
 
 	-- TextChatService: channels keep their delivery callback on the side.
 	roblox.implementProperty("TextChannel", "ShouldDeliverCallback", function(self)
-		return sim.callbacks[self:GetFullName()]
+		return simOf(self).callbacks[self:GetFullName()]
 	end, function(self, callback)
-		sim.callbacks[self:GetFullName()] = callback
+		simOf(self).callbacks[self:GetFullName()] = callback
 	end)
 	roblox.implementMethod("TextChannel", "AddUserAsync", function(self, userId)
 		local source = roblox.Instance.new("TextSource")
@@ -247,11 +254,12 @@ local function install()
 	end)
 
 	roblox.implementProperty("Humanoid", "Died", function(self)
-		return signalFor("Died:" .. self:GetFullName())
+		return signalFor(simOf(self), "Died:" .. self:GetFullName())
 	end)
 
 	roblox.implementProperty("ProximityPrompt", "Triggered", function(self)
-		return signalFor(promptKey(self))
+		local s = simOf(self)
+		return signalFor(s, promptKey(s, self))
 	end)
 end
 
@@ -279,6 +287,9 @@ export type Options = {
 function FakeEngine.start(loaded: Harness.Game, options: Options)
 	install()
 	sim = { game = loaded.game, signals = {}, log = {}, promptCount = 0, callbacks = {} }
+	table.insert(sims, sim)
+	loaded.game:SetAttribute("SimId", #sims)
+	local s = sim -- this simulation, even after newer ones start
 	local game = loaded.game
 
 	loaded.globals.Random = { new = fakeRandom }
@@ -314,7 +325,7 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 		player.DisplayName = name
 		player.UserId = id
 		player.Parent = game:GetService("Players")
-		signalFor("PlayerAdded"):Fire(player)
+		signalFor(s, "PlayerAdded"):Fire(player)
 		return player
 	end
 
@@ -324,13 +335,13 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 
 	function server.removePlayer(id: number)
 		local player = server.player(id)
-		signalFor("PlayerRemoving"):Fire(player)
+		signalFor(s, "PlayerRemoving"):Fire(player)
 		player.Parent = nil
 	end
 
 	-- Client -> server remote call.
 	function server.fireServer(remoteName: string, playerId: number, ...)
-		signalFor("Remote:" .. remoteName):Fire(server.player(playerId), ...)
+		signalFor(s, "Remote:" .. remoteName):Fire(server.player(playerId), ...)
 	end
 
 	-- A player finishes holding a ProximityPrompt (only if it is enabled).
@@ -338,14 +349,14 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 		if not prompt.Enabled then
 			return false
 		end
-		signalFor(promptKey(prompt)):Fire(server.player(playerId))
+		signalFor(s, promptKey(s, prompt)):Fire(server.player(playerId))
 		return true
 	end
 
 	-- Everything the server sent on a remote. `to` = a UserId, "all", or nil for both.
 	function server.sent(remoteName: string, to: (number | string)?): { { any } }
 		local list = {}
-		for _, entry in sim.log do
+		for _, entry in s.log do
 			if entry.Remote == remoteName and (to == nil or entry.To == to) then
 				table.insert(list, entry.Args)
 			end
@@ -383,8 +394,8 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 
 	-- Walls between attacker and target (true = every line of sight is blocked).
 	function server.blockSight(blocked: boolean, distance: number?)
-		sim.blockRays = blocked
-		sim.wallDistance = distance
+		s.blockRays = blocked
+		s.wallDistance = distance
 	end
 
 	local function channel(name: string)
@@ -407,14 +418,14 @@ function FakeEngine.start(loaded: Harness.Game, options: Options)
 		if server.chatAccess(channelName, speakerId) ~= "Send" or server.chatAccess(channelName, targetId) == nil then
 			return false
 		end
-		local callback = sim.callbacks[channel(channelName):GetFullName()]
+		local callback = s.callbacks[channel(channelName):GetFullName()]
 		return callback({ TextSource = { UserId = speakerId } }, { UserId = targetId })
 	end
 
 	-- The player's Humanoid dies by itself (reset button, physics).
 	function server.killHumanoid(id: number)
 		local humanoid = server.humanoid(id)
-		signalFor("Died:" .. humanoid:GetFullName()):Fire()
+		signalFor(s, "Died:" .. humanoid:GetFullName()):Fire()
 	end
 
 	function server.phase(): string

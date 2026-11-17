@@ -27,6 +27,7 @@ local names = {
 	"ItemController",
 	"GhostController",
 	"ChatController",
+	"ScoreboardController",
 	"HighlightController",
 	"ShellAnimator",
 	"HideController",

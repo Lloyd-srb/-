@@ -143,6 +143,7 @@ Config.Timers = {
 	-- meeting starts immediately (true) or still runs the 1-minute countdown (false).
 	ForcedMeetingSkipsCountdown = true,
 	GameOverScoreboard = 30, -- [ASSUMED] seconds on the end scoreboard before teleporting to the lobby
+	LikeWindow = 20, -- [ASSUMED] the first part of the scoreboard, when likes can be given; then rewards show
 }
 
 --------------------------------------------------------------------------------
@@ -676,6 +677,14 @@ Config.Products = {
 		RoleKiller = 0,
 		RoleFool = 0,
 	},
+}
+
+--------------------------------------------------------------------------------
+-- Places (one experience, two places). 0 = not set up yet (milestone 8).
+--------------------------------------------------------------------------------
+
+Config.Places = {
+	LobbyPlaceId = 0,
 }
 
 --------------------------------------------------------------------------------

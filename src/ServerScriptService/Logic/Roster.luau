@@ -18,6 +18,7 @@ export type Member = {
 	Name: string,
 	IsBot: boolean,
 	Role: Config.RoleId,
+	StartRole: Config.RoleId, -- the role dealt at the start (mastery goes to this role)
 	Faction: Config.Faction,
 	Alive: boolean,
 	IsPup: boolean, -- converted villager (wolf side)
@@ -58,6 +59,7 @@ function Roster.add(roster: Roster, id: number, name: string, isBot: boolean): M
 		Name = name,
 		IsBot = isBot,
 		Role = "Villager",
+		StartRole = "Villager",
 		Faction = "Village",
 		Alive = true,
 		IsPup = false,
@@ -78,6 +80,7 @@ function Roster.setRoles(roster: Roster, roles: { [number]: Config.RoleId })
 		local member = roster.Members[id]
 		if member then
 			member.Role = roleId
+			member.StartRole = roleId
 			member.Faction = Config.Roles[roleId].Faction
 		end
 	end
