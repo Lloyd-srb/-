@@ -183,8 +183,8 @@ local Strings: { [string]: Entry } = {
 	},
 	["Tutorial.3.Title"] = { en = "The night", th = "กลางคืน" },
 	["Tutorial.3.Body"] = {
-		en = "At night everyone is sent into a house. The werewolf breaks doors and searches beds and wardrobes. Hide under the bed or in the wardrobe! Anyone in the forest glows red to the wolves.",
-		th = "ตอนกลางคืนทุกคนถูกส่งเข้าบ้าน หมาป่าพังประตูและค้นเตียงกับตู้ ซ่อนใต้เตียงหรือในตู้ให้ดี! ใครอยู่ในป่าจะเรืองแสงสีแดงให้หมาป่าเห็น",
+		en = "At night everyone is sent into a house. The werewolf breaks doors and searches beds and wardrobes. Hide under the bed or in the wardrobe! The monster can always see you in the forest. Be careful!",
+		th = "ตอนกลางคืนทุกคนถูกส่งเข้าบ้าน หมาป่าพังประตูและค้นเตียงกับตู้ ซ่อนใต้เตียงหรือในตู้ให้ดี! ถ้าอยู่ในป่า มอนสเตอร์มองเห็นคุณได้เสมอ ระวังตัวด้วย!",
 	},
 	["Tutorial.4.Title"] = { en = "Roles", th = "บทบาท" },
 	["Tutorial.4.Body"] = {
