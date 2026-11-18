@@ -23,6 +23,8 @@
 	                       PrimaryPart has attachments HideSpot, ExitSpot, PromptAnchor
 	  Tag "HouseLamp" / "PlazaLamp"  parts holding a disabled PointLight (night only)
 	  Tag "GardenPlot"     soil part, attr HouseId, attachment PromptAnchor
+	  Tag "WaterSpot"      part on the stream's bridge, attr SpotId (fetch water task)
+	  Tag "FishingSpot"    part on the stream's bridge, attr SpotId (fishing task)
 	  Tag "TaskTree"       Model, attr TreeId; PrimaryPart (trunk) has attachments
 	                       PromptAnchor, AppleSpot, CrateSpot
 	  Tag "MeetingBell"    part with attachment PromptAnchor (call the meeting)
@@ -769,11 +771,78 @@ local function buildTaskTree(parent: Instance, treeId: number, position: Vector3
 	attachment("CrateSpot", CFrame.new(4.2 * scale, -trunkHeight / 2 + 1.2, 0), trunk)
 end
 
-local function buildForest()
+--------------------------------------------------------------------------------
+-- Stream and bridge (owner, 18 Nov 2026): north-east forest, for the
+-- "fetch water" and "fishing" tasks
+--------------------------------------------------------------------------------
+
+local WATER = Color3.fromRGB(70, 150, 220)
+local RIVERBED = Color3.fromRGB(95, 85, 70)
+
+-- Builds the stream and returns points along it, so trees keep away.
+local function buildStream(): { Vector3 }
+	local cfg = MapCfg.Stream
+	local stream = folder("Stream", Map)
+	-- X = along the stream (tangent), Z = across it (towards the centre).
+	local frame = facingCentre(cfg.Radius, cfg.Angle)
+	decor(block("Riverbed", Vector3.new(cfg.Length, 0.1, cfg.Width + 2), frame * CFrame.new(0, 0.06, 0), RIVERBED, stream))
+	local water = decor(block("Water", Vector3.new(cfg.Length, 0.3, cfg.Width), frame * CFrame.new(0, 0.3, 0), WATER, stream))
+	water.Transparency = 0.25
+	water.Material = Enum.Material.Glass
+	for side = -1, 1, 2 do
+		decor(block(
+			"Bank",
+			Vector3.new(cfg.Length, 0.5, 1.2),
+			frame * CFrame.new(0, 0.25, side * (cfg.Width / 2 + 0.6)),
+			Palette.Rock,
+			stream
+		))
+	end
+
+	-- The bridge crosses the stream; people walk out on it to reach the water.
+	local bridge = model("Bridge", stream)
+	local deckLength = cfg.Width + 8
+	local deck = block("Deck", Vector3.new(cfg.BridgeWidth, 0.6, deckLength), frame * CFrame.new(0, 1, 0), Palette.Wood, bridge)
+	bridge.PrimaryPart = deck
+	for side = -1, 1, 2 do
+		decor(block(
+			"Rail",
+			Vector3.new(0.4, 1.2, deckLength),
+			frame * CFrame.new(side * (cfg.BridgeWidth / 2 - 0.2), 1.9, 0),
+			Palette.WoodDark,
+			bridge
+		))
+		block(
+			"Ramp",
+			Vector3.new(cfg.BridgeWidth, 0.4, 3),
+			frame * CFrame.new(0, 0.5, side * (deckLength / 2 + 1.3)) * CFrame.Angles(side * math.rad(-12), 0, 0),
+			Palette.Wood,
+			bridge
+		)
+	end
+
+	-- Task spots in the middle of the bridge: water on one side, fishing on the other.
+	local waterSpot = invisible(decor(block("WaterSpot", Vector3.new(1, 1, 1), frame * CFrame.new(-(cfg.BridgeWidth / 2 - 1), 2, 0), WATER, bridge)))
+	waterSpot:AddTag("WaterSpot")
+	waterSpot:SetAttribute("SpotId", 1)
+	attachment("PromptAnchor", CFrame.new(), waterSpot)
+	local fishing = invisible(decor(block("FishingSpot", Vector3.new(1, 1, 1), frame * CFrame.new(cfg.BridgeWidth / 2 - 1, 2, 0), WATER, bridge)))
+	fishing:AddTag("FishingSpot")
+	fishing:SetAttribute("SpotId", 1)
+	attachment("PromptAnchor", CFrame.new(), fishing)
+
+	local points: { Vector3 } = {}
+	for along = -cfg.Length / 2, cfg.Length / 2, 6 do
+		table.insert(points, (frame * CFrame.new(along, 0, 0)).Position)
+	end
+	return points
+end
+
+local function buildForest(streamPoints: { Vector3 })
 	local forest = folder("Forest", Map)
 	local trees = folder("Trees", forest)
 	local props = folder("Props", forest)
-	local taken: { Vector3 } = {}
+	local taken: { Vector3 } = table.clone(streamPoints)
 
 	local inner = MapCfg.FenceRadius + 10
 	local outer = MapCfg.ForestOuterRadius - 12
@@ -873,7 +942,7 @@ buildGround()
 buildPlaza()
 buildHouses()
 buildFence()
-buildForest()
+buildForest(buildStream())
 buildOuterForest()
 
 stats.Houses = MapCfg.HouseCount

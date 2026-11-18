@@ -88,7 +88,15 @@ local function join(...: { Shape }): { Shape }
 	return all
 end
 
-local function wolfHead(fur: Color3, dark: Color3, light: Color3, scale: number, eyeSize: number, angry: boolean): { Shape }
+local function wolfHead(
+	fur: Color3,
+	dark: Color3,
+	light: Color3,
+	scale: number,
+	eyeSize: number,
+	angry: boolean,
+	eye: Color3?
+): { Shape }
 	local s = scale
 	local function at(x: number, y: number): (number, number)
 		return 50 + (x - 50) * s, 58 + (y - 58) * s
@@ -108,8 +116,8 @@ local function wolfHead(fur: Color3, dark: Color3, light: Color3, scale: number,
 	add(50, 71, 28, 22, 0.45, 0, light) -- muzzle
 	add(50, 64, 11, 7, 0.5, 0, Palette.Ink) -- nose
 	add(50, 77, 12, 3, 0.5, 0, dark) -- mouth
-	add(39, 54, eyeSize * 1.5, eyeSize, 0.5, 12, Palette.WolfEye) -- glowing eyes
-	add(61, 54, eyeSize * 1.5, eyeSize, 0.5, -12, Palette.WolfEye)
+	add(39, 54, eyeSize * 1.5, eyeSize, 0.5, 12, eye or Palette.WolfEye) -- glowing eyes
+	add(61, 54, eyeSize * 1.5, eyeSize, 0.5, -12, eye or Palette.WolfEye)
 	add(39, 54, 2.4, eyeSize * 0.8, 0.5, 0, Palette.Ink) -- slit pupils
 	add(61, 54, 2.4, eyeSize * 0.8, 0.5, 0, Palette.Ink)
 	if angry then -- brows slanting down to the nose
@@ -201,6 +209,48 @@ RoleIcons.Designs = {
 		{ X = 50, Y = 93, W = 78, H = 4, R = 0, Color = rgb(230, 235, 240) },
 	}),
 
+	-- Plague Doctor (owner, 18 Nov 2026): black beak mask, black wide hat,
+	-- clear white glass eyes, dark coat, and the red potion.
+	PlagueDoctor = join({ background(rgb(70, 110, 90)) }, face(rgb(35, 32, 40), {
+		Skin = rgb(28, 26, 32),
+		NoEyes = true,
+		NoMouth = true,
+		NoCheeks = true,
+	}), {
+		{ X = 50, Y = 72, W = 15, H = 26, R = 0.45, Color = rgb(18, 17, 22) },
+		{ X = 50, Y = 84, W = 10, H = 10, R = 0.15, Rot = 45, Color = rgb(18, 17, 22) },
+		{ X = 50, Y = 69, W = 2, H = 12, R = 0, Color = rgb(60, 58, 68) },
+		{ X = 39, Y = 53, W = 14, H = 14, R = 0.5, T = 0.15, Color = rgb(235, 240, 245), Stroke = { Color = rgb(150, 150, 160), Width = 1.5 } },
+		{ X = 61, Y = 53, W = 14, H = 14, R = 0.5, T = 0.15, Color = rgb(235, 240, 245), Stroke = { Color = rgb(150, 150, 160), Width = 1.5 } },
+		{ X = 36, Y = 50, W = 4, H = 4, R = 0.5, Color = Palette.White },
+		{ X = 58, Y = 50, W = 4, H = 4, R = 0.5, Color = Palette.White },
+		{ X = 50, Y = 35, W = 84, H = 8, R = 0.5, Color = rgb(14, 13, 18) },
+		{ X = 50, Y = 24, W = 40, H = 20, R = 0.2, Color = rgb(14, 13, 18) },
+		{ X = 50, Y = 31, W = 40, H = 3, R = 0, Color = rgb(60, 58, 68) },
+		{ X = 77, Y = 74, W = 6, H = 3, R = 0.2, Color = rgb(140, 95, 55) },
+		{ X = 77, Y = 78, W = 5, H = 6, R = 0.1, Color = rgb(220, 220, 230) },
+		{ X = 77, Y = 86, W = 14, H = 14, R = 0.5, Color = rgb(215, 30, 45), Stroke = { Color = Palette.White, Width = 1 } },
+		{ X = 74, Y = 83, W = 3, H = 4, R = 0.5, T = 0.3, Color = Palette.White },
+	}),
+
+	-- Thief: knit beanie, black bandit mask, striped shirt, loot sack.
+	Thief = join({ background(rgb(60, 62, 85)) }, face(rgb(40, 40, 52), { NoEyes = true, MouthW = 8 }), {
+		{ X = 50, Y = 88, W = 78, H = 4, R = 0, T = 0.15, Color = rgb(235, 235, 240) },
+		{ X = 50, Y = 97, W = 78, H = 4, R = 0, T = 0.15, Color = rgb(235, 235, 240) },
+		{ X = 50, Y = 55, W = 56, H = 13, R = 0.4, Color = rgb(22, 22, 28) },
+		{ X = 23, Y = 60, W = 9, H = 4, R = 0.5, Rot = -30, Color = rgb(22, 22, 28) },
+		{ X = 40, Y = 55, W = 9, H = 6, R = 0.5, Color = Palette.Skin },
+		{ X = 60, Y = 55, W = 9, H = 6, R = 0.5, Color = Palette.Skin },
+		{ X = 41, Y = 55, W = 4, H = 4, R = 0.5, Color = Palette.Ink },
+		{ X = 61, Y = 55, W = 4, H = 4, R = 0.5, Color = Palette.Ink },
+		{ X = 50, Y = 34, W = 52, H = 22, R = 0.45, Color = rgb(70, 72, 90) },
+		{ X = 50, Y = 42, W = 56, H = 7, R = 0.4, Color = rgb(50, 52, 68) },
+		{ X = 50, Y = 22, W = 8, H = 8, R = 0.5, Color = rgb(50, 52, 68) },
+		{ X = 81, Y = 86, W = 24, H = 22, R = 0.45, Color = rgb(175, 145, 95) },
+		{ X = 81, Y = 74, W = 9, H = 5, R = 0.3, Color = rgb(135, 105, 65) },
+		{ X = 81, Y = 87, W = 6, H = 6, R = 0.5, Color = Palette.Gold },
+	}),
+
 	-- Black hood, scarf over the mouth, red eyes, knife.
 	Killer = join({ background(rgb(120, 30, 40)) }, {
 		{ X = 50, Y = 56, W = 70, H = 78, R = 0.45, Color = rgb(25, 22, 28) },
@@ -237,6 +287,24 @@ RoleIcons.Designs = {
 	}, wolfHead(rgb(150, 152, 160), rgb(110, 112, 122), rgb(205, 207, 215), 0.86, 10, false)),
 } :: { [string]: { Shape } }
 
+--[[
+	The werewolf portrait in a wolf skin's colours (Config.Skins[..].Paint keys
+	Fur / FurDark / Eye; anything missing keeps the default grey wolf).
+]]
+function RoleIcons.wolfDesign(paint: { [string]: Color3 }?): { Shape }
+	local p: { [string]: Color3 } = paint or {}
+	local fur = p.Fur or Palette.WolfFur
+	local dark = p.FurDark or Palette.WolfDark
+	local light = p.Belly or fur:Lerp(Palette.White, 0.35)
+	if not p.Fur then
+		light = Palette.WolfLight
+	end
+	return join({
+		background(rgb(35, 45, 85)),
+		{ X = 80, Y = 22, W = 24, H = 24, R = 0.5, Color = rgb(255, 245, 200) },
+	}, wolfHead(fur, dark, light, 1, 8, true, p.Eye))
+end
+
 -- Faction of each icon (for the ring colour).
 function RoleIcons.factionOf(roleId: string, roles: { [string]: any }): string
 	if roleId == "Pup" then
@@ -249,9 +317,10 @@ end
 --[[
 	Builds an icon as GUI: a round frame (the ring) holding a CanvasGroup that
 	clips the drawing to a circle. `size` is in pixels. Returns the frame.
+	`custom` draws that design instead (e.g. RoleIcons.wolfDesign(skinPaint)).
 ]]
-function RoleIcons.create(roleId: string, size: number, ring: Color3?): Frame
-	local design = RoleIcons.Designs[roleId] or RoleIcons.Designs.Villager
+function RoleIcons.create(roleId: string, size: number, ring: Color3?, custom: { Shape }?): Frame
+	local design = custom or RoleIcons.Designs[roleId] or RoleIcons.Designs.Villager
 	local holder = Instance.new("Frame")
 	holder.Name = "RoleIcon"
 	holder.Size = UDim2.fromOffset(size, size)

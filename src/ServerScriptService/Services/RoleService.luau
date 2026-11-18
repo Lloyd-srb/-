@@ -11,6 +11,11 @@
 	  Priest       each morning: bless one player (self allowed); the blessing
 	             blocks one wolf / knife attack until the next morning
 	  Engineer   reinforce a door: 1 per day + 1 per night
+	  PlagueDoctor  red potion (an item, 3 uses), once by day and once by
+	             night: a body gets up at once; a living person dies the next
+	             night; the potion's victims can never get up (owner, 18 Nov 2026)
+	  Thief      by day, hold E on anyone: steal one random item (not a role
+	             item), once per day (owner, 18 Nov 2026)
 	  Killer     knife: one-hit kill, 1 per day + 1 per night
 	  Fool       no ability (wins by being voted out)
 
@@ -65,11 +70,18 @@ RoleService.ConsumeExtraRevive = function(_doctorId: number): boolean
 	return false
 end
 
+-- Set by InventoryService: moves a random item. Returns the kind taken.
+RoleService.StealFrom = function(_fromId: number, _toId: number): string?
+	return nil
+end
+
 local uses = AbilityUses.new()
 local blessed: { [number]: boolean } = {}
 local dashReadyAt: { [number]: number } = {}
 local lightToggledAt: { [number]: number } = {}
 local reinforcePrompts: { [number]: ProximityPrompt } = {}
+local stealPrompts: { [number]: ProximityPrompt } = {} -- on each body, for the Thief
+local poisoned: { [number]: number } = {} -- victim -> Plague Doctor, dies next morning
 
 --------------------------------------------------------------------------------
 -- Helpers
@@ -122,6 +134,8 @@ local function limitFor(roleId: Config.RoleId, kind: string?): (string?, number)
 		return "Reinforce", if kind == "Night" then Abilities.Engineer.UsesPerNight else Abilities.Engineer.UsesPerDay
 	elseif roleId == "Doctor" then
 		return "Revive", Abilities.Doctor.RevivesPerGame
+	elseif roleId == "Thief" then
+		return "Steal", if kind == "Day" then Abilities.Thief.StealsPerDay else 0
 	end
 	return nil, 0
 end
@@ -435,9 +449,167 @@ local function onRevivePrompt(player: Player, corpseId: number, prompt: Proximit
 	sendState(member)
 end
 
+--------------------------------------------------------------------------------
+-- Plague Doctor (owner, 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+local function tell(memberId: number, payload: { [string]: any })
+	local player = MatchService.PlayerOf(memberId)
+	if player then
+		Net.fire(player, "Effect", payload)
+	end
+end
+
+-- A body the potion can raise: not the potion's own victims, not someone who left.
+local function potionCanRaise(member: Roster.Member): boolean
+	return not member.Alive and not member.Left and member.DeathCause ~= "Poison"
+end
+
+--[[
+	The potion, used by its holder: once by day and once by night. A body
+	close by gets up at once; otherwise the person in front is poisoned and
+	dies when the next night begins ([ASSUMED]: nothing blocks it). Returns
+	true when a dose was used.
+]]
+function RoleService.UsePotion(id: number): boolean
+	local scopeKey = scope()
+	if not scopeKey then
+		return false -- meeting / vote / not started
+	end
+	if AbilityUses.left(uses, id, "Potion", scopeKey, Abilities.PlagueDoctor.UsesPerPhase) <= 0 then
+		tell(id, { Kind = "PotionUsed" })
+		return false
+	end
+	local root = MatchService.RootOf(id)
+	if not root then
+		return false
+	end
+	local cfg = Abilities.PlagueDoctor
+	local reach = cfg.Reach + REACH_SLACK
+	local closest: Roster.Member? = nil
+	local closestRoot: BasePart? = nil
+	local closestDistance = reach
+	for _, other in Roster.list(MatchService.Roster) do
+		if potionCanRaise(other) then
+			local body = MatchService.BodyOf(other.Id)
+			local bodyRoot = body and body:FindFirstChild("HumanoidRootPart")
+			if bodyRoot and bodyRoot:IsA("BasePart") then
+				local distance = (bodyRoot.CFrame.Position - root.CFrame.Position).Magnitude
+				if distance <= closestDistance then
+					closest, closestRoot, closestDistance = other, bodyRoot, distance
+				end
+			end
+		end
+	end
+	if closest and closestRoot then
+		local where = CFrame.new(closestRoot.CFrame.Position + Vector3.new(0, REVIVE_RISE, 0))
+		local name = closest.Name
+		if MatchService.Revive(closest.Id, where) then
+			AbilityUses.tryUse(uses, id, "Potion", scopeKey, Abilities.PlagueDoctor.UsesPerPhase)
+			AudioService.At("Revive", where.Position)
+			local player = MatchService.PlayerOf(id)
+			if player then
+				AudioService.To(player, "PotionUse")
+			end
+			tell(id, { Kind = "PotionRevived", Name = name })
+			return true
+		end
+		return false
+	end
+	local target = Melee.findTarget(id, cfg.Reach, cfg.MinDot, function()
+		return true
+	end)
+	if not target then
+		tell(id, { Kind = "PotionNoTarget" })
+		return false
+	end
+	poisoned[target.Id] = id
+	AbilityUses.tryUse(uses, id, "Potion", scopeKey, Abilities.PlagueDoctor.UsesPerPhase)
+	local player = MatchService.PlayerOf(id)
+	if player then
+		AudioService.To(player, "PotionUse")
+	end
+	tell(id, { Kind = "Poisoned", Name = target.Name }) -- only the Plague Doctor knows
+	return true
+end
+
+-- Nightfall: everyone poisoned before this night began dies (a dose given by
+-- day = that same evening; a dose given at night = the night after).
+local function poisonTakesEffect()
+	local victims = poisoned
+	poisoned = {}
+	for victimId, doctorId in victims do
+		local victim = MatchService.Roster.Members[victimId]
+		if victim and victim.Alive then
+			CombatService.Damage(victimId, math.huge, "Poison", doctorId)
+		end
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Thief (owner, 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+local function onStealPrompt(player: Player, targetId: number, prompt: ProximityPrompt)
+	local thief = actor(player, "Thief")
+	local scopeKey, kind = scope()
+	local target = MatchService.Roster.Members[targetId]
+	if not thief or kind ~= "Day" or not scopeKey or not target or not target.Alive or targetId == thief.Id then
+		return
+	end
+	local targetRoot = MatchService.RootOf(targetId)
+	if not targetRoot or not within(thief.Id, targetRoot.CFrame.Position, prompt.MaxActivationDistance + REACH_SLACK) then
+		return
+	end
+	local limit = Abilities.Thief.StealsPerDay
+	if AbilityUses.left(uses, thief.Id, "Steal", scopeKey, limit) <= 0 then
+		return
+	end
+	local stolen = RoleService.StealFrom(targetId, thief.Id)
+	if not stolen then
+		tell(thief.Id, { Kind = "StealNothing", Name = target.Name }) -- a try with nothing to take is free
+		return
+	end
+	AbilityUses.tryUse(uses, thief.Id, "Steal", scopeKey, limit)
+	AudioService.To(player, "Steal")
+	tell(thief.Id, { Kind = "Stolen", Item = stolen }) -- the victim is not told [ASSUMED]
+	sendState(thief)
+end
+
+local function setStealActive(prompt: ProximityPrompt, active: boolean)
+	prompt:SetAttribute("Active", active)
+	prompt.Enabled = active
+end
+
+-- One "steal" prompt on every living body (only the Thief's client shows it).
+local function addStealPrompt(member: Roster.Member)
+	local old = stealPrompts[member.Id]
+	if old then
+		old:Destroy()
+		stealPrompts[member.Id] = nil
+	end
+	local root = MatchService.RootOf(member.Id)
+	if not root or not member.Alive then
+		return
+	end
+	local prompt = Prompts.create(root, "StealPrompt", "Prompt.Steal", Abilities.Thief.StealHold)
+	prompt:SetAttribute("Audience", "Role:Thief")
+	prompt:SetAttribute("OwnerId", member.Id) -- the Thief's own body: not shown to them
+	prompt.UIOffset = Vector2.new(0, 40)
+	local _, kind = scope()
+	setStealActive(prompt, kind == "Day")
+	prompt.Triggered:Connect(function(player: Player)
+		onStealPrompt(player, member.Id, prompt)
+	end)
+	stealPrompts[member.Id] = prompt
+end
+
 local function addRevivePrompt(member: Roster.Member, body: Model)
 	if not member.DiedAtNight then
 		return -- only bodies of people who died at night can be revived (GDD §6.4)
+	end
+	if member.DeathCause == "Poison" then
+		return -- the Plague Doctor's victims never get up (owner, 18 Nov 2026)
 	end
 	local root = body:FindFirstChild("HumanoidRootPart")
 	if not root then
@@ -556,12 +728,34 @@ function RoleService.Start()
 	RoundService.PhaseStarted:Connect(function(state: PhaseMachine.PhaseState)
 		if state.Phase == "Day" then
 			table.clear(blessed) -- blessings wear off each morning
+		elseif state.Phase == "Night" then
+			poisonTakesEffect()
+		end
+		local _, kind = scope()
+		for _, prompt in stealPrompts do
+			setStealActive(prompt, kind == "Day")
 		end
 		refreshReinforcePrompts()
 		sendAllStates()
 	end)
 
-	MatchService.MatchStarted:Connect(sendAllStates)
+	MatchService.MatchStarted:Connect(function()
+		sendAllStates()
+		for _, member in Roster.alive(MatchService.Roster) do
+			addStealPrompt(member)
+		end
+	end)
+	-- A new body gets a new steal prompt; a dead one loses it.
+	MatchService.BodyReplaced:Connect(addStealPrompt)
+	MatchService.MemberRevived:Connect(addStealPrompt)
+	MatchService.MemberDied:Connect(function(member: Roster.Member)
+		local prompt = stealPrompts[member.Id]
+		if prompt then
+			prompt:Destroy()
+			stealPrompts[member.Id] = nil
+		end
+		poisoned[member.Id] = nil
+	end)
 	MatchService.MemberDied:Connect(function(member: Roster.Member)
 		blessed[member.Id] = nil
 	end)

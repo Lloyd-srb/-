@@ -15,7 +15,8 @@
 local RunService = game:GetService("RunService")
 
 -- Role ids: "Wolf", "Villager", "Sheriff", "Doctor", "Seer", "Chief",
--- "Bodyguard", "Priest", "Engineer", "Killer", "Fool" (keys of Config.Roles).
+-- "Bodyguard", "Priest", "Engineer", "PlagueDoctor", "Thief", "Killer", "Fool"
+-- (keys of Config.Roles).
 export type RoleId = string
 
 -- "Village" | "Wolf" | "Killer" | "Fool"
@@ -100,15 +101,20 @@ Config.RoleSelect = {
 --------------------------------------------------------------------------------
 
 Config.Roles = {
+	-- [owner] 18 Nov 2026: every role you buy costs the same as the most
+	-- expensive one (5,000 coins / 399 R$ or Diamonds). Level gates unchanged.
 	Wolf = { Faction = "Wolf", Kind = "Wolf", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Villager = { Faction = "Village", Kind = "Filler", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Sheriff = { Faction = "Village", Kind = "Special", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Doctor = { Faction = "Village", Kind = "Special", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
-	Chief = { Faction = "Village", Kind = "Special", CoinPrice = 1200, RobuxPrice = 99, RequiredLevel = 5, Free = false },
-	Bodyguard = { Faction = "Village", Kind = "Special", CoinPrice = 1200, RobuxPrice = 99, RequiredLevel = 5, Free = false },
-	Seer = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
-	Priest = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
-	Engineer = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
+	Chief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 5, Free = false },
+	Bodyguard = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 5, Free = false },
+	Seer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
+	Priest = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
+	Engineer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
+	-- [owner] 18 Nov 2026 new roles; level [ASSUMED] like the other tier-2 roles.
+	PlagueDoctor = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
+	Thief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
 	Killer = { Faction = "Killer", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
 	Fool = { Faction = "Fool", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
 } :: { [RoleId]: RoleDef }
@@ -123,6 +129,8 @@ Config.RoleOrder = {
 	"Seer",
 	"Priest",
 	"Engineer",
+	"PlagueDoctor",
+	"Thief",
 	"Killer",
 	"Fool",
 } :: { RoleId }
@@ -319,6 +327,13 @@ Config.WolfRig = {
 -- Hiding (§6.4)
 --------------------------------------------------------------------------------
 
+-- [owner] 18 Nov 2026: boots from the watering task, worn for the rest of the
+-- match: +3 walking speed. [ASSUMED] in human form only (the werewolf keeps
+-- its own speed), and a second pair does not add more.
+Config.Boots = {
+	SpeedBonus = 3,
+}
+
 Config.Hiding = {
 	-- Hidden players' bodies are parked here, far from the map, so nobody
 	-- (including exploiters) can tell which spot they are hiding in.
@@ -379,6 +394,21 @@ Config.Abilities = {
 		UsesPerNight = 1, -- [GDD]
 		ReinforceHold = 2, -- [ASSUMED]
 	},
+	-- [owner] 18 Nov 2026: starts with a red potion (3 uses), once by day and
+	-- once by night. On a living player: they die the next night. On a body: it
+	-- gets up at once. The potion's victims can never get up again.
+	PlagueDoctor = {
+		PotionUses = 3, -- [owner]
+		UsesPerPhase = 1, -- [owner] 1 by day + 1 by night
+		Reach = 7, -- [ASSUMED] studs to the person / body
+		MinDot = 0, -- [ASSUMED] the person must be in front
+	},
+	-- [owner] 18 Nov 2026: by day, hold E on anyone to steal one random item
+	-- (never an item that came with a role).
+	Thief = {
+		StealsPerDay = 1, -- [ASSUMED] the owner gave no limit
+		StealHold = 1.5, -- [ASSUMED]
+	},
 	Killer = {
 		KillsPerDay = 1, -- [GDD]
 		KillsPerNight = 1, -- [GDD]
@@ -398,7 +428,11 @@ Config.Tasks = {
 	PlantCarrot = { Hold = 10, Reward = "Shovel" }, -- [GDD]
 	PickApples = { Trees = 3, HoldPerTree = 2, Reward = "Apple", RewardCount = 1 }, -- [GDD]
 	ChopTrees = { Trees = 2, HoldPerTree = 4, Reward = "Axe" }, -- [GDD]
-	Kinds = { "RepairDoor", "PlantCarrot", "PickApples", "ChopTrees" }, -- [GDD §10]
+	-- [owner] 18 Nov 2026: fetch water at the stream, then water a carrot plot -> boots.
+	WaterCarrots = { FetchHold = 3, WaterHold = 5, Perk = "Boots" }, -- holds [ASSUMED]
+	-- [owner] 18 Nov 2026: cast a line into the stream, wait 10 s -> a fish.
+	Fishing = { Hold = 10, Reward = "Fish" },
+	Kinds = { "RepairDoor", "PlantCarrot", "PickApples", "ChopTrees", "WaterCarrots", "Fishing" },
 }
 
 --------------------------------------------------------------------------------
@@ -413,6 +447,11 @@ Config.Items = {
 	FirstAid = { Uses = 1 }, -- heal to full; the Doctor can spend it on an extra revive
 	Cross = { Blocks = 1 },
 	Flashlight = { Range = 45, Angle = 60, Brightness = 2 }, -- [ASSUMED]
+	-- [owner] 18 Nov 2026: the Plague Doctor's red potion (a role item: never dropped or stolen).
+	Potion = { Uses = 3, RoleItem = true },
+	-- [owner] 18 Nov 2026: from fishing. Put it on the ground: at night the monster
+	-- side sees a red aura there, as if a person were standing on that spot.
+	Fish = { Uses = 1 },
 	PickupHold = 0.5, -- [ASSUMED] hold E on an item on the ground
 	DropSpread = 2.5, -- studs between items dropped in one place
 	MinDot = 0, -- shovel: target must be in the front half
@@ -427,6 +466,8 @@ Config.ItemLook = {
 	FirstAid = { Color = Color3.fromRGB(240, 240, 240), Size = Vector3.new(1, 0.7, 0.7) },
 	Cross = { Color = Color3.fromRGB(240, 200, 70), Size = Vector3.new(0.3, 1.4, 0.3) },
 	Flashlight = { Color = Color3.fromRGB(240, 210, 60), Size = Vector3.new(0.4, 0.4, 1.2) },
+	Potion = { Color = Color3.fromRGB(210, 30, 40), Size = Vector3.new(0.6, 1, 0.6) }, -- red bottle
+	Fish = { Color = Color3.fromRGB(120, 170, 210), Size = Vector3.new(0.5, 0.4, 1.4) },
 }
 
 -- Crates sit under a forest tree until someone opens them (GDD §6.1).
@@ -672,6 +713,15 @@ Config.Map = {
 	ForestOuterRadius = 200, -- invisible wall
 	OuterForestRadius = 250, -- dense dark forest beyond the wall
 	TaskTreeCount = 44,
+	-- [owner] 18 Nov 2026: a stream with a wooden bridge in the top-right (north-east)
+	-- of the map, outside the fence. Sizes are art defaults.
+	Stream = {
+		Angle = math.rad(45), -- ring angle of the bridge (0 = north / -Z, clockwise)
+		Radius = 135, -- distance of the bridge from the centre
+		Length = 110, -- the stream runs across the forest, crossing the ring
+		Width = 12,
+		BridgeWidth = 6,
+	},
 	Seed = 20261116, -- deterministic prop placement
 }
 
@@ -792,6 +842,10 @@ Config.Sounds = {
 	Purchase = 0,
 	SpinTick = 0,
 	SpinWin = 0,
+	PotionUse = 0, -- the Plague Doctor's potion
+	Steal = 0, -- the Thief takes something
+	WaterFetch = 0, -- filling the bucket at the stream
+	FishCatch = 0, -- a fish bites
 	RoleRollTick = 0, -- each icon passing the middle of the role reveal
 	RoleReveal = 0, -- the reveal stops on your role
 	WinJingle = 0,
@@ -850,6 +904,8 @@ Config.Products = {
 		RoleSeer = 0,
 		RolePriest = 0,
 		RoleEngineer = 0,
+		RolePlagueDoctor = 0,
+		RoleThief = 0,
 		RoleKiller = 0,
 		RoleFool = 0,
 		SkinGunGold = 0,
@@ -861,6 +917,19 @@ Config.Products = {
 --------------------------------------------------------------------------------
 -- Places (one experience, two places). 0 = not set up yet (milestone 8).
 --------------------------------------------------------------------------------
+
+-- The Lobby's Monster page (owner's design, 18 Nov 2026). Only the werewolf
+-- exists; the other slots show "?" until new monsters come. Stats are 1-5
+-- bars shown on the page (display only); Image = an uploaded picture
+-- (0 = the drawn portrait).
+Config.Monsters = {
+	{
+		Id = "Werewolf",
+		Stats = { RunSpeed = 4, AttackPower = 5, AttackSpeed = 3, Vision = 4 }, -- [owner] from the design
+		Image = 0,
+	},
+}
+Config.MonsterLockedSlots = 2
 
 Config.Places = {
 	LobbyPlaceId = 0,

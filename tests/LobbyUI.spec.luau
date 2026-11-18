@@ -78,7 +78,7 @@ local Config = lobby.require(lobby.game.ReplicatedStorage.Shared.Config)
 local Remotes = lobby.require(lobby.game.ReplicatedStorage.Shared.Remotes)
 
 test("lobby scripts: every remote is declared, every text key exists", function()
-	local prefixes = { "Lobby", "Menu", "News", "Wallet", "Buy", "Shop", "Skin", "Pass", "Reward", "Spin", "Codes", "Title", "Role" }
+	local prefixes = { "Lobby", "Menu", "News", "Wallet", "Buy", "Shop", "Skin", "Pass", "Reward", "Spin", "Codes", "Title", "Role", "Monster" }
 	local remotes, keys = 0, 0
 	for _, instance in lobby.game:GetDescendants() do
 		if instance:IsA("LuaSourceContainer") and instance.Name ~= "Strings" then
@@ -162,4 +162,51 @@ test("how to play: every page has a picture (known icons), a title and text; the
 	expect(panel.Picture:IsA("Frame")).toBe(true)
 	expect(panel.NextButton:IsA("TextButton")).toBe(true)
 	expect(StarterGui.TutorialUI.DisplayOrder > StarterGui.MenuUI.DisplayOrder).toBe(true)
+end)
+
+test("Monster window (owner's design): banner, portrait, skins, stats, passive, abilities, folklore, list, Select", function()
+	local gui = StarterGui.MenuUI
+	local window = gui.MonsterWindow
+	expect(window.Visible).toBe(false)
+	expect(window.NameBanner.NameLabel:IsA("TextLabel")).toBe(true)
+	expect(window.CloseButton:IsA("TextButton")).toBe(true)
+	expect(window.SelectButton:IsA("TextButton")).toBe(true)
+	expect(window.Carousel:IsA("ScrollingFrame")).toBe(true)
+	local left, right = window.Content.Left, window.Content.Right
+	expect(left.Portrait:IsA("Frame")).toBe(true)
+	expect(left.SkinsPanel.SkinList:IsA("ScrollingFrame")).toBe(true)
+	expect(left.SkinsPanel.SkinInfo:IsA("TextLabel")).toBe(true)
+	expect(left.SkinsPanel.Buttons:IsA("Frame")).toBe(true)
+	for index = 1, 4 do
+		local row = right.StatsPanel["Stat" .. index]
+		expect(row.NameLabel:IsA("TextLabel")).toBe(true)
+		for pip = 1, 5 do
+			expect(row.Pips["Pip" .. pip]:IsA("Frame")).toBe(true)
+		end
+		expect(typeof(row.Pips:GetAttribute("ColorOn"))).toBe("Color3")
+	end
+	for _, name in { "PassivePanel", "Ability1Panel", "Ability2Panel", "FolklorePanel" } do
+		expect(right[name].TitleLabel:IsA("TextLabel")).toBe(true)
+		expect(right[name].TextLabel:IsA("TextLabel")).toBe(true)
+	end
+	local templates = gui.Templates
+	expect(templates.SkinSlot.Check:IsA("TextLabel")).toBe(true)
+	expect(templates.SkinSlot.Outline:IsA("UIStroke")).toBe(true)
+	expect(templates.MonsterSlot.Question.Text).toBe("?")
+
+	-- Every monster has its texts and stats from 1 to 5; the owner's numbers.
+	expect(#Config.Monsters >= 1).toBe(true)
+	expect(Config.MonsterLockedSlots >= 1).toBe(true)
+	for _, monster in Config.Monsters do
+		for _, part in { "Name", "Passive", "Ability1", "Ability2", "Folklore" } do
+			expect(Strings["Monster." .. monster.Id .. "." .. part] ~= nil).toBe(true)
+		end
+		for _, key in { "RunSpeed", "AttackPower", "AttackSpeed", "Vision" } do
+			local value = monster.Stats[key]
+			expect(value >= 1 and value <= 5).toBe(true)
+			expect(Strings["Monster.Stat." .. key] ~= nil).toBe(true)
+		end
+	end
+	expect(Config.Monsters[1].Stats).toEqual({ RunSpeed = 4, AttackPower = 5, AttackSpeed = 3, Vision = 4 })
+	expect(Strings["Monster.Werewolf.Folklore"].en:find("Moonfang Stalker prowls when moonlight touches the pines", 1, true) ~= nil).toBe(true)
 end)

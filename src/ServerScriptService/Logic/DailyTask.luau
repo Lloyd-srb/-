@@ -8,6 +8,9 @@
 	  PlantCarrot  plant at any garden plot         -> Shovel
 	  PickApples   3 trees chosen for this player   -> Apple
 	  ChopTrees    any 2 different trees            -> Axe
+	  WaterCarrots fetch water at the stream, then water any plot -> boots
+	  Fishing      cast a line at the stream, wait -> Fish
+	  (the last two: owner, 18 Nov 2026; only offered when the map has a stream)
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,14 +30,28 @@ export type World = {
 	BrokenDoors: { number }, -- houses whose door was broken last night (still unrepaired)
 	Plots: { number },
 	Trees: { number },
+	WaterSpots: { number }?, -- ids of the stream's water spots
+	FishingSpots: { number }?,
 }
 
 local DailyTask = {}
 
+-- Step ids that are not houses or trees (stream spots are numbered from here).
+DailyTask.WaterBase = 1000
+DailyTask.FishingBase = 2000
+
 function DailyTask.availableKinds(world: World): { string }
 	local kinds: { string } = {}
 	for _, kind in Config.Tasks.Kinds do
-		if kind ~= "RepairDoor" or #world.BrokenDoors > 0 then
+		local offered = true
+		if kind == "RepairDoor" then
+			offered = #world.BrokenDoors > 0
+		elseif kind == "WaterCarrots" then
+			offered = #(world.WaterSpots or {}) > 0 and #world.Plots > 0
+		elseif kind == "Fishing" then
+			offered = #(world.FishingSpots or {}) > 0
+		end
+		if offered then
 			table.insert(kinds, kind)
 		end
 	end
@@ -57,6 +74,15 @@ function DailyTask.make(kind: string, world: World, rng: Rng.Rng): Task
 			targets[index] = shuffled[index]
 		end
 		table.sort(targets)
+	elseif kind == "WaterCarrots" then
+		-- Any water spot first, then any plot: 2 steps.
+		targets = table.clone(world.WaterSpots or {})
+		for _, plot in world.Plots do
+			table.insert(targets, plot)
+		end
+		required = 2
+	elseif kind == "Fishing" then
+		targets = table.clone(world.FishingSpots or {})
 	else -- ChopTrees
 		targets = table.clone(world.Trees)
 		required = math.min(Config.Tasks.ChopTrees.Trees, #targets)
@@ -79,9 +105,29 @@ function DailyTask.doneCount(task: Task): number
 	return count
 end
 
+local function isWater(target: number): boolean
+	return target >= DailyTask.WaterBase and target < DailyTask.FishingBase
+end
+
+local function hasWater(task: Task): boolean
+	for target in task.Done do
+		if isWater(target) then
+			return true
+		end
+	end
+	return false
+end
+
 -- Is `target` a step this task still needs?
 function DailyTask.wants(task: Task, target: number): boolean
-	return not task.Complete and table.find(task.Targets, target) ~= nil and not task.Done[target]
+	if task.Complete or table.find(task.Targets, target) == nil or task.Done[target] then
+		return false
+	end
+	if task.Kind == "WaterCarrots" then
+		-- One bucket of water first, then one plot.
+		return if isWater(target) then not hasWater(task) else hasWater(task)
+	end
+	return true
 end
 
 -- Records a step. Returns (accepted, task now complete).
@@ -101,6 +147,12 @@ end
 function DailyTask.reward(kind: string): string?
 	local cfg = (Config.Tasks :: any)[kind]
 	return if cfg then cfg.Reward else nil
+end
+
+-- A lasting bonus a finished task gives instead of an item ("Boots").
+function DailyTask.perk(kind: string): string?
+	local cfg = (Config.Tasks :: any)[kind]
+	return if cfg then cfg.Perk else nil
 end
 
 -- What the owner's client needs to show the task (no other player's data).

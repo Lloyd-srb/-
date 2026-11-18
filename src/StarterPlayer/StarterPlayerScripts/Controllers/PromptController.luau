@@ -11,6 +11,7 @@
 	  switches Enabled locally for prompts that are not meant for this player.
 ]]
 
+local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -39,6 +40,18 @@ local function isForMe(prompt: ProximityPrompt, audience: string): boolean
 		-- Only the steps this player's own task still needs.
 		local task = ClientState.Task
 		local target = prompt:GetAttribute("TargetId")
+		if task ~= nil and task.Kind == "WaterCarrots" and type(target) == "number" then
+			-- Fetch water first (stream spots are 1000-1999), then water a plot.
+			local fetched = false
+			for done in task.Done do
+				if done >= 1000 and done < 2000 then
+					fetched = true
+				end
+			end
+			if (target >= 1000 and target < 2000) == fetched then
+				return false
+			end
+		end
 		return task ~= nil
 			and task.Kind == audience:sub(6)
 			and not task.Complete
@@ -48,6 +61,9 @@ local function isForMe(prompt: ProximityPrompt, audience: string): boolean
 			and ClientState.Alive
 			and not ClientState.Hidden
 	elseif audience:sub(1, 5) == "Role:" then
+		if prompt:GetAttribute("OwnerId") == Players.LocalPlayer.UserId then
+			return false -- e.g. the Thief's prompt on their own body
+		end
 		-- e.g. "Role:Doctor": only that role, in human form, alive, not hiding
 		return ClientState.Role == audience:sub(6)
 			and ClientState.Form == "Human"

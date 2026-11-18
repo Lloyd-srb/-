@@ -28,6 +28,7 @@ export type Member = {
 	TasksCompleted: number,
 	DeathCause: DeathCause?,
 	DiedAtNight: boolean, -- only night deaths leave a body the Doctor can revive
+	HasBoots: boolean, -- from the watering task: faster for the rest of the match
 }
 
 export type Roster = {
@@ -69,6 +70,7 @@ function Roster.add(roster: Roster, id: number, name: string, isBot: boolean): M
 		TasksCompleted = 0,
 		DeathCause = nil,
 		DiedAtNight = false,
+		HasBoots = false,
 	}
 	roster.Members[id] = member
 	table.insert(roster.Order, id)

@@ -38,7 +38,7 @@ test("lobby shop: wallet sent; a role for coins; level gate; Robux opens Roblox'
 	expect(first.Coins).toBe(0)
 	expect(first.Level).toBe(1)
 	change(server, 1, function(data)
-		data.Coins = 1500
+		data.Coins = 5300
 	end)
 	server.fireServer("ShopBuy", 1, "Role", "Chief", "Coins")
 	expect(shopResult(server, 1).Reason).toBe("Level")

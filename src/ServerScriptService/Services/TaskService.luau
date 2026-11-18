@@ -29,13 +29,19 @@ local HouseService = require(script.Parent.HouseService)
 local InventoryService = require(script.Parent.InventoryService)
 local AudioService = require(script.Parent.AudioService)
 local MatchService = require(script.Parent.MatchService)
+local MoveService = require(script.Parent.MoveService)
 local Net = require(script.Parent.Net)
 local Prompts = require(script.Parent.Prompts)
 local RoundService = require(script.Parent.RoundService)
 local WolfService = require(script.Parent.WolfService)
 
 local REACH_SLACK = 4
-local STEP_SOUNDS: { [string]: string } = { ChopTrees = "TreeChop", PlantCarrot = "Digging", RepairDoor = "Reinforce" }
+local STEP_SOUNDS: { [string]: string } = {
+	ChopTrees = "TreeChop",
+	PlantCarrot = "Digging",
+	RepairDoor = "Reinforce",
+	Fishing = "FishCatch",
+}
 
 type StepPrompt = { Prompt: ProximityPrompt, Kind: string, Target: number }
 
@@ -45,6 +51,8 @@ local tasks: { [number]: DailyTask.Task } = {}
 local prompts: { StepPrompt } = {}
 local plots: { number } = {}
 local trees: { number } = {}
+local waterSpots: { number } = {}
+local fishingSpots: { number } = {}
 local rng = Rng.wrap(Random.new())
 
 function TaskService.TaskOf(id: number): DailyTask.Task?
@@ -103,7 +111,7 @@ local function onStep(player: Player, step: StepPrompt)
 		return -- someone else repaired it first
 	end
 
-	local stepSound = STEP_SOUNDS[step.Kind]
+	local stepSound = if step.Kind == "WaterCarrots" and step.Target >= DailyTask.WaterBase then "WaterFetch" else STEP_SOUNDS[step.Kind]
 	if stepSound then
 		AudioService.At(stepSound, position)
 	end
@@ -113,6 +121,10 @@ local function onStep(player: Player, step: StepPrompt)
 		local reward = DailyTask.reward(task.Kind)
 		if reward then
 			InventoryService.Give(member.Id, reward)
+		end
+		if DailyTask.perk(task.Kind) == "Boots" then
+			TaskService.GiveBoots(member)
+			Net.fire(player, "Effect", { Kind = "Boots" })
 		end
 		Net.fire(player, "Effect", { Kind = "TaskComplete", Coins = Config.Tasks.CoinReward })
 	end
@@ -139,6 +151,8 @@ local function assignAll()
 		BrokenDoors = HouseService.DoorsNeedingRepair(),
 		Plots = plots,
 		Trees = trees,
+		WaterSpots = waterSpots,
+		FishingSpots = fishingSpots,
 	}
 	local forced = if Config.Debug.Enabled then Config.Debug.ForceTask else nil
 	table.clear(tasks)
@@ -166,7 +180,9 @@ function TaskService.Init()
 		local houseId = plot:GetAttribute("HouseId")
 		if type(houseId) == "number" then
 			table.insert(plots, houseId)
-			addPrompt(plot:FindFirstChild("PromptAnchor") or plot, "PlantCarrot", houseId, "Prompt.Plant", Config.Tasks.PlantCarrot.Hold)
+			local anchor = plot:FindFirstChild("PromptAnchor") or plot
+			addPrompt(anchor, "PlantCarrot", houseId, "Prompt.Plant", Config.Tasks.PlantCarrot.Hold)
+			addPrompt(anchor, "WaterCarrots", houseId, "Prompt.WaterPlot", Config.Tasks.WaterCarrots.WaterHold)
 		end
 	end
 	for _, tree in CollectionService:GetTagged("TaskTree") do
@@ -185,8 +201,36 @@ function TaskService.Init()
 			addPrompt(door:FindFirstChild("PromptAnchor") or door, "RepairDoor", houseId, "Prompt.Repair", Config.Tasks.RepairDoor.Hold)
 		end
 	end
+	-- The stream (owner, 18 Nov 2026): fetch water and fishing spots on the bridge.
+	for _, spot in CollectionService:GetTagged("WaterSpot") do
+		local spotId = spot:GetAttribute("SpotId")
+		if type(spotId) == "number" then
+			local target = DailyTask.WaterBase + spotId
+			table.insert(waterSpots, target)
+			addPrompt(spot:FindFirstChild("PromptAnchor") or spot, "WaterCarrots", target, "Prompt.FetchWater", Config.Tasks.WaterCarrots.FetchHold)
+		end
+	end
+	for _, spot in CollectionService:GetTagged("FishingSpot") do
+		local spotId = spot:GetAttribute("SpotId")
+		if type(spotId) == "number" then
+			local target = DailyTask.FishingBase + spotId
+			table.insert(fishingSpots, target)
+			addPrompt(spot:FindFirstChild("PromptAnchor") or spot, "Fishing", target, "Prompt.Fish", Config.Tasks.Fishing.Hold)
+		end
+	end
 	table.sort(plots)
 	table.sort(trees)
+end
+
+-- Boots (owner, 18 Nov 2026): +3 speed for the rest of the match, in human form.
+function TaskService.GiveBoots(member: Roster.Member)
+	if member.HasBoots then
+		return
+	end
+	member.HasBoots = true
+	if not WolfService.IsTransformed(member.Id) then
+		MoveService.SetModifier(member.Id, "Boots", { Add = Config.Boots.SpeedBonus })
+	end
 end
 
 function TaskService.Start()

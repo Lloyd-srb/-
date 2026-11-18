@@ -183,6 +183,12 @@ local function onEffect(data: any)
 		showToast(Loc.format("Task.Complete", { coins = data.Coins }))
 	elseif data.Kind == "CrossInfo" then
 		showToast(Loc.format("Effect.CrossInfo"))
+	elseif data.Kind == "Stolen" and type(data.Item) == "string" and Loc.has("Item." .. data.Item .. ".Name") then
+		showToast(Loc.format("Effect.Stolen", { item = Loc.format("Item." .. data.Item .. ".Name") }))
+	elseif type(data.Kind) == "string" and Loc.has("Effect." .. data.Kind) then
+		-- Boots, Poisoned, PotionRevived, PotionUsed, PotionNoTarget, StealNothing
+		local name = if type(data.Name) == "string" then data.Name else ""
+		showToast(Loc.format("Effect." .. data.Kind, { name = name }))
 	end
 end
 

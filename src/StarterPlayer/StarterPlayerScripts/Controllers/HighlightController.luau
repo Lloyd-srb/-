@@ -6,6 +6,7 @@
 	to see them (wolf side for the forest glow / howl, the sniffing wolf, later
 	the Seer) which member ids to outline, and this script creates the
 	Highlight instances locally, so no other client ever has them.
+	Fish baits come as spots: a red person-shaped glow is made here, locally.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -24,11 +25,23 @@ local COLOR_KEYS: { [string]: string } = {
 	Sniff = "Sniff",
 	Howl = "Howl",
 	Seer = "Seer",
+	Bait = "ForestTarget", -- a fish on the ground, seen as someone standing there
 }
+
+-- A person-shaped decoy (local to this client) for a bait: torso, head, arms, legs.
+local DECOY_PARTS: { { Size: Vector3, Offset: Vector3 } } = {
+	{ Size = Vector3.new(2, 2, 1), Offset = Vector3.new(0, 3, 0) },
+	{ Size = Vector3.new(1.2, 1.2, 1.2), Offset = Vector3.new(0, 4.6, 0) },
+	{ Size = Vector3.new(1, 2, 1), Offset = Vector3.new(-1.5, 3, 0) },
+	{ Size = Vector3.new(1, 2, 1), Offset = Vector3.new(1.5, 3, 0) },
+	{ Size = Vector3.new(1, 2, 1), Offset = Vector3.new(-0.5, 1, 0) },
+	{ Size = Vector3.new(1, 2, 1), Offset = Vector3.new(0.5, 1, 0) },
+}
+local DECOY_TRANSPARENCY = 0.9 -- the glow does the showing
 
 local HighlightController = {}
 
-local active: { [string]: { Highlight } } = {}
+local active: { [string]: { Instance } } = {}
 local tokens: { [string]: number } = {}
 
 local function bodyOf(id: number): Instance?
@@ -50,7 +63,7 @@ local function clear(kind: string)
 	active[kind] = {}
 end
 
-local function show(kind: string, ids: { any }, duration: number?)
+local function show(kind: string, ids: { any }, duration: number?, spots: { any }?)
 	local colorKey = COLOR_KEYS[kind]
 	if not colorKey then
 		return
@@ -60,6 +73,37 @@ local function show(kind: string, ids: { any }, duration: number?)
 	local token = tokens[kind]
 
 	local color = (Config.Highlights :: any)[colorKey] :: Color3
+	if kind == "Bait" then
+		local list: { any } = spots or {}
+		for _, spot in list do
+			if typeof(spot) == "Vector3" then
+				local decoy = Instance.new("Model")
+				decoy.Name = "BaitDecoy"
+				for _, piece in DECOY_PARTS do
+					local part = Instance.new("Part")
+					part.Size = piece.Size
+					part.CFrame = CFrame.new(spot + piece.Offset)
+					part.Anchored = true
+					part.CanCollide = false
+					part.CanQuery = false
+					part.CanTouch = false
+					part.CastShadow = false
+					part.Color = color
+					part.Transparency = DECOY_TRANSPARENCY
+					part.Parent = decoy
+				end
+				local highlight = Instance.new("Highlight")
+				highlight.FillColor = color
+				highlight.OutlineColor = color
+				highlight.FillTransparency = FILL_TRANSPARENCY
+				highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+				highlight.Parent = decoy
+				decoy.Parent = workspace
+				table.insert(active[kind], decoy)
+			end
+		end
+		return
+	end
 	for _, id in ids do
 		local body = if type(id) == "number" then bodyOf(id) else nil
 		if body then
@@ -89,7 +133,8 @@ function HighlightController.Start()
 		if type(data) ~= "table" or type(data.Kind) ~= "string" or type(data.Ids) ~= "table" then
 			return
 		end
-		show(data.Kind, data.Ids, if type(data.Duration) == "number" then data.Duration else nil)
+		local duration = if type(data.Duration) == "number" then data.Duration else nil
+		show(data.Kind, data.Ids, duration, if type(data.Spots) == "table" then data.Spots else nil)
 	end)
 	-- Back to human in the morning, or dead: nothing stays outlined.
 	local function clearAll()

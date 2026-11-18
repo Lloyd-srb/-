@@ -15,6 +15,10 @@
 	  First aid   heal to full, used up (the Doctor can spend it on a revive)
 	  Cross       blocks one attack while carried, then breaks
 	  Flashlight  light on / off
+	  Potion      the Plague Doctor's role item (owner, 18 Nov 2026), 3 uses
+	              at night: a body gets up, a living person dies next morning
+	  Fish        put on the ground: at night the monster side sees a red
+	              aura there, as if a person stood on that spot
 
 	Dropping: on death the items fall where the body lies (and stay); an
 	exiled player's items are scattered in the forest; a player who leaves
@@ -66,6 +70,8 @@ local SHIELD_CAUSES = { Wolf = true, Pup = true, Killer = true, Sheriff = true }
 local InventoryService = {}
 
 local inventories: { [number]: { Item } } = {}
+local baits: { [number]: Model } = {} -- fish on the ground (bait id -> model)
+local nextBait = 0
 local nextId = 0
 local appleTokens: { [number]: number } = {}
 local uses = AbilityUses.new() -- gun shots per day / night
@@ -99,7 +105,15 @@ function InventoryService.CanTake(id: number, kind: string): boolean
 	if kind == "Gun" then
 		return Loot.canHoldGun(member.Role, InventoryService.Count(id, "Gun"))
 	end
+	if kind == "Potion" then
+		return member.Role == "PlagueDoctor" -- a role item: only its owner holds it
+	end
 	return Items[kind] ~= nil
+end
+
+function InventoryService.IsRoleItem(kind: string): boolean
+	local cfg = (Items :: any)[kind]
+	return cfg ~= nil and cfg.RoleItem == true
 end
 
 local function startUses(kind: string): number
@@ -351,6 +365,9 @@ function InventoryService.DropAll(id: number, how: string, where: Vector3?)
 		if tool then
 			tool:Destroy()
 		end
+		if InventoryService.IsRoleItem(item.Kind) then
+			continue -- items that came with a role never drop (GDD §11)
+		end
 		local position = if how == "Exile" then forestPoint() else spread(centre, index, #list)
 		InventoryService.SpawnWorldItem(item.Kind, item.Uses, position)
 	end
@@ -461,6 +478,13 @@ local function onUse(player: Player, itemId: any, aim: any)
 		end
 	elseif kind == "Cross" then
 		Net.fire(player, "Effect", { Kind = "CrossInfo" }) -- passive: nothing to do
+	elseif kind == "Potion" then
+		if RoleService.UsePotion(id) then
+			spend(id, item)
+		end
+	elseif kind == "Fish" then
+		InventoryService.PlaceBait(id)
+		spend(id, item)
 	elseif kind == "Gun" then
 		if isDirection(aim) then
 			fireGun(id, aim)
@@ -474,6 +498,75 @@ local function onUse(player: Player, itemId: any, aim: any)
 			swingShovel(id, item)
 		end
 	end
+end
+
+--------------------------------------------------------------------------------
+-- Fish bait (owner, 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+-- Puts a fish on the ground at the member's feet. It stays until the end of
+-- the next night ([ASSUMED]); nobody can pick it up.
+function InventoryService.PlaceBait(id: number)
+	local root = MatchService.RootOf(id)
+	if not root then
+		return
+	end
+	nextBait += 1
+	local look = Config.ItemLook.Fish
+	local bait = Instance.new("Model")
+	bait.Name = "FishBait"
+	local part = Instance.new("Part")
+	part.Name = "Fish"
+	part.Size = look.Size
+	part.Color = look.Color
+	part.Material = Enum.Material.SmoothPlastic
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	part.CanQuery = false
+	part.CFrame = CFrame.new(ground(root.CFrame.Position) + Vector3.new(0, look.Size.Y / 2 + 0.1, 0))
+	part.Parent = bait
+	bait.PrimaryPart = part
+	bait:SetAttribute("BaitId", nextBait)
+	bait:AddTag("Bait")
+	bait.Parent = worldFolder
+	baits[nextBait] = bait
+end
+
+-- Where every fish on the ground is (for the monster side's red auras).
+function InventoryService.Baits(): { { Id: number, Position: Vector3 } }
+	local list = {}
+	for baitId, bait in baits do
+		if bait.Parent and bait.PrimaryPart then
+			table.insert(list, { Id = baitId, Position = bait.PrimaryPart.CFrame.Position })
+		end
+	end
+	table.sort(list, function(a, b)
+		return a.Id < b.Id
+	end)
+	return list
+end
+
+--------------------------------------------------------------------------------
+-- Stealing (the Thief, owner 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+-- Moves one random item (never a role item) from `fromId` to `toId`.
+-- Returns the kind stolen, or nil when there was nothing to take.
+function InventoryService.StealRandom(fromId: number, toId: number): string?
+	local choices: { Item } = {}
+	for _, item in InventoryService.Items(fromId) do
+		if not InventoryService.IsRoleItem(item.Kind) and InventoryService.CanTake(toId, item.Kind) then
+			table.insert(choices, item)
+		end
+	end
+	if #choices == 0 then
+		return nil
+	end
+	local item = Rng.pick(choices, rng)
+	InventoryService.Remove(fromId, item.Id)
+	InventoryService.Give(toId, item.Kind, item.Uses)
+	return item.Kind
 end
 
 --------------------------------------------------------------------------------
@@ -570,6 +663,27 @@ function InventoryService.Start()
 	RoleService.ConsumeExtraRevive = function(doctorId: number): boolean
 		return InventoryService.Consume(doctorId, "FirstAid")
 	end
+	RoleService.StealFrom = InventoryService.StealRandom
+	WolfService.Baits = InventoryService.Baits
+
+	-- The Plague Doctor starts with the potion (owner, 18 Nov 2026).
+	MatchService.MatchStarted:Connect(function()
+		for _, member in Roster.list(MatchService.Roster) do
+			if member.Role == "PlagueDoctor" then
+				InventoryService.Give(member.Id, "Potion", Config.Abilities.PlagueDoctor.PotionUses)
+			end
+		end
+	end)
+
+	-- Fish on the ground last until the end of the next night.
+	RoundService.PhaseEnded:Connect(function(state: PhaseMachine.PhaseState)
+		if state.Phase == "Night" then
+			for baitId, bait in baits do
+				bait:Destroy()
+				baits[baitId] = nil
+			end
+		end
+	end)
 
 	-- A new body (respawn in place) comes with a new, empty Backpack: Roblox
 	-- throws the old tools away, so the hotbar is rebuilt from the inventory.

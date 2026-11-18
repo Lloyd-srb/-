@@ -163,7 +163,7 @@ test("receipts: given once per purchase id, only answered 'granted' once saved",
 	expect(server.processReceipt(4, 222, "p3")).toBe(Granted)
 	expect(data.Roles.Chief).toBe(true)
 	expect(server.processReceipt(4, 222, "p4")).toBe(Granted)
-	expect(data.Diamonds).toBe(99)
+	expect(data.Diamonds).toBe(399) -- every paid role is 399 (owner, 18 Nov 2026)
 
 	-- Unknown product, or a player who is not on this server: wait.
 	expect(server.processReceipt(4, 999, "p5")).toBe(NotYet)

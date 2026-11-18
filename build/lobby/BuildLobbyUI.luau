@@ -5,7 +5,10 @@
 	  MenuUI   left: Shop / Roles / Monster / Settings
 	           right: News / Codes / Pass / Daily Spin
 	           and one window that shows the page picked; a wallet bar on top
-	           (coins, diamonds, level); a toast line for results
+	           (coins, diamonds, level); a toast line for results.
+	           Monster has its own window (owner's design, 18 Nov 2026):
+	           name banner, portrait, skins, stats, passive, abilities,
+	           folklore, the monster list (locked "?" slots) and Select
 	Run it in the Lobby place in Studio. Idempotent. Scripts only fill these in.
 ]]
 
@@ -175,6 +178,195 @@ local function buildWallet(gui: ScreenGui)
 	toast.Visible = false
 end
 
+--------------------------------------------------------------------------------
+-- Monster window (owner's design, 18 Nov 2026). MenuController fills it from
+-- Config.Monsters, Config.Skins and the player's profile.
+--------------------------------------------------------------------------------
+
+local function list(parent: Instance, horizontal: boolean, padding: number): UIListLayout
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = if horizontal then Enum.FillDirection.Horizontal else Enum.FillDirection.Vertical
+	layout.Padding = UDim.new(0, padding)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.VerticalAlignment = if horizontal then Enum.VerticalAlignment.Center else Enum.VerticalAlignment.Top
+	layout.Parent = parent
+	return layout
+end
+
+local function scroller(name: string, parent: Instance, horizontal: boolean): ScrollingFrame
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = name
+	scroll.BackgroundTransparency = 1
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 6
+	scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+	scroll.AutomaticCanvasSize = if horizontal then Enum.AutomaticSize.X else Enum.AutomaticSize.Y
+	scroll.ScrollingDirection = if horizontal then Enum.ScrollingDirection.X else Enum.ScrollingDirection.Y
+	scroll.Parent = parent
+	return scroll
+end
+
+local function padding(parent: Instance, pixels: number)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, pixels)
+	pad.PaddingBottom = UDim.new(0, pixels)
+	pad.PaddingLeft = UDim.new(0, pixels)
+	pad.PaddingRight = UDim.new(0, pixels)
+	pad.Parent = parent
+end
+
+-- A box with a heading and a paragraph that grows with its text.
+local function infoBox(name: string, parent: Instance, order: number, color: Color3): Frame
+	local box = frame(name, parent, UDim2.new(1, -10, 0, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), color, 0)
+	box.AutomaticSize = Enum.AutomaticSize.Y
+	box.LayoutOrder = order
+	corner(box, 12)
+	padding(box, 10)
+	list(box, false, 4)
+	local heading = label("TitleLabel", box, UDim2.new(1, 0, 0, 24), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), TITLE_FONT, 22)
+	heading.TextXAlignment = Enum.TextXAlignment.Left
+	heading.TextColor3 = Colors.Coins
+	heading.LayoutOrder = 1
+	local text = label("TextLabel", box, UDim2.new(1, 0, 0, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), BODY_FONT, 18)
+	text.TextScaled = false
+	text.TextSize = 17
+	text.AutomaticSize = Enum.AutomaticSize.Y
+	text.TextXAlignment = Enum.TextXAlignment.Left
+	text.TextYAlignment = Enum.TextYAlignment.Top
+	text.TextColor3 = Colors.SubText
+	text.LayoutOrder = 2
+	return box
+end
+
+local STAT_COUNT = 4 -- Run Speed, Attack Power, Attack Speed, Vision
+local PIP_COUNT = 5
+
+local function buildMonsterWindow(gui: ScreenGui, templates: Instance)
+	local window = frame("MonsterWindow", gui, UDim2.new(0.9, 0, 0.9, 0), UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), Colors.Panel, 0.03)
+	corner(window, 18)
+	window.Visible = false
+	local limit = Instance.new("UISizeConstraint")
+	limit.MaxSize = Vector2.new(960, 640)
+	limit.Parent = window
+
+	-- Name banner (top centre) and the X (top right).
+	local banner = frame("NameBanner", window, UDim2.new(0.5, 0, 0, 46), UDim2.new(0.5, 0, 0, 10), Vector2.new(0.5, 0), rgb(120, 36, 48), 0)
+	corner(banner, 14)
+	local bannerStroke = Instance.new("UIStroke")
+	bannerStroke.Color = Colors.Coins
+	bannerStroke.Thickness = 2
+	bannerStroke.Parent = banner
+	label("NameLabel", banner, UDim2.new(1, -20, 1, -8), UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), TITLE_FONT, 32)
+	local close = button("CloseButton", window, UDim2.new(0, 44, 0, 44), rgb(200, 60, 70))
+	close.Text = "X"
+	close.Position = UDim2.new(1, -10, 0, 10)
+	close.AnchorPoint = Vector2.new(1, 0)
+
+	local BOTTOM = 112 -- monster list + Select
+	local content = frame("Content", window, UDim2.new(1, -28, 1, -(66 + BOTTOM)), UDim2.new(0, 14, 0, 64), Vector2.new(0, 0), Colors.Panel, 1)
+
+	-- Left: portrait and skins (scrolls on a short phone screen).
+	local left = scroller("Left", content, false)
+	left.Size = UDim2.new(0.38, -6, 1, 0)
+	list(left, false, 8)
+	local portrait = frame("Portrait", left, UDim2.new(1, -10, 0, 200), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Colors.PanelLight, 0)
+	portrait.LayoutOrder = 1
+	corner(portrait, 14)
+	local skins = frame("SkinsPanel", left, UDim2.new(1, -10, 0, 196), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Colors.PanelLight, 0)
+	skins.LayoutOrder = 2
+	corner(skins, 14)
+	local skinsTitle = label("TitleLabel", skins, UDim2.new(1, -20, 0, 24), UDim2.new(0, 10, 0, 6), Vector2.new(0, 0), TITLE_FONT, 22)
+	skinsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	skinsTitle.TextColor3 = Colors.Coins
+	local skinList = scroller("SkinList", skins, true)
+	skinList.Size = UDim2.new(1, -16, 0, 80)
+	skinList.Position = UDim2.new(0, 8, 0, 34)
+	list(skinList, true, 8)
+	local skinInfo = label("SkinInfo", skins, UDim2.new(1, -20, 0, 22), UDim2.new(0, 10, 0, 118), Vector2.new(0, 0), BODY_FONT, 17)
+	skinInfo.TextXAlignment = Enum.TextXAlignment.Left
+	skinInfo.TextColor3 = Colors.SubText
+	-- Buy / equip buttons for the skin picked (MenuController's addButton).
+	local skinButtons = frame("Buttons", skins, UDim2.new(1, -16, 0, 44), UDim2.new(0, 8, 1, -8), Vector2.new(0, 1), Colors.Panel, 1)
+	local skinButtonLayout = list(skinButtons, true, 6)
+	skinButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+
+	-- Right: stats, passive, abilities, folklore.
+	local right = scroller("Right", content, false)
+	right.Size = UDim2.new(0.62, -6, 1, 0)
+	right.Position = UDim2.new(1, 0, 0, 0)
+	right.AnchorPoint = Vector2.new(1, 0)
+	list(right, false, 8)
+	local stats = frame("StatsPanel", right, UDim2.new(1, -10, 0, 40 + STAT_COUNT * 30), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Colors.PanelLight, 0)
+	stats.LayoutOrder = 1
+	corner(stats, 12)
+	local statsTitle = label("TitleLabel", stats, UDim2.new(1, -20, 0, 24), UDim2.new(0, 10, 0, 6), Vector2.new(0, 0), TITLE_FONT, 22)
+	statsTitle.TextXAlignment = Enum.TextXAlignment.Left
+	statsTitle.TextColor3 = Colors.Coins
+	for index = 1, STAT_COUNT do
+		local row = frame("Stat" .. index, stats, UDim2.new(1, -20, 0, 26), UDim2.new(0, 10, 0, 6 + index * 30), Vector2.new(0, 0), Colors.Panel, 1)
+		local name = label("NameLabel", row, UDim2.new(0.45, 0, 1, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), BODY_FONT, 18)
+		name.TextXAlignment = Enum.TextXAlignment.Left
+		local pips = frame("Pips", row, UDim2.new(0.55, 0, 0, 16), UDim2.new(1, 0, 0.5, 0), Vector2.new(1, 0.5), Colors.Panel, 1)
+		pips:SetAttribute("ColorOn", Colors.Coins)
+		pips:SetAttribute("ColorOff", Colors.Panel)
+		local pipLayout = list(pips, true, 4)
+		pipLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+		for pip = 1, PIP_COUNT do
+			local dot = frame("Pip" .. pip, pips, UDim2.new(0.2, -4, 1, 0), UDim2.new(0, 0, 0, 0), Vector2.new(0, 0), Colors.Panel, 0)
+			dot.LayoutOrder = pip
+			corner(dot, 5)
+		end
+	end
+	infoBox("PassivePanel", right, 2, Colors.PanelLight)
+	infoBox("Ability1Panel", right, 3, Colors.PanelLight)
+	infoBox("Ability2Panel", right, 4, Colors.PanelLight)
+	local folklore = infoBox("FolklorePanel", right, 5, rgb(70, 56, 44))
+	local folkloreText = folklore:FindFirstChild("TextLabel") :: TextLabel
+	folkloreText.FontFace = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium, Enum.FontStyle.Italic)
+	folkloreText.TextColor3 = rgb(240, 225, 200)
+
+	-- Bottom: every monster (locked ones are "?"), and Select.
+	local carousel = scroller("Carousel", window, true)
+	carousel.Size = UDim2.new(1, -(28 + 176), 0, BOTTOM - 16)
+	carousel.Position = UDim2.new(0, 14, 1, -8)
+	carousel.AnchorPoint = Vector2.new(0, 1)
+	list(carousel, true, 10)
+	local select = button("SelectButton", window, UDim2.new(0, 160, 0, 54), Colors.Start)
+	select.Position = UDim2.new(1, -14, 1, -26)
+	select.AnchorPoint = Vector2.new(1, 1)
+	maxTextSize(select, 28)
+
+	-- One skin (icon drawn in by MenuController), a check on the one worn.
+	local skinSlot = button("SkinSlot", templates, UDim2.new(0, 72, 0, 72), Colors.Panel)
+	skinSlot.Text = ""
+	skinSlot.Visible = false
+	local slotStroke = Instance.new("UIStroke")
+	slotStroke.Name = "Outline"
+	slotStroke.Color = Colors.Coins
+	slotStroke.Thickness = 3
+	slotStroke.Enabled = false
+	slotStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	slotStroke.Parent = skinSlot
+	local check = label("Check", skinSlot, UDim2.new(0, 24, 0, 24), UDim2.new(1, 4, 0, -4), Vector2.new(1, 0), TITLE_FONT, 20)
+	check.Text = "✓"
+	check.BackgroundColor3 = Colors.Start
+	check.BackgroundTransparency = 0
+	check.ZIndex = 5
+	corner(check, 12)
+	check.Visible = false
+
+	-- One monster in the list; a locked one shows "?".
+	local monsterSlot = button("MonsterSlot", templates, UDim2.new(0, 88, 0, 88), Colors.PanelLight)
+	monsterSlot.Text = ""
+	monsterSlot.Visible = false
+	local monsterStroke = slotStroke:Clone()
+	monsterStroke.Parent = monsterSlot
+	local question = label("Question", monsterSlot, UDim2.new(1, 0, 1, 0), UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5), TITLE_FONT, 56)
+	question.Text = "?"
+	question.TextColor3 = Colors.SubText
+	question.Visible = false
+end
+
 local function buildMenuUI()
 	local gui = screenGui("MenuUI", 3)
 	sideBar("LeftBar", gui, true, { "Shop", "Role", "Monster", "Settings" })
@@ -299,6 +491,7 @@ local function buildMenuUI()
 	corner(fill, 7)
 
 	buildWallet(gui)
+	buildMonsterWindow(gui, templates)
 end
 
 --------------------------------------------------------------------------------

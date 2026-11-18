@@ -2,7 +2,7 @@
 Draws the role icons (exported by export.luau) the way the game builds them:
 rounded frames on a 100x100 grid, clipped to a circle, with a faction ring.
 
-  python3 tools/roleicons/render.py icons.json docs/role_icons.png [docs/role_roll_mock.png [docs/tutorial_pages.png]]
+  python3 tools/roleicons/render.py icons.json docs/role_icons.png [docs/role_roll_mock.png [docs/tutorial_pages.png [docs/monster_page.png]]]
 
 The second image is a mock-up of the intro screen (the reel stopped on one role),
 the third the lobby's how-to-play pages.
@@ -174,6 +174,96 @@ def tutorial(data, path):
     img.convert("RGB").save(path)
 
 
+def monster_page(data, path):
+    """The lobby's Monster window (BuildLobbyUI MonsterWindow), first skin worn."""
+    m = data["monster"]
+    W, H = 960, 640
+    img = Image.new("RGBA", (W + 80, H + 80), (40, 60, 45, 255))
+    draw = ImageDraw.Draw(img)
+    ox, oy = 40, 40
+    panel, light, gold, sub = (24, 26, 38, 255), (44, 48, 68, 255), (255, 210, 90, 255), (200, 205, 220, 255)
+    draw.rounded_rectangle([ox, oy, ox + W, oy + H], radius=18, fill=panel)
+    # banner + X
+    bw = W // 2
+    bx = ox + (W - bw) // 2
+    draw.rounded_rectangle([bx, oy + 10, bx + bw, oy + 56], radius=14, fill=(120, 36, 48, 255), outline=gold, width=2)
+    f = font(30)
+    tw = draw.textlength(m["name"], font=f)
+    draw.text((bx + (bw - tw) / 2, oy + 16), m["name"], font=f, fill=(255, 255, 255, 255))
+    draw.rounded_rectangle([ox + W - 54, oy + 10, ox + W - 10, oy + 54], radius=12, fill=(200, 60, 70, 255))
+    draw.text((ox + W - 41, oy + 16), "X", font=font(26), fill=(255, 255, 255, 255))
+    bottom = 112
+    cx, cy = ox + 14, oy + 64
+    cw, ch = W - 28, H - 66 - bottom
+    lw = int(cw * 0.38) - 6
+    # portrait
+    draw.rounded_rectangle([cx, cy, cx + lw - 10, cy + 200], radius=14, fill=light)
+    ic = icon(m["skins"][0]["shapes"], m["ring"], 180)
+    img.alpha_composite(ic, (cx + (lw - 10 - ic.width) // 2, cy + (200 - ic.height) // 2))
+    # skins
+    sy = cy + 208
+    draw.rounded_rectangle([cx, sy, cx + lw - 10, sy + 196], radius=14, fill=light)
+    draw.text((cx + 10, sy + 6), m["labels"]["skins"], font=font(20), fill=gold)
+    for i, skin in enumerate(m["skins"]):
+        x = cx + 8 + i * 80
+        if x + 72 > cx + lw - 10:
+            break
+        draw.rounded_rectangle([x, sy + 38, x + 72, sy + 110], radius=12, fill=panel, outline=gold if i == 0 else None, width=3)
+        s_ic = icon(skin["shapes"], m["ring"], 60)
+        if i > 1:
+            s_ic.putalpha(s_ic.getchannel("A").point(lambda a: int(a * 0.5)))
+        img.alpha_composite(s_ic, (x + (72 - s_ic.width) // 2, sy + 38 + (72 - s_ic.height) // 2))
+        if i == 0:
+            draw.ellipse([x + 52, sy + 34, x + 76, sy + 58], fill=(90, 200, 110, 255))
+            draw.text((x + 57, sy + 35), "✓", font=font(17), fill=(255, 255, 255, 255))
+    draw.text((cx + 10, sy + 118), m["skins"][0]["name"] + "  ·  Equipped", font=font(16, False), fill=sub)
+    draw.rounded_rectangle([cx + 8, sy + 144, cx + 128, sy + 188], radius=12, fill=(80, 160, 255, 140))
+    draw.text((cx + 26, sy + 155), "Equipped", font=font(18), fill=(255, 255, 255, 255))
+    # right column
+    rx, rw = cx + lw + 12, cw - lw - 12
+    y = cy
+    draw.rounded_rectangle([rx, y, rx + rw - 10, y + 160], radius=12, fill=light)
+    draw.text((rx + 10, y + 6), m["labels"]["stats"], font=font(20), fill=gold)
+    for i, (name, value) in enumerate(m["stats"]):
+        ry = y + 6 + (i + 1) * 30
+        draw.text((rx + 10, ry + 2), name, font=font(17, False), fill=(255, 255, 255, 255))
+        pw = (rw - 30) * 0.55
+        px = rx + rw - 20 - pw
+        for p in range(5):
+            dx = px + p * (pw / 5)
+            draw.rounded_rectangle([dx, ry + 6, dx + pw / 5 - 4, ry + 20], radius=5, fill=gold if p < value else panel)
+    y += 168
+    body = font(15, False)
+    for i, (title, text) in enumerate(m["boxes"]):
+        lines = wrap(draw, text, body, rw - 40)
+        h = 40 + len(lines) * 20
+        fill = (70, 56, 44, 255) if i == 3 else light
+        if y + h > cy + ch:
+            draw.text((rx + 10, y), "(scrolls)", font=font(14, False), fill=sub)
+            break
+        draw.rounded_rectangle([rx, y, rx + rw - 10, y + h], radius=12, fill=fill)
+        draw.text((rx + 10, y + 8), title, font=font(19), fill=gold)
+        for j, line in enumerate(lines):
+            draw.text((rx + 10, y + 34 + j * 20), line, font=body, fill=(240, 225, 200, 255) if i == 3 else sub)
+        y += h + 8
+    # carousel + Select
+    ky = oy + H - 8 - 96
+    x = ox + 14
+    draw.rounded_rectangle([x, ky + 4, x + 88, ky + 92], radius=12, fill=light, outline=gold, width=3)
+    c_ic = icon(m["skins"][0]["shapes"], m["ring"], 76)
+    img.alpha_composite(c_ic, (x + (88 - c_ic.width) // 2, ky + 4 + (88 - c_ic.height) // 2))
+    for k in range(m["locked"]):
+        x += 98
+        draw.rounded_rectangle([x, ky + 4, x + 88, ky + 92], radius=12, fill=light)
+        draw.text((x + 30, ky + 18), "?", font=font(50), fill=sub)
+    sx = ox + W - 14 - 160
+    draw.rounded_rectangle([sx, oy + H - 26 - 54, sx + 160, oy + H - 26], radius=12, fill=(90, 200, 110, 140))
+    label = m["labels"]["select"]
+    tw = draw.textlength(label, font=font(24))
+    draw.text((sx + (160 - tw) / 2, oy + H - 26 - 42), label, font=font(24), fill=(255, 255, 255, 255))
+    img.convert("RGB").save(path)
+
+
 if __name__ == "__main__":
     data = json.load(open(sys.argv[1]))
     sheet(data, sys.argv[2])
@@ -181,3 +271,5 @@ if __name__ == "__main__":
         mock(data, sys.argv[3])
     if len(sys.argv) > 4 and data.get("tutorial"):
         tutorial(data, sys.argv[4])
+    if len(sys.argv) > 5 and data.get("monster"):
+        monster_page(data, sys.argv[5])

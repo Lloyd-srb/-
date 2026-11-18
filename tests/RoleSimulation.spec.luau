@@ -42,7 +42,7 @@ test("role screen: options are private, bad picks are rejected, all confirmed = 
 	-- Everyone gets their own option list.
 	for _, id in { 1, 2, 3 } do
 		local options = server.last("RoleOptions", id)[1]
-		expect(#options.Usable).toBe(10)
+		expect(#options.Usable).toBe(12)
 		expect(options.PickCount).toBe(3)
 		expect(table.find(options.Usable, "Wolf")).toBeNil() -- the wolf can never be picked
 	end

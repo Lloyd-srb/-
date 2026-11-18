@@ -5,11 +5,12 @@
 	adds a named modifier instead of writing WalkSpeed directly.
 
 	final speed = lowest Override if any modifier has one,
-	              otherwise Base x every Multiplier.
+	              otherwise (Base + every Add) x every Multiplier.
 ]]
 
 export type Modifier = {
 	Multiplier: number?,
+	Add: number?, -- e.g. +3 from the boots
 	Override: number?, -- e.g. 0 while frozen
 	NoJump: boolean?,
 }
@@ -28,7 +29,9 @@ end
 function SpeedStack.speed(stack: Stack): number
 	local override: number? = nil
 	local multiplier = 1
+	local add = 0
 	for _, modifier in stack.Modifiers do
+		add += modifier.Add or 0
 		if modifier.Override ~= nil then
 			override = if override == nil then modifier.Override else math.min(override, modifier.Override)
 		end
@@ -39,7 +42,7 @@ function SpeedStack.speed(stack: Stack): number
 	if override ~= nil then
 		return override
 	end
-	return stack.Base * multiplier
+	return (stack.Base + add) * multiplier
 end
 
 function SpeedStack.canJump(stack: Stack): boolean

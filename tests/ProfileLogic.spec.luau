@@ -86,7 +86,7 @@ end)
 
 test("shop: roles need the coins, the level, and are bought once", function()
 	local data = fresh()
-	data.Coins = 1500
+	data.Coins = 5300
 	local ok, reason = ProfileLogic.buy(data, "Role", "Chief", "Coins")
 	expect(ok).toBe(false)
 	expect(reason).toBe("Level") -- level 5 needed
@@ -102,7 +102,7 @@ test("shop: roles need the coins, the level, and are bought once", function()
 	expect(select(2, ProfileLogic.buy(data, "Role", "Villager", "Coins"))).toBe("NotForSale")
 	expect(select(2, ProfileLogic.buy(data, "Role", "Wolf", "Diamonds"))).toBe("NotForSale")
 	expect(select(2, ProfileLogic.buy(data, "Role", "Bodyguard", "Robux"))).toBe("WrongCurrency") -- not here
-	data.Diamonds = 99
+	data.Diamonds = 399
 	expect(ProfileLogic.buy(data, "Role", "Bodyguard", "Diamonds")).toBe(true) -- Diamonds = Robux price
 	expect(data.Diamonds).toBe(0)
 end)

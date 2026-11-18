@@ -49,6 +49,14 @@ local WolfService = {}
 local wolves: { [number]: WolfState } = {}
 local forestIds: { number } = {}
 local forestLoopToken = 0
+local baitIds: { number } = {}
+local baitSpots: { Vector3 } = {}
+
+-- Set by InventoryService: fish lying on the ground (they look like people
+-- to the wolf side at night; owner, 18 Nov 2026).
+WolfService.Baits = function(): { { Id: number, Position: Vector3 } }
+	return {}
+end
 
 --------------------------------------------------------------------------------
 -- Queries
@@ -201,6 +209,7 @@ local function transform(member: Roster.Member)
 		MaulUntil = 0,
 		ReadyAt = {},
 	}
+	MoveService.ClearModifier(member.Id, "Boots") -- boots are for human feet
 	MoveService.SetBase(member.Id, if member.IsPup then Config.Pup.WalkSpeed else Config.Wolf.WalkSpeed)
 	local player = MatchService.PlayerOf(member.Id)
 	if player then
@@ -231,6 +240,9 @@ local function revert(id: number)
 	MoveService.ClearModifier(id, "Sprint")
 	MoveService.ClearModifier(id, "Maul")
 	MoveService.SetBase(id, Config.Human.WalkSpeed)
+	if member and member.Alive and member.HasBoots then
+		MoveService.SetModifier(id, "Boots", { Add = Config.Boots.SpeedBonus })
+	end
 	local player = MatchService.PlayerOf(id)
 	if player then
 		Net.fire(player, "FormChanged", "Human")
@@ -259,6 +271,26 @@ local function sameIds(a: { number }, b: { number }): boolean
 	return true
 end
 
+local function sendBaits(viewers: { Player })
+	for _, viewer in viewers do
+		Net.fire(viewer, "Highlight", { Kind = "Bait", Ids = baitIds, Spots = baitSpots })
+	end
+end
+
+-- Fish baits: a red glow shaped like a person, for the wolf side only.
+local function scanBaits()
+	local ids: { number } = {}
+	local spots: { Vector3 } = {}
+	for _, bait in WolfService.Baits() do
+		table.insert(ids, bait.Id)
+		table.insert(spots, bait.Position)
+	end
+	if not sameIds(ids, baitIds) then
+		baitIds, baitSpots = ids, spots
+		sendBaits(wolfSidePlayers())
+	end
+end
+
 -- GDD §6.4: at night, players in the forest glow red for the wolf side.
 local function scanForest()
 	local ids: { number } = {}
@@ -273,6 +305,7 @@ local function scanForest()
 		forestIds = ids
 		sendHighlight(wolfSidePlayers(), "Forest", ids, nil)
 	end
+	scanBaits()
 end
 
 local function startForestLoop()
@@ -291,6 +324,8 @@ local function stopForestLoop()
 	forestLoopToken += 1
 	forestIds = {}
 	sendHighlight(wolfSidePlayers(), "Forest", {}, nil)
+	baitIds, baitSpots = {}, {}
+	sendBaits(wolfSidePlayers())
 end
 
 --------------------------------------------------------------------------------
@@ -494,6 +529,7 @@ function WolfService.Start()
 		if wolf then
 			Net.fire(player, "FormChanged", wolf.Form)
 			Net.fire(player, "Highlight", { Kind = "Forest", Ids = forestIds })
+			sendBaits({ player })
 		end
 	end)
 end

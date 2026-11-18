@@ -75,9 +75,37 @@ local Strings: { [string]: Entry } = {
 	["Menu.Free"] = { en = "Free", th = "ฟรี" },
 	["Menu.Price"] = { en = "{coins:int} coins  ·  {robux:int} R$ / Diamonds", th = "{coins:int} coin  ·  {robux:int} R$ / Diamond" },
 	["Menu.Level"] = { en = "Level {level:int}+", th = "เลเวล {level:int} ขึ้นไป" },
-	["Menu.Werewolf"] = { en = "Werewolf (selected)", th = "หมาป่า (ใช้อยู่)" },
-	["Menu.WolfDefault"] = { en = "Plain grey werewolf", th = "หมาป่าสีเทาแบบปกติ" },
-	["Menu.MonsterInfo"] = { en = "More monsters will come later.", th = "มอนสเตอร์แบบอื่นจะมาในภายหลัง" },
+	-- Monster window (owner's design, 18 Nov 2026)
+	["Monster.Werewolf.Name"] = { en = "Moonfang Stalker", th = "นักล่าเขี้ยวจันทร์" },
+	["Monster.Skins"] = { en = "Skins", th = "สกิน" },
+	["Monster.PlainSkin"] = { en = "Plain grey", th = "สีเทาปกติ" },
+	["Monster.Stats"] = { en = "Stats", th = "ค่าสถานะ" },
+	["Monster.Stat.RunSpeed"] = { en = "Run Speed", th = "ความเร็ววิ่ง" },
+	["Monster.Stat.AttackPower"] = { en = "Attack Power", th = "พลังโจมตี" },
+	["Monster.Stat.AttackSpeed"] = { en = "Attack Speed", th = "ความเร็วโจมตี" },
+	["Monster.Stat.Vision"] = { en = "Vision", th = "การมองเห็น" },
+	["Monster.Passive"] = { en = "Passive", th = "ความสามารถติดตัว" },
+	["Monster.Ability"] = { en = "Ability {n:int}", th = "สกิล {n:int}" },
+	["Monster.Folklore"] = { en = "Folklore", th = "ตำนาน" },
+	["Monster.Werewolf.Passive"] = {
+		en = "The first player slain by the Moonfang Stalker becomes a wolf cub ally.",
+		th = "ผู้เล่นคนแรกที่ถูกนักล่าเขี้ยวจันทร์สังหาร จะกลายเป็นลูกหมาป่าพวกเดียวกัน",
+	},
+	["Monster.Werewolf.Ability1"] = {
+		en = "Scent Hunt: sniffs the area and highlights nearby enemies for {duration:int} seconds. {cooldown:int} second cooldown.",
+		th = "ดมกลิ่นล่า: ดมกลิ่นรอบตัว เห็นศัตรูที่อยู่ใกล้ {duration:int} วินาที คูลดาวน์ {cooldown:int} วินาที",
+	},
+	["Monster.Werewolf.Ability2"] = {
+		en = "Savage Rush: gains increased speed for {duration:int} seconds and mauls the first enemy it catches. {cooldown:int} second cooldown.",
+		th = "พุ่งโหด: วิ่งเร็วขึ้น {duration:int} วินาที และขย้ำศัตรูคนแรกที่ไล่ทัน คูลดาวน์ {cooldown:int} วินาที",
+	},
+	["Monster.Werewolf.Folklore"] = {
+		en = "Hunters say the Moonfang Stalker prowls when moonlight touches the pines. Its amber stare freezes the brave, and the first soul it fells rises again as a lesser wolf bound to its howl. By dawn, only claw marks and silence remain.",
+		th = "นายพรานเล่าว่านักล่าเขี้ยวจันทร์จะออกล่าเมื่อแสงจันทร์ทาบยอดสน ดวงตาสีอำพันของมันทำให้คนกล้าตัวแข็งทื่อ และวิญญาณดวงแรกที่มันโค่นลงจะลุกขึ้นอีกครั้งเป็นหมาป่าตัวน้อยที่ผูกพันกับเสียงหอนของมัน พอรุ่งสาง เหลือไว้เพียงรอยกรงเล็บและความเงียบงัน",
+	},
+	["Monster.Select"] = { en = "Select", th = "เลือก" },
+	["Monster.Selected"] = { en = "Selected", th = "เลือกแล้ว" },
+	["Monster.Locked"] = { en = "More monsters are coming soon!", th = "มอนสเตอร์ตัวใหม่กำลังจะมาเร็วๆ นี้!" },
 	["Menu.SettingsInfo"] = {
 		en = "The game uses the language of your Roblox account automatically.",
 		th = "ภาษาในเกมเปลี่ยนตามภาษาของบัญชี Roblox อัตโนมัติ",
@@ -343,6 +371,16 @@ local Strings: { [string]: Entry } = {
 		en = "Reinforce a door: full health and double maximum. Once per day and once per night.",
 		th = "เสริมประตูให้เลือดเต็มและเลือดสูงสุด ×2 ใช้ได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง",
 	},
+	["Role.PlagueDoctor.Name"] = { en = "Plague Doctor", th = "หมอโรคระบาด" },
+	["Role.PlagueDoctor.Desc"] = {
+		en = "You carry a red potion (3 uses): once by day, once by night. On a body: they get up at once. On a living person: they die the next night, and nobody can bring them back.",
+		th = "มียาขวดแดง (ใช้ได้ 3 ครั้ง) ใช้ได้ตอนกลางวัน 1 ครั้ง กลางคืน 1 ครั้ง ใช้กับศพ: ฟื้นทันที ใช้กับคนที่ยังมีชีวิต: เขาจะตายในคืนถัดไป และไม่มีใครชุบเขาได้",
+	},
+	["Role.Thief.Name"] = { en = "Thief", th = "หัวขโมย" },
+	["Role.Thief.Desc"] = {
+		en = "By day, sneak up on anyone and steal one random item from them. Role items cannot be stolen.",
+		th = "ตอนกลางวัน ย่องไปขโมยไอเทมสุ่ม 1 ชิ้นจากใครก็ได้ ขโมยไอเทมประจำ role ไม่ได้",
+	},
 	["Role.Killer.Name"] = { en = "Killer", th = "ฆาตกร" },
 	["Role.Killer.Desc"] = {
 		en = "You work alone. Your knife kills in one hit: once per day and once per night. You cannot hold a gun.",
@@ -370,12 +408,27 @@ local Strings: { [string]: Entry } = {
 	["Item.Flashlight.Name"] = { en = "Flashlight", th = "ไฟฉาย" },
 	["Item.Flashlight.Desc"] = { en = "Lights up the night.", th = "ส่องสว่างตอนกลางคืน" },
 	["Item.Knife.Name"] = { en = "Knife", th = "มีด" },
+	["Item.Potion.Name"] = { en = "Red potion", th = "ยาขวดแดง" },
+	["Item.Potion.Desc"] = {
+		en = "Once by day, once by night: a body gets up at once; a living person dies the next night.",
+		th = "ใช้ได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง: ศพฟื้นทันที คนที่ยังมีชีวิตจะตายในคืนถัดไป",
+	},
+	["Item.Fish.Name"] = { en = "Fish", th = "ปลา" },
+	["Item.Fish.Desc"] = {
+		en = "Put it on the ground. To the monster it looks like someone standing there.",
+		th = "วางไว้บนพื้น มอนสเตอร์จะเห็นเหมือนมีคนยืนอยู่ตรงนั้น",
+	},
 
 	-- Tasks (GDD §10)
 	["Task.RepairDoor"] = { en = "Repair a broken door", th = "ซ่อมประตูที่เสีย" },
 	["Task.PlantCarrot"] = { en = "Plant carrots behind a house", th = "ปลูกแครอตหลังบ้าน" },
 	["Task.PickApples"] = { en = "Pick apples in the forest ({done:int}/{total:int})", th = "เก็บแอปเปิ้ลในป่า ({done:int}/{total:int})" },
 	["Task.ChopTrees"] = { en = "Chop trees ({done:int}/{total:int})", th = "ตัดต้นไม้ ({done:int}/{total:int})" },
+	["Task.WaterCarrots"] = {
+		en = "Fetch water at the stream, then water the carrots ({done:int}/{total:int})",
+		th = "ตักน้ำที่ลำธาร แล้วรดน้ำแปลงแครอต ({done:int}/{total:int})",
+	},
+	["Task.Fishing"] = { en = "Catch a fish at the stream", th = "ตกปลาที่ลำธาร" },
 	["Hud.Task"] = { en = "Task: {task}", th = "ภารกิจ: {task}" },
 	["Hud.TaskDone"] = { en = "Task done", th = "ทำภารกิจแล้ว" },
 	["Effect.Gained"] = { en = "You got: {item}", th = "ได้รับ: {item}" },
@@ -383,6 +436,16 @@ local Strings: { [string]: Entry } = {
 		en = "The Cross protects you from one attack while you carry it.",
 		th = "Cross จะกันการโจมตีให้ 1 ครั้งเมื่อพกติดตัว",
 	},
+	["Effect.Boots"] = { en = "You got boots! You run faster for the rest of the game.", th = "ได้รองเท้าบูท! วิ่งเร็วขึ้นไปตลอดเกม" },
+	["Effect.Poisoned"] = { en = "{name} will not survive the next night...", th = "{name} จะไม่รอดคืนถัดไป..." },
+	["Effect.PotionRevived"] = { en = "{name} gets up again!", th = "{name} ฟื้นขึ้นมาแล้ว!" },
+	["Effect.PotionUsed"] = {
+		en = "You already used the potion. Once by day and once by night.",
+		th = "ใช้ยาไปแล้ว ใช้ได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง",
+	},
+	["Effect.PotionNoTarget"] = { en = "Nobody close enough.", th = "ไม่มีใครอยู่ใกล้พอ" },
+	["Effect.StealNothing"] = { en = "{name} has nothing to steal.", th = "{name} ไม่มีอะไรให้ขโมย" },
+	["Effect.Stolen"] = { en = "You stole: {item}", th = "ขโมยได้: {item}" },
 	["Task.Complete"] = { en = "Task complete! +{coins:int} coins at the end of the game", th = "ภารกิจสำเร็จ! +{coins:int} coin ตอนจบเกม" },
 
 	-- Interaction prompts (hold E)
@@ -400,6 +463,10 @@ local Strings: { [string]: Entry } = {
 	["Prompt.PickApple"] = { en = "Pick apple", th = "เก็บแอปเปิ้ล" },
 	["Prompt.Chop"] = { en = "Chop tree", th = "ตัดต้นไม้" },
 	["Prompt.PickUp"] = { en = "Pick up", th = "เก็บ" },
+	["Prompt.FetchWater"] = { en = "Fetch water", th = "ตักน้ำ" },
+	["Prompt.WaterPlot"] = { en = "Water carrots", th = "รดน้ำแครอต" },
+	["Prompt.Fish"] = { en = "Fish", th = "ตกปลา" },
+	["Prompt.Steal"] = { en = "Steal", th = "ขโมย" },
 	["Prompt.DebugHitDoor"] = { en = "[Debug] Hit door", th = "[Debug] ตีประตู" },
 
 	-- Chat channels (GDD §6.2, §12)

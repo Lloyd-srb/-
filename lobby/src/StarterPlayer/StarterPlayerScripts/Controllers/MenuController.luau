@@ -1,12 +1,16 @@
 --!strict
 --[[
 	MenuController — the lobby's side menus and wallet (GDD §3, §13).
-	  Left:  Shop (skins, coin packs) · Roles (buy) · Monster (werewolf skins) · Settings
+	  Left:  Shop (skins, coin packs) · Roles (buy) · Monster · Settings
 	  Right: News · Codes · Pass (Season Pass) · Daily Spin
 	Everything shown comes from this player's ProfileView (sent by the server).
 	Buttons only ask the server (ShopBuy / Equip / SpinRequest / CodeRedeem);
 	buttons the server would refuse are greyed out using the same rules
 	(Shared.Logic.Shop).
+	Monster has its own window (owner's design, 18 Nov 2026): name banner,
+	portrait in the skin picked, skins (check on the one worn), stats, passive,
+	abilities (numbers from Config, so the text is always true), folklore,
+	the monster list with locked "?" slots, and Select.
 ]]
 
 local Players = game:GetService("Players")
@@ -18,6 +22,7 @@ local GamepadFocus = require(ReplicatedStorage.Shared.GamepadFocus)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Progression = require(ReplicatedStorage.Shared.Logic.Progression)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local RoleIcons = require(ReplicatedStorage.Shared.RoleIcons)
 local Shop = require(ReplicatedStorage.Shared.Logic.Shop)
 
 local TOAST_SECONDS = 3
@@ -43,6 +48,14 @@ local spinStarted = 0
 local toastToken = 0
 local codeAnswer: TextLabel? = nil
 local spinInfo: TextLabel? = nil
+
+local monsterWindow: Frame
+local monsterIndex = 1 -- the monster shown
+local selectedMonster = "Werewolf" -- the one this player plays (only one exists so far)
+local previewSkin: string? = nil -- skin shown in the portrait (nil = plain)
+local previewSet = false -- false: follow the skin worn
+
+local STAT_KEYS = { "RunSpeed", "AttackPower", "AttackSpeed", "Vision" }
 
 --------------------------------------------------------------------------------
 -- Text helpers
@@ -295,20 +308,211 @@ function PAGES.Shop()
 	end
 end
 
-function PAGES.Monster()
-	addText(Loc.format("Menu.Werewolf"), 1)
-	local plain = addRow(2, Loc.format("Menu.WolfDefault"), Loc.format("Skin.Slot.Wolf"), "", "")
-	if view then
-		addEquipButton(plain, "Wolf", nil)
-	end
-	local order = 2
-	for _, skinId in Config.SkinOrder do
-		if Config.Skins[skinId].Slot == "Wolf" then
-			order += 1
-			skinRow(order, skinId)
+--------------------------------------------------------------------------------
+-- Monster window
+--------------------------------------------------------------------------------
+
+local function paintOf(skinId: string?): { [string]: Color3 }?
+	return if skinId and Config.Skins[skinId] then Config.Skins[skinId].Paint else nil
+end
+
+local function clearGui(parent: Instance)
+	for _, child in parent:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
 		end
 	end
-	addText(Loc.format("Menu.MonsterInfo"), order + 1)
+end
+
+-- The portrait: an uploaded picture when Config.Monsters[i].Image is set,
+-- otherwise the drawn wolf face in the skin's colours.
+local function monsterPicture(def: any, size: number, skinId: string?): GuiObject
+	if def.Image and def.Image ~= 0 then
+		local image = Instance.new("ImageLabel")
+		image.Size = UDim2.fromOffset(size, size)
+		image.AnchorPoint = Vector2.new(0.5, 0.5)
+		image.BackgroundTransparency = 1
+		image.Image = "rbxassetid://" .. tostring(def.Image)
+		return image
+	end
+	return RoleIcons.create("Wolf", size, RoleIcons.RingColors.Wolf, RoleIcons.wolfDesign(paintOf(skinId)))
+end
+
+local function skinLine(skinId: string?): string
+	if not skinId then
+		return Loc.format("Monster.PlainSkin")
+	end
+	local def = Config.Skins[skinId]
+	local owned = view and view.Skins[skinId] == true
+	local name = nameOf("Skin", skinId)
+	if owned then
+		return name .. "  ·  " .. Loc.format("Menu.Owned")
+	elseif def.Source == "Pass" then
+		return name .. "  ·  " .. Loc.format("Skin.FromPass")
+	elseif def.Source == "Spin" then
+		return name .. "  ·  " .. Loc.format("Skin.FromSpin")
+	end
+	return name
+end
+
+local function setBox(name: string, heading: string, text: string)
+	local right = monsterWindow:WaitForChild("Content"):WaitForChild("Right")
+	local box = right:WaitForChild(name);
+	(box:WaitForChild("TitleLabel") :: TextLabel).Text = heading;
+	(box:WaitForChild("TextLabel") :: TextLabel).Text = text
+end
+
+local function renderMonster()
+	local def = Config.Monsters[monsterIndex]
+	if not def then
+		return
+	end
+	local id = def.Id
+	local worn: string? = view and view.Equipped.Wolf or nil
+	if not previewSet then
+		previewSkin = worn
+	end
+	local banner = monsterWindow:WaitForChild("NameBanner"):WaitForChild("NameLabel") :: TextLabel
+	banner.Text = Loc.format("Monster." .. id .. ".Name")
+
+	-- Portrait.
+	local content = monsterWindow:WaitForChild("Content")
+	local left = content:WaitForChild("Left")
+	local portrait = left:WaitForChild("Portrait") :: Frame
+	clearGui(portrait)
+	local box = portrait.AbsoluteSize
+	local size = math.floor(math.min(box.X, box.Y) * 0.9)
+	if size <= 0 then
+		size = 180
+	end
+	local picture = monsterPicture(def, size, previewSkin)
+	picture.Position = UDim2.fromScale(0.5, 0.5)
+	picture.Parent = portrait
+
+	-- Skins: plain + every wolf skin; a check on the one worn.
+	local skins = left:WaitForChild("SkinsPanel") :: Frame
+	(skins:WaitForChild("TitleLabel") :: TextLabel).Text = Loc.format("Monster.Skins")
+	local skinList = skins:WaitForChild("SkinList")
+	clearGui(skinList)
+	local choices: { string } = { "" }
+	for _, skinId in Config.SkinOrder do
+		if Config.Skins[skinId].Slot == "Wolf" then
+			table.insert(choices, skinId)
+		end
+	end
+	for order, choice in choices do
+		local skinId: string? = if choice == "" then nil else choice
+		local slot = template("SkinSlot"):Clone() :: TextButton
+		slot.Name = "Skin_" .. (if choice == "" then "Plain" else choice)
+		slot.LayoutOrder = order
+		local icon = RoleIcons.create("Wolf", 60, nil, RoleIcons.wolfDesign(paintOf(skinId)))
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		local owned = skinId == nil or (view ~= nil and view.Skins[skinId] == true)
+		local face = icon:FindFirstChild("Face")
+		if face and face:IsA("CanvasGroup") and not owned then
+			face.GroupTransparency = 0.5 -- not owned yet
+		end
+		icon.Parent = slot;
+		(slot:WaitForChild("Check") :: TextLabel).Visible = skinId == worn;
+		(slot:WaitForChild("Outline") :: UIStroke).Enabled = skinId == previewSkin
+		slot.Visible = true
+		slot.Activated:Connect(function()
+			previewSkin, previewSet = skinId, true
+			Audio.play("UIOpen")
+			renderMonster()
+		end)
+		slot.Parent = skinList
+	end
+	(skins:WaitForChild("SkinInfo") :: TextLabel).Text = skinLine(previewSkin)
+	clearGui(skins:WaitForChild("Buttons"))
+	if view then
+		local owned = previewSkin == nil or view.Skins[previewSkin :: string] == true
+		if owned then
+			addEquipButton(skins, "Wolf", previewSkin)
+		elseif Config.Skins[previewSkin :: string].Source == "Shop" then
+			addBuyButtons(skins, "Skin", previewSkin :: string)
+		end
+	end
+
+	-- Stats: 5 pips each.
+	local right = content:WaitForChild("Right")
+	local stats = right:WaitForChild("StatsPanel");
+	(stats:WaitForChild("TitleLabel") :: TextLabel).Text = Loc.format("Monster.Stats")
+	for index, key in STAT_KEYS do
+		local row = stats:WaitForChild("Stat" .. index);
+		(row:WaitForChild("NameLabel") :: TextLabel).Text = Loc.format("Monster.Stat." .. key)
+		local pips = row:WaitForChild("Pips")
+		local on = pips:GetAttribute("ColorOn")
+		local off = pips:GetAttribute("ColorOff")
+		local value = (def.Stats :: any)[key] or 0
+		for pip = 1, 5 do
+			local dot = pips:FindFirstChild("Pip" .. pip)
+			if dot and dot:IsA("Frame") and typeof(on) == "Color3" and typeof(off) == "Color3" then
+				dot.BackgroundColor3 = if pip <= value then on else off
+			end
+		end
+	end
+
+	-- Passive, abilities (numbers from Config), folklore.
+	local sniff, sprint = Config.Wolf.Sniff, Config.Wolf.Sprint
+	setBox("PassivePanel", Loc.format("Monster.Passive"), Loc.format("Monster." .. id .. ".Passive"))
+	setBox(
+		"Ability1Panel",
+		Loc.format("Monster.Ability", { n = 1 }),
+		Loc.format("Monster." .. id .. ".Ability1", { duration = sniff.Duration, cooldown = sniff.Cooldown })
+	)
+	setBox(
+		"Ability2Panel",
+		Loc.format("Monster.Ability", { n = 2 }),
+		Loc.format("Monster." .. id .. ".Ability2", { duration = sprint.Duration, cooldown = sprint.Cooldown })
+	)
+	setBox("FolklorePanel", Loc.format("Monster.Folklore"), Loc.format("Monster." .. id .. ".Folklore"))
+
+	-- The monster list: real ones, then locked "?" slots.
+	local carousel = monsterWindow:WaitForChild("Carousel")
+	clearGui(carousel)
+	for index, monster in Config.Monsters do
+		local slot = template("MonsterSlot"):Clone() :: TextButton
+		slot.Name = "Monster_" .. monster.Id
+		slot.LayoutOrder = index
+		local icon = monsterPicture(monster, 76, if index == monsterIndex then previewSkin else nil)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon.Parent = slot;
+		(slot:WaitForChild("Outline") :: UIStroke).Enabled = index == monsterIndex
+		slot.Visible = true
+		slot.Activated:Connect(function()
+			if monsterIndex ~= index then
+				monsterIndex, previewSet = index, false
+				renderMonster()
+			end
+		end)
+		slot.Parent = carousel
+	end
+	for lockedIndex = 1, Config.MonsterLockedSlots do
+		local slot = template("MonsterSlot"):Clone() :: TextButton
+		slot.Name = "Locked" .. lockedIndex
+		slot.LayoutOrder = #Config.Monsters + lockedIndex;
+		(slot:WaitForChild("Question") :: TextLabel).Visible = true
+		slot.Visible = true
+		slot.Activated:Connect(function()
+			showToast(Loc.format("Monster.Locked"))
+		end)
+		slot.Parent = carousel
+	end
+
+	local select = monsterWindow:WaitForChild("SelectButton") :: TextButton
+	local chosen = selectedMonster == id
+	select.Text = Loc.format(if chosen then "Monster.Selected" else "Monster.Select")
+	select.AutoButtonColor = not chosen
+	select.BackgroundTransparency = if chosen then DISABLED_TRANSPARENCY else 0
+end
+
+local function closeMonster()
+	GamepadFocus.release(monsterWindow)
+	monsterWindow.Visible = false
+	if openPage == "Monster" then
+		openPage = nil
+	end
 end
 
 function PAGES.Settings()
@@ -481,11 +685,26 @@ function render()
 end
 
 local function open(page: string)
+	if page == "Monster" then
+		if monsterWindow.Visible then
+			closeMonster()
+			return
+		end
+		window.Visible = false
+		openPage = page
+		previewSet = false
+		monsterWindow.Visible = true
+		Audio.play("UIOpen")
+		task.defer(renderMonster) -- after the layout has a size (portrait)
+		GamepadFocus.offer(monsterWindow:FindFirstChild("SelectButton"))
+		return
+	end
 	if openPage == page and window.Visible then
 		window.Visible = false
 		openPage = nil
 		return
 	end
+	monsterWindow.Visible = false
 	openPage = page
 	body.CanvasPosition = Vector2.zero
 	render()
@@ -515,6 +734,9 @@ local function onView(newView: any)
 	temporaryLabel.Visible = view.Temporary == true
 	if window.Visible then
 		render()
+	end
+	if monsterWindow.Visible then
+		renderMonster()
 	end
 end
 
@@ -580,6 +802,17 @@ function MenuController.Start()
 	walletBar = gui:WaitForChild("WalletBar") :: Frame
 	temporaryLabel = gui:WaitForChild("TemporaryLabel") :: TextLabel
 	toast = gui:WaitForChild("Toast") :: TextLabel
+	monsterWindow = gui:WaitForChild("MonsterWindow") :: Frame
+	local monsterClose = monsterWindow:WaitForChild("CloseButton") :: TextButton
+	monsterClose.Activated:Connect(closeMonster)
+	local select = monsterWindow:WaitForChild("SelectButton") :: TextButton
+	select.Activated:Connect(function()
+		local def = Config.Monsters[monsterIndex]
+		if def and selectedMonster ~= def.Id then
+			selectedMonster = def.Id
+			renderMonster()
+		end
+	end)
 	local close = window:WaitForChild("CloseButton") :: TextButton
 	close.Text = Loc.format("Menu.Close")
 	close.Activated:Connect(function()
