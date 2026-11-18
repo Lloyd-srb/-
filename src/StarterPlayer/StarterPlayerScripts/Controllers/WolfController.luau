@@ -11,12 +11,17 @@
 	  Howl    Q / L2                       (pup)
 	Gamepad X is left to the "hold" prompts (searching hiding spots).
 	Touch buttons use Roblox's own layout around the jump button.
+	Vision (owner, 18 Nov 2026): in werewolf form the night fog on this
+	screen follows the monster's Vision stat (Config.Wolf.NightVision).
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")
+local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Config = require(ReplicatedStorage.Shared.Config)
 local Loc = require(ReplicatedStorage.Shared.Loc)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -105,7 +110,33 @@ local function unbind(action: Action)
 	end
 end
 
+local VISION_BIND = "WolfVision"
+local visionBound = false
+
+-- How far the werewolf sees at night: the fog on this screen only.
+local function setVision(on: boolean)
+	if on == visionBound then
+		return
+	end
+	visionBound = on
+	if not on then
+		RunService:UnbindFromRenderStep(VISION_BIND)
+		return
+	end
+	local night = Config.Lighting.Night
+	local fogEnd = Config.Wolf.NightVision
+	local fogStart = fogEnd * night.FogStart / night.FogEnd
+	RunService:BindToRenderStep(VISION_BIND, Enum.RenderPriority.Last.Value, function()
+		-- The server's night preset replicates over this; set it back each frame.
+		if Lighting.FogEnd ~= fogEnd then
+			Lighting.FogEnd = fogEnd
+			Lighting.FogStart = fogStart
+		end
+	end)
+end
+
 local function refresh()
+	setVision(ClientState.Alive and ClientState.Form == "Wolf" and Config.Wolf.NightVision ~= Config.Lighting.Night.FogEnd)
 	for _, action in ACTIONS do
 		if ClientState.Alive and table.find(action.Forms, ClientState.Form) then
 			bind(action)

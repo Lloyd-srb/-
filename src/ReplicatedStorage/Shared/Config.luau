@@ -206,9 +206,13 @@ Config.Human = {
 --------------------------------------------------------------------------------
 
 Config.Wolf = {
+	-- These four come from the monster's stat bars (Config.Monsters, set at
+	-- the end of this file): RunSpeed -> WalkSpeed, AttackPower -> AttackDamage,
+	-- AttackSpeed -> AttackCooldown, Vision -> NightVision.
 	WalkSpeed = 20, -- [GDD]
 	AttackDamage = 100, -- [GDD] one hit kills
 	AttackCooldown = 1, -- [GDD]
+	NightVision = 150, -- studs the werewolf sees at night (night fog end)
 	AttackRange = 7, -- [ASSUMED] studs
 	AttackMinDot = 0, -- [ASSUMED] target must be in the front half (dot of look and direction)
 	ForestScanInterval = 0.5, -- seconds between "who is in the forest" updates (§6.4)
@@ -978,10 +982,20 @@ Config.Products = {
 -- exists; the other slots show "?" until new monsters come. Stats are 1-5
 -- bars shown on the page (display only); Image = an uploaded picture
 -- (0 = the drawn portrait).
+-- [owner] 18 Nov 2026: the stat bars on the Monster page are real. Each bar
+-- is a level 1-5 and each level is a number in the game (MonsterStatValues).
+-- Level 3 = the GDD's werewolf; Attack Power 5 = 100 damage (one hit kills).
+Config.MonsterStatValues = {
+	RunSpeed = { 16, 18, 20, 22, 24 }, -- [ASSUMED] walk speed (people: 16); level 3 = 20 [GDD]
+	AttackPower = { 20, 40, 60, 80, 100 }, -- [ASSUMED] damage per hit (people: 100 HP); level 5 = 100 [owner]
+	AttackSpeed = { 2, 1.5, 1, 0.75, 0.5 }, -- [ASSUMED] seconds between attacks; level 3 = 1 s [GDD]
+	Vision = { 90, 120, 150, 180, 210 }, -- [ASSUMED] studs seen at night; level 3 = 150 (same as people)
+} :: { [string]: { number } }
+
 Config.Monsters = {
 	{
 		Id = "Werewolf",
-		Stats = { RunSpeed = 4, AttackPower = 5, AttackSpeed = 3, Vision = 4 }, -- [owner] from the design
+		Stats = { RunSpeed = 3, AttackPower = 5, AttackSpeed = 3, Vision = 3 }, -- [owner] 18 Nov 2026
 		Image = 0,
 	},
 }
@@ -1031,5 +1045,20 @@ Config.Debug = {
 	TimerScale = 1, -- e.g. 0.1 makes every timer 10x shorter
 	SkipRoleSelect = false,
 } :: DebugConfig
+
+-- The werewolf's numbers come from its stat bars (owner, 18 Nov 2026).
+function Config.monsterStat(monsterId: string, key: string): number
+	for _, monster in Config.Monsters do
+		if monster.Id == monsterId then
+			local level = math.clamp((monster.Stats :: any)[key] or 3, 1, 5)
+			return Config.MonsterStatValues[key][level]
+		end
+	end
+	return Config.MonsterStatValues[key][3]
+end
+Config.Wolf.WalkSpeed = Config.monsterStat("Werewolf", "RunSpeed")
+Config.Wolf.AttackDamage = Config.monsterStat("Werewolf", "AttackPower")
+Config.Wolf.AttackCooldown = Config.monsterStat("Werewolf", "AttackSpeed")
+Config.Wolf.NightVision = Config.monsterStat("Werewolf", "Vision")
 
 return Config

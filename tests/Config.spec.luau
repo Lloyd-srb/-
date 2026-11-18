@@ -35,6 +35,27 @@ test("every paid role costs the same: the old top price; no level gates (owner, 
 	end
 end)
 
+test("the Monster page's stat bars are the werewolf's real numbers (owner, 18 Nov 2026)", function()
+	local werewolf = Config.Monsters[1]
+	expect(werewolf.Id).toBe("Werewolf")
+	expect(werewolf.Stats).toEqual({ RunSpeed = 3, AttackPower = 5, AttackSpeed = 3, Vision = 3 })
+	for key, values in Config.MonsterStatValues do
+		expect(#values).toBe(5)
+		for level = 2, 5 do
+			if key == "AttackSpeed" then
+				expect(values[level] < values[level - 1]).toBe(true) -- faster = less time between hits
+			else
+				expect(values[level] > values[level - 1]).toBe(true)
+			end
+		end
+	end
+	expect(Config.Wolf.WalkSpeed).toBe(20) -- level 3 = the GDD's werewolf
+	expect(Config.Wolf.AttackDamage).toBe(100) -- level 5 = one hit kills
+	expect(Config.Wolf.AttackCooldown).toBe(1)
+	expect(Config.Wolf.NightVision).toBe(Config.Lighting.Night.FogEnd)
+	expect(Config.monsterStat("Werewolf", "AttackPower")).toBe(Config.MonsterStatValues.AttackPower[5])
+end)
+
 test("hit counts from the GDD", function()
 	expect(Config.Human.MaxHealth / Config.Wolf.AttackDamage).toBe(1) -- wolf: 1 hit
 	expect(Config.Human.MaxHealth / Config.Pup.AttackDamage).toBe(2) -- pup: 2 hits

@@ -207,6 +207,6 @@ test("Monster window (owner's design): banner, portrait, skins, stats, passive, 
 			expect(Strings["Monster.Stat." .. key] ~= nil).toBe(true)
 		end
 	end
-	expect(Config.Monsters[1].Stats).toEqual({ RunSpeed = 4, AttackPower = 5, AttackSpeed = 3, Vision = 4 })
+	expect(Config.Monsters[1].Stats).toEqual({ RunSpeed = 3, AttackPower = 5, AttackSpeed = 3, Vision = 3 })
 	expect(Strings["Monster.Werewolf.Folklore"].en:find("Moonfang Stalker prowls when moonlight touches the pines", 1, true) ~= nil).toBe(true)
 end)
