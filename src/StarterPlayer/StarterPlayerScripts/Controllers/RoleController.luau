@@ -8,7 +8,7 @@
 	  Killer     Stab        R / R2
 	  Seer       See         Q / L2
 	  Bodyguard  Dash        Q / L2
-	  Monk       Bless       Q / L2      opens a list of living players
+	  Priest       Bless       Q / L2      opens a list of living players
 	  Villager   Flashlight  F / Y
 	Doctor and Engineer use "hold E" prompts on bodies / doors instead.
 	Gamepad X is left to the "hold" prompts (Roblox's default prompt button).
@@ -41,7 +41,7 @@ local ACTIONS: { Action } = {
 	{ Id = "RoleStab", Role = "Killer", Ability = "Stab", TitleKey = "Ability.Stab", Inputs = { Enum.KeyCode.R, Enum.KeyCode.ButtonR2 } },
 	{ Id = "RoleSee", Role = "Seer", Ability = "See", TitleKey = "Ability.See", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
 	{ Id = "RoleDash", Role = "Bodyguard", Ability = "Dash", TitleKey = "Ability.Dash", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
-	{ Id = "RoleBless", Role = "Monk", Ability = "Bless", TitleKey = "Ability.Bless", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
+	{ Id = "RoleBless", Role = "Priest", Ability = "Bless", TitleKey = "Ability.Bless", Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 } },
 	{ Id = "RoleFlashlight", Role = "Villager", Ability = "Flashlight", TitleKey = "Ability.Flashlight", Inputs = { Enum.KeyCode.F, Enum.KeyCode.ButtonY } },
 }
 
@@ -58,7 +58,7 @@ local pickerList: Instance
 local optionTemplate: TextButton
 
 --------------------------------------------------------------------------------
--- Picker (Monk)
+-- Picker (Priest)
 --------------------------------------------------------------------------------
 
 local function closePicker()

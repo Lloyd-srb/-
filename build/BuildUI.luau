@@ -464,7 +464,7 @@ local function buildRoleSelectUI()
 end
 
 --------------------------------------------------------------------------------
--- PickerUI: choose a player (Monk's blessing)
+-- PickerUI: choose a player (Priest's blessing)
 --------------------------------------------------------------------------------
 
 local function buildPickerUI()

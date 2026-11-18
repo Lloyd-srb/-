@@ -1,7 +1,7 @@
 --!strict
 --[[
 	GamepadFocus — client helper for console players: when a screen they must
-	use opens (role selection, voting, the Monk's list, the scoreboard, the
+	use opens (role selection, voting, the Priest's list, the scoreboard, the
 	lobby menus), the controller's selection jumps to its first button, so
 	the D-pad / stick works at once. Mouse, keyboard and touch are untouched.
 ]]

@@ -15,7 +15,7 @@
 local RunService = game:GetService("RunService")
 
 -- Role ids: "Wolf", "Villager", "Sheriff", "Doctor", "Seer", "Chief",
--- "Bodyguard", "Monk", "Engineer", "Killer", "Fool" (keys of Config.Roles).
+-- "Bodyguard", "Priest", "Engineer", "Killer", "Fool" (keys of Config.Roles).
 export type RoleId = string
 
 -- "Village" | "Wolf" | "Killer" | "Fool"
@@ -107,7 +107,7 @@ Config.Roles = {
 	Chief = { Faction = "Village", Kind = "Special", CoinPrice = 1200, RobuxPrice = 99, RequiredLevel = 5, Free = false },
 	Bodyguard = { Faction = "Village", Kind = "Special", CoinPrice = 1200, RobuxPrice = 99, RequiredLevel = 5, Free = false },
 	Seer = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
-	Monk = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
+	Priest = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
 	Engineer = { Faction = "Village", Kind = "Special", CoinPrice = 2500, RobuxPrice = 199, RequiredLevel = 10, Free = false },
 	Killer = { Faction = "Killer", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
 	Fool = { Faction = "Fool", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
@@ -121,7 +121,7 @@ Config.RoleOrder = {
 	"Chief",
 	"Bodyguard",
 	"Seer",
-	"Monk",
+	"Priest",
 	"Engineer",
 	"Killer",
 	"Fool",
@@ -370,7 +370,7 @@ Config.Abilities = {
 		DashSpeed = 80, -- [ASSUMED]
 		HitRadius = 4, -- [ASSUMED] how close to the dash path a wolf must be
 	},
-	Monk = {
+	Priest = {
 		BlessingsPerMorning = 1, -- [GDD]
 		BlocksPerBlessing = 1, -- [GDD]
 	},
@@ -848,7 +848,7 @@ Config.Products = {
 		RoleChief = 0,
 		RoleBodyguard = 0,
 		RoleSeer = 0,
-		RoleMonk = 0,
+		RolePriest = 0,
 		RoleEngineer = 0,
 		RoleKiller = 0,
 		RoleFool = 0,

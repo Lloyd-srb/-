@@ -49,23 +49,23 @@ test("role screen: options are private, bad picks are rejected, all confirmed = 
 	expect(#server.sent("RoleOptions", "all")).toBe(0)
 
 	-- Rejected: wrong count, duplicate, the wolf, unknown role, garbage.
-	server.fireServer("RolePicks", 1, { "Seer", "Monk" })
-	server.fireServer("RolePicks", 1, { "Seer", "Seer", "Monk" })
-	server.fireServer("RolePicks", 1, { "Seer", "Monk", "Wolf" })
-	server.fireServer("RolePicks", 1, { "Seer", "Monk", "Hacker" })
+	server.fireServer("RolePicks", 1, { "Seer", "Priest" })
+	server.fireServer("RolePicks", 1, { "Seer", "Seer", "Priest" })
+	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Wolf" })
+	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Hacker" })
 	server.fireServer("RolePicks", 1, "Seer")
 	server.fireServer("RolePicks", 1, { 1, 2, 3 })
 	expect(#server.sent("RolePicksAck", 1)).toBe(0)
 	expect(svc.Match.PicksOf(1)).toBeNil()
 
 	-- Accepted, and can be changed until the phase ends.
-	server.fireServer("RolePicks", 1, { "Seer", "Monk", "Engineer" })
-	expect(server.last("RolePicksAck", 1)[1]).toEqual({ "Seer", "Monk", "Engineer" })
+	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Engineer" })
+	expect(server.last("RolePicksAck", 1)[1]).toEqual({ "Seer", "Priest", "Engineer" })
 	server.fireServer("RolePicks", 1, { "Chief", "Bodyguard", "Doctor" })
 	expect(svc.Match.PicksOf(1)).toEqual({ "Chief", "Bodyguard", "Doctor" })
 	expect(server.phase()).toBe("RoleSelect") -- still waiting for the others
 
-	server.fireServer("RolePicks", 2, { "Seer", "Monk", "Engineer" })
+	server.fireServer("RolePicks", 2, { "Seer", "Priest", "Engineer" })
 	server.fireServer("RolePicks", 3, { "Killer", "Fool", "Sheriff" })
 	-- All three confirmed: day 1 starts right away instead of after 30 s.
 	server.waitFor("day 1", function()
@@ -75,7 +75,7 @@ test("role screen: options are private, bad picks are rejected, all confirmed = 
 	-- Everyone got one of their own picks (or was drawn as the wolf).
 	local chosen = {
 		[1] = { "Chief", "Bodyguard", "Doctor" },
-		[2] = { "Seer", "Monk", "Engineer" },
+		[2] = { "Seer", "Priest", "Engineer" },
 		[3] = { "Killer", "Fool", "Sheriff" },
 	}
 	local roles = {}
@@ -86,7 +86,7 @@ test("role screen: options are private, bad picks are rejected, all confirmed = 
 		roles[role] = true
 	end
 	-- Picks are no longer accepted once the match has started.
-	server.fireServer("RolePicks", 1, { "Seer", "Monk", "Engineer" })
+	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Engineer" })
 	expect(svc.Match.PicksOf(1)).toEqual({ "Chief", "Bodyguard", "Doctor" })
 	finish(server, svc)
 end)

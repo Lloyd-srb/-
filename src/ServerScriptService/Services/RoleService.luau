@@ -8,7 +8,7 @@
 	  Seer       once per night: every survivor outlined in white for 5 s
 	  Chief      double vote + tie-break (handled by VoteService)
 	  Bodyguard  dash forward, stuns a wolf it runs into; 30 s cooldown
-	  Monk       each morning: bless one player (self allowed); the blessing
+	  Priest       each morning: bless one player (self allowed); the blessing
 	             blocks one wolf / knife attack until the next morning
 	  Engineer   reinforce a door: 1 per day + 1 per night
 	  Killer     knife: one-hit kill, 1 per day + 1 per night
@@ -114,8 +114,8 @@ local function limitFor(roleId: Config.RoleId, kind: string?): (string?, number)
 		return "Shoot", Abilities.Sheriff.ShotsPerPhase
 	elseif roleId == "Seer" then
 		return "See", if kind == "Night" then Abilities.Seer.UsesPerNight else 0
-	elseif roleId == "Monk" then
-		return "Bless", if kind == "Day" then Abilities.Monk.BlessingsPerMorning else 0
+	elseif roleId == "Priest" then
+		return "Bless", if kind == "Day" then Abilities.Priest.BlessingsPerMorning else 0
 	elseif roleId == "Killer" then
 		return "Stab", if kind == "Night" then Abilities.Killer.KillsPerNight else Abilities.Killer.KillsPerDay
 	elseif roleId == "Engineer" then
@@ -322,11 +322,11 @@ local function dash(player: Player)
 end
 
 --------------------------------------------------------------------------------
--- Monk
+-- Priest
 --------------------------------------------------------------------------------
 
 local function bless(player: Player, targetId: any)
-	local member = actor(player, "Monk")
+	local member = actor(player, "Priest")
 	local scopeKey, kind = scope()
 	if not member or kind ~= "Day" or not scopeKey or type(targetId) ~= "number" then
 		return
@@ -335,11 +335,11 @@ local function bless(player: Player, targetId: any)
 	if not target or not target.Alive then
 		return
 	end
-	if not AbilityUses.tryUse(uses, member.Id, "Bless", scopeKey, Abilities.Monk.BlessingsPerMorning) then
+	if not AbilityUses.tryUse(uses, member.Id, "Bless", scopeKey, Abilities.Priest.BlessingsPerMorning) then
 		return
 	end
 	blessed[targetId] = true
-	-- Only the Monk is told; the blessed player finds out when it saves them.
+	-- Only the Priest is told; the blessed player finds out when it saves them.
 	Net.fire(player, "Effect", { Kind = "Blessed", Name = target.Name })
 	sendState(member)
 end
@@ -533,7 +533,7 @@ end
 function RoleService.Start()
 	Net.on("AbilityUse", onAbility, 12, 5)
 
-	-- The blessing blocks one wolf / pup / knife attack (GDD §9 Monk).
+	-- The blessing blocks one wolf / pup / knife attack (GDD §9 Priest).
 	CombatService.AddShield(function(victimId: number, cause: Roster.DeathCause): boolean
 		if blessed[victimId] and WOLF_DAMAGE_CAUSES[cause] then
 			blessed[victimId] = nil

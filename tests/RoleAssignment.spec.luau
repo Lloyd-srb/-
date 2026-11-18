@@ -100,7 +100,7 @@ end)
 test("a player gets one of their own picks when it is free", function()
 	for seed = 1, 100 do
 		local list = {
-			{ Id = 1, Picks = { "Seer", "Monk", "Engineer" }, Usable = ALL },
+			{ Id = 1, Picks = { "Seer", "Priest", "Engineer" }, Usable = ALL },
 			{ Id = 2, Picks = { "Chief", "Bodyguard", "Doctor" }, Usable = ALL },
 			{ Id = 3, Picks = { "Killer", "Fool", "Sheriff" }, Usable = ALL },
 		}
@@ -118,7 +118,7 @@ test("owner rule: a player whose picks are gone never gets the Killer or Fool un
 	for seed = 1, 200 do
 		-- Everyone owns everything but picks the same three village roles, so
 		-- most of them fall back. Killer / Fool are free, yet nobody picked them.
-		local list = candidates(12, { "Seer", "Monk", "Engineer" }, ALL)
+		local list = candidates(12, { "Seer", "Priest", "Engineer" }, ALL)
 		local result = RoleAssignment.assign(list, RoleAssignment.composition(12), Rng.seeded(seed))
 		for _, roleId in result do
 			expect(roleId ~= "Killer" and roleId ~= "Fool").toBe(true)

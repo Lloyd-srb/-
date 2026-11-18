@@ -179,12 +179,16 @@ RoleIcons.Designs = {
 		{ X = 50, Y = 94, W = 5, H = 14, R = 0.2, Color = rgb(200, 40, 50) },
 	}),
 
-	-- Shaved head, calm closed eyes, golden halo, saffron robe.
-	Monk = join({ background(rgb(100, 175, 170)) }, {
+	-- Priest: neat hair, calm closed eyes, black cassock with a white collar,
+	-- a small gold cross, golden halo.
+	Priest = join({ background(rgb(170, 140, 210)) }, {
 		{ X = 50, Y = 53, W = 76, H = 76, R = 0.5, Color = Palette.Gold },
-		{ X = 50, Y = 53, W = 68, H = 68, R = 0.5, Color = rgb(100, 175, 170) },
-	}, face(rgb(235, 140, 40), { EyeH = 2.5, EyeW = 9, Skin = rgb(250, 205, 160) }), {
-		{ X = 64, Y = 96, W = 16, H = 40, R = 0.3, Rot = 30, Color = rgb(200, 105, 25) },
+		{ X = 50, Y = 53, W = 68, H = 68, R = 0.5, Color = rgb(170, 140, 210) },
+	}, face(rgb(32, 30, 38), { EyeH = 2.5, EyeW = 9 }), {
+		{ X = 50, Y = 37, W = 52, H = 14, R = 0.45, Color = rgb(95, 65, 45) },
+		{ X = 50, Y = 84, W = 10, H = 6, R = 0.2, Color = Palette.White },
+		{ X = 50, Y = 94, W = 3, H = 11, R = 0, Color = Palette.Gold },
+		{ X = 50, Y = 92, W = 9, H = 3, R = 0, Color = Palette.Gold },
 	}),
 
 	-- Yellow hard hat, goggles, safety vest.

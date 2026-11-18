@@ -20,7 +20,7 @@ test("GDD 13.1 price tiers", function()
 		expect(Config.Roles[roleId].RobuxPrice).toBe(99)
 		expect(Config.Roles[roleId].RequiredLevel).toBe(5)
 	end
-	for _, roleId in { "Seer", "Monk", "Engineer" } do
+	for _, roleId in { "Seer", "Priest", "Engineer" } do
 		expect(Config.Roles[roleId].CoinPrice).toBe(2500)
 		expect(Config.Roles[roleId].RobuxPrice).toBe(199)
 		expect(Config.Roles[roleId].RequiredLevel).toBe(10)

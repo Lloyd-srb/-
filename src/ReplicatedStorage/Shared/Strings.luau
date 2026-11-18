@@ -183,23 +183,23 @@ local Strings: { [string]: Entry } = {
 	},
 	["Tutorial.3.Title"] = { en = "The night", th = "กลางคืน" },
 	["Tutorial.3.Body"] = {
-		en = "At night everyone is sent into a house. The werewolf breaks doors (5 hits) and searches beds and wardrobes. Hide under the bed or in the wardrobe! Anyone in the forest glows red to the wolves.",
-		th = "ตอนกลางคืนทุกคนถูกส่งเข้าบ้าน หมาป่าพังประตู (ตี 5 ครั้ง) และค้นเตียงกับตู้ ซ่อนใต้เตียงหรือในตู้ให้ดี! ใครอยู่ในป่าจะเรืองแสงสีแดงให้หมาป่าเห็น",
+		en = "At night everyone is sent into a house. The werewolf breaks doors and searches beds and wardrobes. Hide under the bed or in the wardrobe! Anyone in the forest glows red to the wolves.",
+		th = "ตอนกลางคืนทุกคนถูกส่งเข้าบ้าน หมาป่าพังประตูและค้นเตียงกับตู้ ซ่อนใต้เตียงหรือในตู้ให้ดี! ใครอยู่ในป่าจะเรืองแสงสีแดงให้หมาป่าเห็น",
 	},
 	["Tutorial.4.Title"] = { en = "Roles", th = "บทบาท" },
 	["Tutorial.4.Body"] = {
-		en = "Before the match, pick 3 roles you own; you get one of them. Each role has a power: use it with its button, or by holding E on a body or a door.",
-		th = "ก่อนเริ่มเกมเลือก 3 บทที่คุณมี แล้วจะได้หนึ่งในนั้น แต่ละบทมีพลังพิเศษ ใช้ด้วยปุ่มบนจอ หรือกด E ค้างที่ศพหรือประตู",
+		en = "Before the match, pick 3 roles you own; you get one of them. Each role has a power. Use it with caution: the one you're helping might not be on your side!",
+		th = "ก่อนเริ่มเกมเลือก 3 บทที่คุณมี แล้วจะได้หนึ่งในนั้น แต่ละบทมีพลังพิเศษ ใช้อย่างระวัง เพราะคนที่คุณช่วยอาจไม่ได้อยู่ฝั่งคุณ!",
 	},
-	["Tutorial.5.Title"] = { en = "Lone roles", th = "บทที่เล่นคนเดียว" },
+	["Tutorial.5.Title"] = { en = "Special roles", th = "บทพิเศษ" },
 	["Tutorial.5.Body"] = {
-		en = "The Killer wins by outlasting everyone. The Fool wins only by being voted out. And watch out: the werewolf's first victim at night becomes a Wolf Pup!",
-		th = "ฆาตกรชนะเมื่อเหลือรอดเป็นคนท้ายๆ คนบ้าชนะเมื่อถูกโหวตไล่ออกเท่านั้น และระวัง: เหยื่อคนแรกของหมาป่าตอนกลางคืนจะกลายเป็นลูกหมาป่า!",
+		en = "They win by their own rules. They're not on your side, so don't get fooled by them!",
+		th = "พวกเขาชนะด้วยเงื่อนไขของตัวเอง ไม่ได้อยู่ฝั่งคุณ อย่าหลงกลพวกเขา!",
 	},
-	["Tutorial.6.Title"] = { en = "Ghosts and rewards", th = "ผีและรางวัล" },
+	["Tutorial.6.Title"] = { en = "Survive!", th = "เอาตัวรอด!" },
 	["Tutorial.6.Body"] = {
-		en = "The dead become ghosts: they can walk around and chat with other ghosts, or go back to the lobby. Survive nights, finish tasks and win to earn coins, EXP and Diamonds.",
-		th = "คนตายจะกลายเป็นผี เดินได้และคุยกับผีด้วยกันได้ หรือกลับ Lobby ก็ได้ รอดหลายคืน ทำภารกิจ และชนะ เพื่อรับ coin, EXP และ Diamond",
+		en = "Survive the nights as long as you can, until the wolves are finished! Good luck!",
+		th = "เอาตัวรอดในแต่ละคืนให้นานที่สุด จนกว่าหมาป่าจะหมดไป! โชคดี!",
 	},
 
 	-- HUD
@@ -333,8 +333,8 @@ local Strings: { [string]: Entry } = {
 		en = "Dash forward. Hitting a wolf stuns it for 5 seconds. 30 second cooldown.",
 		th = "พุ่งไปข้างหน้า ถ้าชนหมาป่าจะสตั้น 5 วินาที คูลดาวน์ 30 วินาที",
 	},
-	["Role.Monk.Name"] = { en = "Monk", th = "หลวงพ่อ" },
-	["Role.Monk.Desc"] = {
+	["Role.Priest.Name"] = { en = "Priest", th = "นักบวช" },
+	["Role.Priest.Desc"] = {
 		en = "Each morning, bless one player (even yourself). The blessing blocks one attack until the next morning.",
 		th = "ทุกเช้าให้พรได้ 1 คน (รวมถึงตัวเอง) พรกันการโจมตีได้ 1 ครั้ง และหายไปเช้าวันถัดไป",
 	},

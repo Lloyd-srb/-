@@ -3,7 +3,7 @@
 	engine. Each test forces a set of roles, then plays them out:
 	  1. Sheriff + Killer (+ a wolf): stun shots, knife kills, shot kills the Killer
 	  2. Seer + Bodyguard (+ a wolf): night vision, dash stun, pass-through, walls
-	  3. Doctor + Monk + Engineer (wolf is a bot): blessing, revive, doors
+	  3. Doctor + Priest + Engineer (wolf is a bot): blessing, revive, doors
 	  4. Chief + Villager: tie-break and flashlight
 ]]
 
@@ -226,8 +226,8 @@ test("Seer and Bodyguard", function()
 	server.waitForPhase("GameOver", 10)
 end)
 
-test("Doctor, Monk and Engineer", function()
-	local server, svc = start(0.02, { [1] = "Doctor", [2] = "Monk", [3] = "Engineer", [BOT_A] = "Wolf" })
+test("Doctor, Priest and Engineer", function()
+	local server, svc = start(0.02, { [1] = "Doctor", [2] = "Priest", [3] = "Engineer", [BOT_A] = "Wolf" })
 	local roster = svc.Match.Roster
 	local function door(houseId)
 		return server.game.Workspace.Map.Houses[string.format("House%02d", houseId)].Door
@@ -240,7 +240,7 @@ test("Doctor, Monk and Engineer", function()
 	-------------------------------------------------- day 1: blessing
 	expect(lastState(server, 2, "Bless").UsesLeft).toBe(1)
 	use(server, 2, "Bless", 999) -- nobody
-	use(server, 1, "Bless", 3) -- not the Monk
+	use(server, 1, "Bless", 3) -- not the Priest
 	expect(svc.Role.IsBlessed(3)).toBe(false)
 	use(server, 2, "Bless", 3)
 	expect(svc.Role.IsBlessed(3)).toBe(true)
