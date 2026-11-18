@@ -51,7 +51,7 @@ test("the Monster page's stat bars are the werewolf's real numbers (owner, 18 No
 	end
 	expect(Config.Wolf.WalkSpeed).toBe(20) -- level 3 = the GDD's werewolf
 	expect(Config.Wolf.AttackDamage).toBe(100) -- level 5 = one hit kills
-	expect(Config.Wolf.AttackCooldown).toBe(1)
+	expect(Config.Wolf.AttackCooldown).toBe(2) -- [owner] Attack Speed 3 = 2 s between hits
 	expect(Config.Wolf.NightVision).toBe(Config.Lighting.Night.FogEnd)
 	expect(Config.monsterStat("Werewolf", "AttackPower")).toBe(Config.MonsterStatValues.AttackPower[5])
 end)

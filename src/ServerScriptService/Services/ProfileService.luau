@@ -56,6 +56,29 @@ function ProfileService.UsableRoles(player: Player): { [Config.RoleId]: boolean 
 	return RoleAssignment.usableRoles(owned, ProfileService.Level(player))
 end
 
+-- The roles this player chose in the Lobby (owner, 18 Nov 2026), filled up to
+-- PickCount with random usable roles when fewer were saved.
+function ProfileService.RolePicks(player: Player, rng: any): { Config.RoleId }
+	local usable = ProfileService.UsableRoles(player)
+	local data = Profiles.Get(player)
+	local picks: { Config.RoleId } = {}
+	if data then
+		for _, roleId in ProfileLogic.rolePicks(data) do
+			if usable[roleId] and #picks < Config.RoleSelect.PickCount then
+				table.insert(picks, roleId)
+			end
+		end
+	end
+	if #picks < Config.RoleSelect.PickCount then
+		for _, roleId in RoleAssignment.defaultPicks(usable, rng) do
+			if #picks < Config.RoleSelect.PickCount and not table.find(picks, roleId) then
+				table.insert(picks, roleId)
+			end
+		end
+	end
+	return picks
+end
+
 -- The skin this player wears in a slot ("Gun" / "Knife" / "Wolf"), if any.
 function ProfileService.Skin(player: Player?, slot: string): string?
 	local data = if player then Profiles.Get(player) else nil

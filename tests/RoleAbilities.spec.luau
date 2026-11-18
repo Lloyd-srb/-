@@ -132,10 +132,14 @@ test("Sheriff and Killer", function()
 	expect(alive(svc, BOT_D)).toBe(true)
 	expect(roster.PupsCreated).toBe(0)
 
-	-- The Killer's knife kills a werewolf too.
+	-- [owner] 18 Nov 2026: the knife cannot hurt a werewolf in its beast form.
 	place(svc, BOT_D, Vector3.new(100, 3, 100)) -- out of the way
 	place(svc, 3, Vector3.new(0, 3, 26), true) -- facing +Z, towards the wolf
 	use(server, 3, "Stab")
+	expect(alive(svc, 2)).toBe(true)
+	expect(lastState(server, 3, "Stab").UsesLeft).toBe(1) -- a miss: the kill is not used up
+	-- (The wolf dies another way, so the rest of the night can be tested.)
+	expect(svc.Combat.Damage(2, 100, "Killer", 3)).toBe("Killed")
 	expect(alive(svc, 2)).toBe(false)
 	expect(roster.KillerKills).toBe(2)
 	expect(roster.Members[2].DiedAtNight).toBe(true)

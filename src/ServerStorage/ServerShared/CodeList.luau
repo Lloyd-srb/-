@@ -19,6 +19,9 @@ export type CodeDef = {
 local CodeList: { [string]: CodeDef } = {
 	-- [ASSUMED] example code until the owner sends real ones (OWNER_TODO 67).
 	WOLFVILLAGE = { Rewards = { { Kind = "Coins", Amount = 200 } }, Expires = nil },
+	-- [owner] 18 Nov 2026
+	DAY1 = { Rewards = { { Kind = "Spin", Amount = 5 } }, Expires = nil },
+	UPD0 = { Rewards = { { Kind = "Diamonds", Amount = 200 } }, Expires = nil },
 }
 
 return CodeList

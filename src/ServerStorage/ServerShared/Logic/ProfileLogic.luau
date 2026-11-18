@@ -33,6 +33,7 @@ export type Data = {
 	Codes: { [string]: boolean }, -- redeemed codes
 	Receipts: { string }, -- recent Robux purchase ids, oldest first
 	TutorialSeen: boolean, -- read the how-to-play pages
+	RolePicks: { string }, -- the 3 roles chosen in the Lobby (owner, 18 Nov 2026)
 }
 
 export type Reward = {
@@ -75,6 +76,7 @@ function ProfileLogic.template(): Data
 		Codes = {},
 		Receipts = {},
 		TutorialSeen = false,
+		RolePicks = table.clone(Config.RoleSelect.StarterRoles),
 	}
 end
 
@@ -144,6 +146,15 @@ function ProfileLogic.reconcile(raw: any): Data
 		data.Spin.Extra = count(raw.Spin.Extra)
 	end
 	data.TutorialSeen = raw.TutorialSeen == true
+	if type(raw.RolePicks) == "table" then
+		local picks: { string } = {}
+		for _, roleId in raw.RolePicks do
+			if type(roleId) == "string" and Config.Roles[roleId] and roleId ~= "Wolf" and not table.find(picks, roleId) then
+				table.insert(picks, roleId)
+			end
+		end
+		data.RolePicks = picks
+	end
 	if type(raw.Receipts) == "table" then
 		for _, id in raw.Receipts do
 			if type(id) == "string" then
@@ -399,6 +410,41 @@ function ProfileLogic.equip(data: Data, slot: string, id: string?): boolean
 end
 
 --------------------------------------------------------------------------------
+-- Role picks (owner, 18 Nov 2026): chosen in the Lobby, used in every match.
+--------------------------------------------------------------------------------
+
+-- Saves up to PickCount owned roles (no duplicates, never the wolf).
+function ProfileLogic.setRolePicks(data: Data, chosen: { any }): boolean
+	local picks: { string } = {}
+	for index = 1, Config.RoleSelect.PickCount + 1 do
+		local roleId = chosen[index]
+		if roleId == nil then
+			break
+		end
+		if type(roleId) ~= "string" or roleId == "Wolf" or not ProfileLogic.ownsRole(data, roleId) or table.find(picks, roleId) then
+			return false
+		end
+		table.insert(picks, roleId)
+	end
+	if #picks > Config.RoleSelect.PickCount then
+		return false
+	end
+	data.RolePicks = picks
+	return true
+end
+
+-- The saved picks still owned (a role can never be lost, but be safe).
+function ProfileLogic.rolePicks(data: Data): { string }
+	local picks: { string } = {}
+	for _, roleId in data.RolePicks do
+		if ProfileLogic.ownsRole(data, roleId) and roleId ~= "Wolf" then
+			table.insert(picks, roleId)
+		end
+	end
+	return picks
+end
+
+--------------------------------------------------------------------------------
 -- Daily Spin (GDD §13.3)
 --------------------------------------------------------------------------------
 
@@ -445,6 +491,7 @@ function ProfileLogic.view(data: Data, now: number): { [string]: any }
 			Premium = data.Pass.Premium,
 		},
 		TutorialSeen = data.TutorialSeen,
+		RolePicks = ProfileLogic.rolePicks(data),
 		Spin = {
 			Free = DailySpin.freeReady(data.Spin, now),
 			Extra = data.Spin.Extra,

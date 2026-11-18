@@ -16,7 +16,11 @@ export type Entry = { en: string, th: string }
 
 local Strings: { [string]: Entry } = {
 	-- Phase banners (GDD §6)
-	["Phase.RoleSelect"] = { en = "Choose 3 roles", th = "เลือก 3 บทบาท" },
+	["Match.AlreadyStarted"] = {
+		en = "This match has already started. / เกมนี้เริ่มไปแล้ว",
+		th = "เกมนี้เริ่มไปแล้ว / This match has already started.",
+	},
+	["Phase.RoleSelect"] = { en = "Getting ready...", th = "กำลังเตรียมเกม..." },
 	["Phase.Day"] = { en = "Day {day:int}", th = "วันที่ {day:int}" },
 	["Phase.Night"] = { en = "Night {night:int}", th = "คืนที่ {night:int}" },
 	["Phase.FullMoon"] = { en = "Full moon in {seconds:int} seconds", th = "พระจันทร์เต็มดวงในอีก {seconds:int} วินาที" },
@@ -38,19 +42,14 @@ local Strings: { [string]: Entry } = {
 	["Phase.Waiting"] = { en = "Waiting for players {count:int}/{needed:int}", th = "รอผู้เล่น {count:int}/{needed:int}" },
 
 	-- Role-selection screen (GDD §4)
-	["RoleSelect.Count"] = { en = "{count:int}/{max:int} chosen", th = "เลือกแล้ว {count:int}/{max:int}" },
-	["RoleSelect.Locked"] = { en = "Level {level:int}", th = "ต้องเลเวล {level:int}" },
-	["RoleSelect.NotOwned"] = { en = "Not owned", th = "ยังไม่มีบทนี้" },
-	["RoleSelect.Waiting"] = { en = "Waiting for the other players...", th = "รอผู้เล่นคนอื่น..." },
-	["RoleSelect.Hint"] = {
-		en = "You get one of your 3 picks. The wolf is chosen at random.",
-		th = "คุณจะได้ 1 ใน 3 บทที่เลือก ส่วนหมาป่าสุ่มจากทุกคน",
-	},
 
 	-- Lobby (GDD §3, owner's rules 17 Nov 2026)
 	["Lobby.PadTitle"] = { en = "Match {id:int}", th = "ห้อง {id:int}" },
 	["Lobby.Waiting"] = { en = "Needs {min:int} to start", th = "ต้องมีอย่างน้อย {min:int} คน" },
-	["Lobby.Ready"] = { en = "Host {name} can start", th = "หัวห้อง {name} กดเริ่มได้" },
+	["Lobby.Ready"] = {
+		en = "Starting in {seconds:int} (host {name} can start now)",
+		th = "เริ่มในอีก {seconds:int} (หัวห้อง {name} กดเริ่มได้เลย)",
+	},
 	["Lobby.Countdown"] = { en = "Starting in {seconds:int}", th = "เริ่มในอีก {seconds:int}" },
 	["Lobby.Launching"] = { en = "Going to the village...", th = "กำลังไปหมู่บ้าน..." },
 	["Lobby.InQueue"] = { en = "In queue: Match {id:int}  ({count:int}/{max:int})", th = "อยู่ในคิว: ห้อง {id:int}  ({count:int}/{max:int})" },
@@ -65,6 +64,14 @@ local Strings: { [string]: Entry } = {
 	["Menu.Shop"] = { en = "Shop", th = "ร้านค้า" },
 	["Menu.Role"] = { en = "Roles", th = "บทบาท" },
 	["Menu.Monster"] = { en = "Monster", th = "มอนสเตอร์" },
+	["Menu.YourPicks"] = { en = "Your roles ({count:int}/{max:int}): {roles}", th = "บทที่คุณเลือก ({count:int}/{max:int}): {roles}" },
+	["Menu.PicksHint"] = {
+		en = "Pick 3 roles you own. In a match you get one of them, unless you are the werewolf or a villager.",
+		th = "เลือกบทที่มี 3 บท ในเกมจะได้ 1 ใน 3 บทนี้ (ยกเว้นได้เป็นหมาป่าหรือชาวบ้าน)",
+	},
+	["Menu.Pick"] = { en = "Pick", th = "เลือก" },
+	["Menu.Picked"] = { en = "Picked ✓", th = "เลือกแล้ว ✓" },
+	["Menu.PicksFull"] = { en = "You can pick {count:int}. Remove one first.", th = "เลือกได้ {count:int} บท เอาบทเดิมออกก่อน" },
 	["Menu.Settings"] = { en = "Settings", th = "ตั้งค่า" },
 	["Menu.News"] = { en = "News", th = "ข่าวสาร" },
 	["Menu.Codes"] = { en = "Codes", th = "โค้ด" },
@@ -88,8 +95,8 @@ local Strings: { [string]: Entry } = {
 	["Monster.Ability"] = { en = "Ability {n:int}", th = "สกิล {n:int}" },
 	["Monster.Folklore"] = { en = "Folklore", th = "ตำนาน" },
 	["Monster.Werewolf.Passive"] = {
-		en = "The first person it kills at night becomes its wolf pup. One hit kills (1 second between attacks). Speed {speed:int} (people: {human:int}).",
-		th = "คนแรกที่ถูกมันฆ่าตอนกลางคืนจะกลายเป็นลูกหมาป่า ตีทีเดียวตาย (ตีได้ทุก 1 วินาที) ความเร็ว {speed:int} (คนปกติ {human:int})",
+		en = "The first person it kills at night becomes its wolf pup. One hit kills ({cooldown:int} seconds between attacks). Speed {speed:int} (people: {human:int}).",
+		th = "คนแรกที่ถูกมันฆ่าตอนกลางคืนจะกลายเป็นลูกหมาป่า ตีทีเดียวตาย (ตีได้ทุก {cooldown:int} วินาที) ความเร็ว {speed:int} (คนปกติ {human:int})",
 	},
 	["Monster.Werewolf.Ability1"] = {
 		en = "Sniff: everyone on the map who is outside a house glows for {duration:int} seconds. {cooldown:int} second cooldown.",
@@ -148,6 +155,9 @@ local Strings: { [string]: Entry } = {
 	["Shop.Reason.NotOwned"] = { en = "You do not have it.", th = "คุณยังไม่มีสิ่งนี้" },
 	["Skin.Slot.Gun"] = { en = "Gun skin", th = "สกินปืน" },
 	["Skin.Slot.Knife"] = { en = "Knife skin", th = "สกินมีด" },
+	["Rarity.Rare"] = { en = "Rare", th = "Rare" },
+	["Rarity.Epic"] = { en = "Epic", th = "Epic" },
+	["Rarity.Legendary"] = { en = "Legendary", th = "Legendary" },
 	["Skin.Slot.Wolf"] = { en = "Werewolf skin", th = "สกินหมาป่า" },
 	["Skin.FromPass"] = { en = "From the Season Pass (level 60)", th = "ได้จาก Season Pass (เลเวล 60)" },
 	["Skin.FromSpin"] = { en = "Only from the Daily Spin", th = "ได้จาก Daily Spin เท่านั้น" },
@@ -479,7 +489,7 @@ local Strings: { [string]: Entry } = {
 	["Effect.NoTarget"] = { en = "Nobody in front of you.", th = "ไม่มีใครอยู่ตรงหน้า" },
 	["Effect.Cuffed"] = { en = "{name} cannot leave their house tonight.", th = "{name} ออกจากบ้านไม่ได้ในคืนนี้" },
 	["Effect.LockedIn"] = { en = "You are locked in tonight!", th = "คืนนี้คุณถูกขังอยู่ในบ้าน!" },
-	["Effect.NoNightYet"] = { en = "There has been no night yet.", th = "ยังไม่มีคืนไหนผ่านไปเลย" },
+	["Effect.NoNightYet"] = { en = "Cannot be used on the first day.", th = "ใช้ไม่ได้ในวันแรก" },
 	["Effect.StayedHome"] = { en = "{name} stayed home last night.", th = "{name} ไม่ได้ออกจากบ้านเมื่อคืน" },
 	["Effect.WasOut"] = { en = "{name} was not home last night!", th = "{name} ไม่อยู่บ้านเมื่อคืน!" },
 	["Effect.OilInfo"] = { en = "Hold E right next to a house wall to pour oil.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
@@ -511,8 +521,7 @@ local Strings: { [string]: Entry } = {
 
 	-- Chat channels (GDD §6.2, §12)
 	["Chat.General"] = { en = "General", th = "แชทรวม" },
-	["Chat.Wolf"] = { en = "Wolf", th = "แชทหมาป่า" },
-	["Chat.Ghost"] = { en = "Ghost", th = "แชทผี" },
+	["Chat.Ghost"] = { en = "Ghosts & Wolves", th = "แชทผีและหมาป่า" },
 }
 
 return Strings

@@ -84,8 +84,8 @@ test("reveal screen: RoleRollUI has what RoleRollController looks up", function(
 	expect(panel.Window.Marker:FindFirstChildOfClass("UIStroke") ~= nil).toBe(true)
 	expect(panel.TitleLabel:IsA("TextLabel")).toBe(true)
 	expect(panel.DescLabel:IsA("TextLabel")).toBe(true)
-	-- Above the role-selection screen it replaces.
-	expect(gui.DisplayOrder > game:GetService("StarterGui").RoleSelectUI.DisplayOrder).toBe(true)
+	-- Above the HUD and the vote screen.
+	expect(gui.DisplayOrder > game:GetService("StarterGui").VoteUI.DisplayOrder).toBe(true)
 	expect(Strings["RoleRoll.YouAre"].en).toBe("You are {role}!")
 	expect(Config.Sounds.RoleRollTick ~= nil and Config.Sounds.RoleReveal ~= nil).toBe(true)
 end)

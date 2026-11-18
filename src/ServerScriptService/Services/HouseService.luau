@@ -359,6 +359,19 @@ local function marker(name: string): Attachment?
 	return if found and found:IsA("Attachment") then found else nil
 end
 
+-- Eyes closed (owner, 18 Nov 2026): the living, except the wolf side, see a
+-- black screen while everyone is moved.
+local function closeEyes()
+	for _, member in Roster.alive(MatchService.Roster) do
+		if not Roster.isWolfSide(member) then
+			local player = MatchService.PlayerOf(member.Id)
+			if player then
+				Net.fire(player, "EyesClosed", { Seconds = Config.EyesClosed.Seconds })
+			end
+		end
+	end
+end
+
 local function warp(memberId: number, target: CFrame)
 	MovementGuard.Warp(memberId, target) -- a move made by the game, not by the player
 end
@@ -368,6 +381,7 @@ local function beginNight()
 		DoorState.beginNight(house.State)
 		applyDoor(house, false)
 	end
+	closeEyes()
 	-- Today's handcuffs lock people in tonight (a cuffed main wolf: no effect).
 	lockedTonight = {}
 	for memberId in cuffed do
@@ -424,6 +438,7 @@ local function beginDay(state: PhaseMachine.PhaseState)
 	if state.Day <= 1 then
 		return
 	end
+	closeEyes()
 	scanToken += 1
 	outLastNight = outTonight
 	outTonight = {}

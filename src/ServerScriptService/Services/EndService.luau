@@ -51,6 +51,7 @@ local EndService = {}
 
 -- What each player was given (kept for checks and for the profile save in milestone 9).
 EndService.Granted = {} :: { [number]: Summary }
+EndService.Forfeited = {} :: { [number]: boolean } -- left while alive: no reward
 
 local likes = Likes.new()
 local likesOpen = false
@@ -94,7 +95,7 @@ end
 
 -- Works out and grants one player's reward (once).
 local function grant(member: Roster.Member, player: Player)
-	if EndService.Granted[member.Id] or member.IsBot then
+	if EndService.Granted[member.Id] or EndService.Forfeited[member.Id] or member.IsBot then
 		return
 	end
 	local won = didWin(member)
@@ -154,6 +155,19 @@ local function closeLikes()
 	mvpId = Rewards.pickMvp(Likes.counts(likes), function(tied: { number }): number
 		return tied[random:NextInteger(1, #tied)]
 	end)
+	if not mvpId then
+		-- [owner] 18 Nov 2026: nobody gave a like = a random player (not a bot,
+		-- not someone who left while alive).
+		local pool: { number } = {}
+		for _, member in Roster.list(MatchService.Roster) do
+			if not member.IsBot and not EndService.Forfeited[member.Id] and MatchService.PlayerOf(member.Id) then
+				table.insert(pool, member.Id)
+			end
+		end
+		if #pool > 0 then
+			mvpId = pool[random:NextInteger(1, #pool)]
+		end
+	end
 	Net.fireAll("Results", { MvpId = mvpId })
 	for _, player in Players:GetPlayers() do
 		local member = MatchService.MemberOf(player)
@@ -197,12 +211,20 @@ function EndService.Start()
 		end
 	end)
 
-	-- Leaving early: keep what was earned so far (GDD §12).
+	-- Leaving early: a ghost keeps what was earned so far (GDD §12); a player
+	-- who leaves while still alive gets nothing ([owner] 18 Nov 2026).
+	-- MatchService (started first) has already marked them dead with "Left".
 	Players.PlayerRemoving:Connect(function(player: Player)
 		local member = MatchService.MemberOf(player)
-		if MatchService.Started and member then
-			grant(member, player)
+		if not MatchService.Started or not member then
+			return
 		end
+		if member.DeathCause == "Left" and not MatchService.Winner then
+			EndService.Granted[member.Id] = nil
+			EndService.Forfeited[member.Id] = true
+			return
+		end
+		grant(member, player)
 	end)
 
 	MatchService.SyncRequested:Connect(function(player: Player)

@@ -16,8 +16,8 @@ type Controller = { Start: () -> () }
 
 local names = {
 	"HudController",
+	"EyesController",
 	"RoleRollController",
-	"RoleSelectController",
 	"VoteController",
 	"WindowController",
 	"PromptController",

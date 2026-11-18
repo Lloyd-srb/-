@@ -106,6 +106,7 @@ local function snapshot(): { any }
 				Min = Config.Match.MinPlayers,
 				State = PadQueue.state(pad),
 				CountdownEndsAt = serverTime(pad.CountdownEndsAt),
+				StartsAt = serverTime(pad.AutoStartAt),
 				HostName = hostName(pad),
 			})
 		end

@@ -124,7 +124,7 @@ test("lobby: the host leaves, the next in line takes over", function()
 	expect(pad(server, 2).Count).toBe(0)
 end)
 
-test("lobby: a full pad counts down 10 s, holds everyone, then goes", function()
+test("lobby: a full pad counts down 10 s, holds everyone; a quitter restarts the 20 s countdown", function()
 	local server = openLobby(12)
 	server.Config.Lobby.FullCountdown = 0.6
 	settle()
@@ -140,18 +140,22 @@ test("lobby: a full pad counts down 10 s, holds everyone, then goes", function()
 	stepOff(server, 5) -- trying to leave anyway
 	settle()
 	expect(pad(server, 3).Count).toBe(12)
-	-- Someone quits Roblox: the countdown goes on with 11.
+	-- Someone quits Roblox: unlocked, back to the 8-11 countdown (restarted).
+	stand(server, 5, 3, (5 - 6.5) * 0.9) -- back on the pad, so nobody else leaves
+	server.Config.Lobby.ReadyCountdown = 0.6
 	server.removePlayer(12)
-	task.wait(0.6)
+	settle()
+	expect(pad(server, 3).State).toBe("Ready")
+	task.wait(0.8)
 	local trip = server.teleports()[1]
 	expect(trip ~= nil).toBe(true)
 	expect(#trip.Players).toBe(11)
 	expect(trip.Data.Expected).toBe(11)
 end)
 
-test("lobby: a host who never presses Start: the match starts by itself", function()
+test("lobby: 8+ players and nobody presses Start: the match starts by itself after the countdown", function()
 	local server = openLobby(8)
-	server.Config.Lobby.HostIdleStart = 0.6
+	server.Config.Lobby.ReadyCountdown = 0.6
 	settle()
 	for id = 1, 8 do
 		stand(server, id, 4, (id - 4.5) * 1.2)

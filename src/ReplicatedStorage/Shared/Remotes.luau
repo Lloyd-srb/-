@@ -5,12 +5,11 @@
 
 	Server -> one client only (secret):  RoleAssigned, HouseAssigned, VoteMine,
 	                                     FormChanged, PackChanged, Highlight,
-	                                     AbilityState, HideChanged, RoleOptions,
-	                                     RolePicksAck
+	                                     AbilityState, HideChanged
 	Server -> everyone (public):         PhaseChanged, Announcement, RosterChanged,
 	                                     VoteOpened, VoteCounts, VoteClosed, GameOver
 	Client -> server (intents):          RequestSync, VoteSelect, VoteConfirm,
-	                                     WolfAttack, WolfAbility, HideExit, RolePicks
+	                                     WolfAttack, WolfAbility, HideExit
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +25,7 @@ Remotes.Names = {
 	"Announcement",
 	"RosterChanged",
 	"RoleAssigned",
+	"EyesClosed", -- the screen goes black for a moment (night / morning move home)
 	"HouseAssigned",
 	"VoteOpened",
 	"VoteCounts",
@@ -38,8 +38,6 @@ Remotes.Names = {
 	"Highlight", -- allowed viewers only: who to outline
 	"AbilityState", -- own cooldowns
 	"HideChanged", -- own hiding spot
-	"RoleOptions", -- own usable roles for the role-selection screen
-	"RolePicksAck", -- own accepted picks
 	"DashStart", -- own dash (the client moves its own character)
 	"TaskChanged", -- own task of the day
 	"Scoreboard", -- game over: everyone's role (public once the game is over)
@@ -63,7 +61,7 @@ Remotes.Names = {
 	"WolfAttack",
 	"WolfAbility",
 	"HideExit",
-	"RolePicks",
+	"SaveRolePicks", -- Lobby: the 3 roles this player wants (owner, 18 Nov 2026)
 	"ShopBuy", -- Lobby: buy (kind, id, currency)
 	"Equip", -- Lobby: wear a skin / title (slot, id or "")
 	"SpinRequest", -- Lobby: use a Daily Spin

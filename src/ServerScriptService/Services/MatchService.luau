@@ -8,8 +8,10 @@
 local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Loc = require(ReplicatedStorage.Shared.Loc)
 local Rng = require(ReplicatedStorage.Shared.Rng)
 local Signal = require(ReplicatedStorage.Shared.Signal)
 
@@ -21,6 +23,7 @@ local WolfPack = require(Logic.WolfPack)
 
 local BotBody = require(script.Parent.BotBody)
 local Net = require(script.Parent.Net)
+local Travel = require(script.Parent.Travel)
 local Prompts = require(script.Parent.Prompts)
 local ProfileService = require(script.Parent.ProfileService)
 
@@ -31,6 +34,7 @@ local MatchService = {}
 MatchService.Roster = Roster.new()
 MatchService.Started = false
 MatchService.Winner = nil :: string?
+MatchService.LateJoiners = {} :: { [number]: boolean } -- arrived after the start (sent back)
 MatchService.DeathsThisNight = 0
 
 MatchService.MatchStarted = Signal.new() -- ()
@@ -296,9 +300,16 @@ local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(function(character: Model)
 		setupCharacter(player, character)
 	end)
-	-- Late joiners spectate: only players present at the start get a body.
 	if not MatchService.Started then
 		player:LoadCharacterAsync()
+		return
+	end
+	-- [owner] 18 Nov 2026: nobody joins a match that has started. The lobby
+	-- only sends players into reserved servers before the start, so this is
+	-- just a guard: whoever still arrives goes back to the lobby.
+	MatchService.LateJoiners[player.UserId] = true
+	if not Travel.toLobby({ player }) and not RunService:IsStudio() and Config.Places.LobbyPlaceId ~= 0 then
+		player:Kick(Loc.format("Match.AlreadyStarted"))
 	end
 end
 

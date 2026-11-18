@@ -48,25 +48,37 @@ test("under 8 nobody can start; from 8 only the host can, at once", function()
 	expect(PadQueue.state(pad)).toBe("Waiting")
 end)
 
-test("a host who never starts: the match starts by itself after the idle time", function()
+test("8-11 players: a 20 s countdown starts the match; a join or leave restarts it (owner, 18 Nov 2026)", function()
 	local pad = PadQueue.new(1)
 	fill(pad, MIN)
+	local wait = Config.Lobby.ReadyCountdown
+	expect(wait).toBe(20)
 	expect(PadQueue.tick(pad, 100)).toBe(false)
-	expect(PadQueue.tick(pad, 100 + Config.Lobby.HostIdleStart - 1)).toBe(false)
-	expect(PadQueue.tick(pad, 100 + Config.Lobby.HostIdleStart)).toBe(true)
-	-- Dropping below 8 resets the idle timer.
+	expect(pad.AutoStartAt).toBe(100 + wait)
+	expect(PadQueue.tick(pad, 100 + wait - 1)).toBe(false)
+	expect(PadQueue.tick(pad, 100 + wait)).toBe(true)
+	-- Someone joins at t = 10: the countdown starts again from 10.
 	local other = PadQueue.new(2)
 	fill(other, MIN)
 	PadQueue.tick(other, 0)
-	PadQueue.leave(other, 3)
-	PadQueue.tick(other, 10)
-	PadQueue.join(other, 3)
-	expect(PadQueue.tick(other, 20)).toBe(false) -- back to 8 at t = 20: the wait starts again
-	expect(PadQueue.tick(other, 20 + Config.Lobby.HostIdleStart - 1)).toBe(false)
-	expect(PadQueue.tick(other, 20 + Config.Lobby.HostIdleStart)).toBe(true)
+	PadQueue.join(other, 50)
+	expect(PadQueue.tick(other, 10)).toBe(false)
+	expect(PadQueue.tick(other, wait + 5)).toBe(false) -- would have started without the join
+	expect(PadQueue.tick(other, 10 + wait)).toBe(true)
+	-- Someone leaves: starts over too; below 8 there is no countdown.
+	local third = PadQueue.new(3)
+	fill(third, MIN + 1)
+	PadQueue.tick(third, 0)
+	PadQueue.leave(third, 2)
+	PadQueue.tick(third, 15)
+	expect(third.AutoStartAt).toBe(15 + wait)
+	PadQueue.leave(third, 3)
+	PadQueue.tick(third, 16)
+	expect(third.AutoStartAt).toBeNil()
+	expect(PadQueue.tick(third, 1000)).toBe(false)
 end)
 
-test("full: 10 s countdown, locked, then launch; a disconnect does not stop it", function()
+test("full: 10 s countdown, locked, then launch; a disconnect goes back to the 20 s countdown", function()
 	local pad = PadQueue.new(1)
 	fill(pad, MAX)
 	expect(PadQueue.tick(pad, 0)).toBe(false)
@@ -74,10 +86,17 @@ test("full: 10 s countdown, locked, then launch; a disconnect does not stop it",
 	expect(pad.CountdownEndsAt).toBe(Config.Lobby.FullCountdown)
 	expect(PadQueue.leave(pad, 4)).toBe(false) -- nobody can step off
 	expect(PadQueue.join(pad, 50)).toBe(false)
-	expect(PadQueue.leave(pad, 4, true)).toBe(true) -- but a player can quit Roblox
-	expect(PadQueue.tick(pad, 5)).toBe(false)
-	expect(PadQueue.state(pad)).toBe("Countdown") -- still counting with 11
+	expect(PadQueue.tick(pad, Config.Lobby.FullCountdown - 1)).toBe(false)
 	expect(PadQueue.tick(pad, Config.Lobby.FullCountdown)).toBe(true)
+	-- A player quits Roblox during the countdown: unlocked, 20 s again.
+	local quit = PadQueue.new(3)
+	fill(quit, MAX)
+	PadQueue.tick(quit, 0)
+	expect(PadQueue.leave(quit, 4, true)).toBe(true)
+	expect(PadQueue.tick(quit, 5)).toBe(false)
+	expect(PadQueue.state(quit)).toBe("Ready")
+	expect(PadQueue.isLocked(quit)).toBe(false)
+	expect(quit.AutoStartAt).toBe(5 + Config.Lobby.ReadyCountdown)
 	-- The host may still start early during the countdown.
 	local early = PadQueue.new(2)
 	fill(early, MAX)

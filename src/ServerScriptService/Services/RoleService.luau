@@ -382,8 +382,10 @@ local function stab(player: Player)
 	if AbilityUses.left(uses, member.Id, "Stab", scopeKey, limit) <= 0 then
 		return
 	end
-	local target = Melee.findTarget(member.Id, cfg.KnifeRange, cfg.MinDot, function()
-		return true -- the Killer may kill anyone, wolves included
+	local target = Melee.findTarget(member.Id, cfg.KnifeRange, cfg.MinDot, function(other: Roster.Member)
+		-- [owner] 18 Nov 2026: not a werewolf (or pup) in its beast form;
+		-- the same player in human form can be stabbed.
+		return not WolfService.IsTransformed(other.Id)
 	end)
 	if not target then
 		return -- a miss does not use up the kill
@@ -690,17 +692,20 @@ end
 local function sendLovers()
 	local lovers: { Roster.Member } = {}
 	for _, member in Roster.list(MatchService.Roster) do
-		if member.StartRole == "Lover" then
+		-- [owner] 18 Nov 2026: a Lover who became the pup is gone, as if dead.
+		if member.StartRole == "Lover" and not member.IsPup then
 			table.insert(lovers, member)
 		end
 	end
-	for _, lover in lovers do
-		local player = MatchService.PlayerOf(lover.Id)
+	for _, member in Roster.list(MatchService.Roster) do
+		local player = if member.StartRole == "Lover" then MatchService.PlayerOf(member.Id) else nil
 		if player then
 			local ids: { number } = {}
-			for _, other in lovers do
-				if other.Id ~= lover.Id and other.Alive then
-					table.insert(ids, other.Id)
+			if not member.IsPup then
+				for _, other in lovers do
+					if other.Id ~= member.Id and other.Alive then
+						table.insert(ids, other.Id)
+					end
 				end
 			end
 			Net.fire(player, "Highlight", { Kind = "Lover", Ids = ids })
@@ -859,6 +864,11 @@ function RoleService.Start()
 	MatchService.MemberRevived:Connect(function(member: Roster.Member)
 		addStealPrompt(member)
 		sendLovers()
+	end)
+	MatchService.MemberConverted:Connect(function(member: Roster.Member)
+		if member.StartRole == "Lover" then
+			sendLovers()
+		end
 	end)
 	MatchService.MemberDied:Connect(function(member: Roster.Member)
 		local prompt = stealPrompts[member.Id]

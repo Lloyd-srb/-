@@ -35,74 +35,64 @@ local function finish(server, svc)
 	end
 end
 
-test("role screen: options are private, bad picks are rejected, all confirmed = start early", function()
-	local server, svc = start({ TimerScale = 1, UnlockAllRoles = true }) -- 30 s timer
-	server.waitForPhase("RoleSelect")
-
-	-- Everyone gets their own option list.
-	for _, id in { 1, 2, 3 } do
-		local options = server.last("RoleOptions", id)[1]
-		expect(#options.Usable).toBe(16)
-		expect(options.PickCount).toBe(3)
-		expect(table.find(options.Usable, "Wolf")).toBeNil() -- the wolf can never be picked
+test("role picks are chosen in the Lobby, saved, and used in the match; no role screen (owner, 18 Nov 2026)", function()
+	local people = { { Id = 1, Name = "Alice" }, { Id = 2, Name = "Bob" }, { Id = 3, Name = "Cara" } }
+	local lobby = startLobby({ Players = people, Experience = "role-picks" })
+	lobby.Config.Data.LoadRetryDelay = 0.05
+	local Profiles = lobby.require(lobby.game.ServerStorage.ServerShared.Profiles)
+	local function view(id)
+		lobby.waitFor("profile view " .. id, function()
+			return lobby.last("ProfileView", id) ~= nil
+		end, 3)
+		task.wait(0.1)
+		return lobby.last("ProfileView", id)[1]
 	end
-	expect(#server.sent("RoleOptions", "all")).toBe(0)
-
-	-- Rejected: wrong count, duplicate, the wolf, unknown role, garbage.
-	server.fireServer("RolePicks", 1, { "Seer", "Priest" })
-	server.fireServer("RolePicks", 1, { "Seer", "Seer", "Priest" })
-	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Wolf" })
-	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Hacker" })
-	server.fireServer("RolePicks", 1, "Seer")
-	server.fireServer("RolePicks", 1, { 1, 2, 3 })
-	expect(#server.sent("RolePicksAck", 1)).toBe(0)
-	expect(svc.Match.PicksOf(1)).toBeNil()
-
-	-- Accepted, and can be changed until the phase ends.
-	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Engineer" })
-	expect(server.last("RolePicksAck", 1)[1]).toEqual({ "Seer", "Priest", "Engineer" })
-	server.fireServer("RolePicks", 1, { "Chief", "Bodyguard", "Doctor" })
-	expect(svc.Match.PicksOf(1)).toEqual({ "Chief", "Bodyguard", "Doctor" })
-	expect(server.phase()).toBe("RoleSelect") -- still waiting for the others
-
-	server.fireServer("RolePicks", 2, { "Seer", "Priest", "Engineer" })
-	server.fireServer("RolePicks", 3, { "Killer", "Fool", "Sheriff" })
-	-- All three confirmed: day 1 starts right away instead of after 30 s.
-	server.waitFor("day 1", function()
-		return server.phase() == "Day"
-	end, 2)
-
-	-- Everyone got one of their own picks (or was drawn as the wolf).
-	local chosen = {
-		[1] = { "Chief", "Bodyguard", "Doctor" },
-		[2] = { "Seer", "Priest", "Engineer" },
-		[3] = { "Killer", "Fool", "Sheriff" },
-	}
-	local roles = {}
-	for id, picks in chosen do
-		local role = server.last("RoleAssigned", id)[1]
-		expect(role == "Wolf" or table.find(picks, role) ~= nil).toBe(true)
-		expect(roles[role]).toBeNil() -- no duplicates among special roles
-		roles[role] = true
+	-- A new player starts with the three free roles picked.
+	expect(view(1).RolePicks).toEqual({ "Villager", "Sheriff", "Doctor" })
+	Profiles.Update(lobby.player(1), function(data)
+		data.Roles.Seer, data.Roles.Priest, data.Roles.Engineer = true, true, true
+	end)
+	-- Refused: not owned, the wolf, a duplicate, more than three, garbage.
+	for _, bad in { { "Killer" }, { "Wolf" }, { "Seer", "Seer" }, { "Seer", "Priest", "Engineer", "Doctor" }, { 1, 2 } } do
+		lobby.fireServer("SaveRolePicks", 1, bad)
 	end
-	-- Picks are no longer accepted once the match has started.
-	server.fireServer("RolePicks", 1, { "Seer", "Priest", "Engineer" })
-	expect(svc.Match.PicksOf(1)).toEqual({ "Chief", "Bodyguard", "Doctor" })
-	finish(server, svc)
+	lobby.fireServer("SaveRolePicks", 1, "Seer")
+	expect(view(1).RolePicks).toEqual({ "Villager", "Sheriff", "Doctor" })
+	-- Accepted.
+	lobby.fireServer("SaveRolePicks", 1, { "Seer", "Priest", "Engineer" })
+	expect(view(1).RolePicks).toEqual({ "Seer", "Priest", "Engineer" })
+	for _, person in people do
+		lobby.removePlayer(person.Id) -- off to the match (saved)
+	end
+
+	local match = startServer({ Players = {}, Experience = "role-picks", Debug = { TimerScale = 1, MinPlayers = 3, FillWithBots = true } })
+	match.Config.Data.LoadRetryDelay = 0.05
+	for _, person in people do
+		match.addPlayer(person.Id, person.Name)
+	end
+	-- Everyone's profile loads quickly: day 1 starts well before the phase's limit.
+	match.waitFor("day 1", function()
+		return match.phase() == "Day"
+	end, 6)
+	local alice = match.last("RoleAssigned", 1)[1]
+	expect(alice == "Wolf" or table.find({ "Seer", "Priest", "Engineer" }, alice) ~= nil).toBe(true)
+	for _, id in { 2, 3 } do
+		local role = match.last("RoleAssigned", id)[1]
+		expect(role == "Wolf" or table.find({ "Villager", "Sheriff", "Doctor" }, role) ~= nil).toBe(true)
+	end
+	-- No role screen any more.
+	local Remotes = match.require(match.game.ReplicatedStorage.Shared.Remotes)
+	expect(table.find(Remotes.Names, "RoleOptions")).toBeNil()
+	expect(table.find(Remotes.Names, "RolePicks")).toBeNil()
+	finish(match, setmetatable({}, {
+		__index = function(_, name)
+			return match.require(match.game.ServerScriptService.Services[name .. "Service"])
+		end,
+	}))
 end)
 
-test("role screen: new players only see and can only pick the three free roles", function()
+test("new players: the match uses their three free roles", function()
 	local server, svc = start({ TimerScale = 0.01, UnlockAllRoles = false })
-	server.waitForPhase("RoleSelect")
-	local options = server.last("RoleOptions", 2)[1]
-	expect(options.Usable).toEqual({ "Villager", "Sheriff", "Doctor" })
-	expect(options.Level).toBe(1)
-	server.fireServer("RolePicks", 2, { "Villager", "Sheriff", "Killer" }) -- not owned
-	expect(#server.sent("RolePicksAck", 2)).toBe(0)
-	server.fireServer("RolePicks", 2, { "Villager", "Sheriff", "Doctor" })
-	expect(#server.sent("RolePicksAck", 2)).toBe(1)
-
-	-- Nobody else confirms: the timer runs out and they get random owned roles.
 	server.waitFor("day 1", function()
 		return server.phase() == "Day"
 	end, 5)

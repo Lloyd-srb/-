@@ -29,6 +29,7 @@ local ordered: { Service } = {
 	require(Services.TaskService),
 	require(Services.GhostService),
 	require(Services.ChatService),
+	require(Services.VoiceService),
 	require(Services.EndService),
 	require(Services.LightingService),
 }

@@ -36,6 +36,9 @@ local LATIN_IN_THAI = {
 	["Item.FirstAid.Name"] = true,
 	["Item.Cross.Name"] = true,
 	["Tutorial.Page"] = true, -- "1 / 6"
+	["Rarity.Rare"] = true, -- rarity names stay in English (owner, 18 Nov 2026)
+	["Rarity.Epic"] = true,
+	["Rarity.Legendary"] = true,
 }
 
 local function hasThai(text)

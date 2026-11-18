@@ -28,10 +28,11 @@ local hintLabel: TextLabel
 local startButton: TextButton
 
 local function secondsLeft(pad: any): number
-	if type(pad.CountdownEndsAt) ~= "number" then
+	local endsAt = if type(pad.CountdownEndsAt) == "number" then pad.CountdownEndsAt else pad.StartsAt
+	if type(endsAt) ~= "number" then
 		return 0
 	end
-	return math.max(0, math.ceil(pad.CountdownEndsAt - workspace:GetServerTimeNow()))
+	return math.max(0, math.ceil(endsAt - workspace:GetServerTimeNow()))
 end
 
 local function stateText(pad: any): string
@@ -40,7 +41,7 @@ local function stateText(pad: any): string
 	elseif pad.State == "Countdown" then
 		return Loc.format("Lobby.Countdown", { seconds = secondsLeft(pad) })
 	elseif pad.State == "Ready" then
-		return Loc.format("Lobby.Ready", { name = pad.HostName or "?" })
+		return Loc.format("Lobby.Ready", { name = pad.HostName or "?", seconds = secondsLeft(pad) })
 	end
 	return Loc.format("Lobby.Waiting", { min = pad.Min })
 end
@@ -140,7 +141,7 @@ function PadController.Start()
 			local needed = noticeNow ~= noticeShown
 			noticeShown = noticeNow
 			for _, pad in pads do
-				if pad.State == "Countdown" then
+				if pad.State == "Countdown" or pad.State == "Ready" then
 					needed = true
 					break
 				end

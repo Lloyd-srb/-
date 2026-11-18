@@ -13,24 +13,25 @@ local VILLAGER, WOLF, GHOST, DEAD_WOLF = viewer(true, false), viewer(true, true)
 
 test("rules: who is in which channel", function()
 	expect(ChatRules.membership(VILLAGER)).toEqual({ General = "Send" })
-	expect(ChatRules.membership(WOLF)).toEqual({ General = "Send", Wolf = "Send", Ghost = "Read" })
-	expect(ChatRules.membership(GHOST)).toEqual({ General = "Send", Wolf = "Send", Ghost = "Send" })
-	expect(ChatRules.membership(DEAD_WOLF)).toEqual({ General = "Send", Wolf = "Send", Ghost = "Send" })
+	-- One chat for ghosts and the wolf side (owner, 18 Nov 2026).
+	expect(ChatRules.membership(WOLF)).toEqual({ General = "Send", Ghost = "Send" })
+	expect(ChatRules.membership(GHOST)).toEqual({ General = "Send", Ghost = "Send" })
+	expect(ChatRules.membership(DEAD_WOLF)).toEqual({ General = "Send", Ghost = "Send" })
 	expect(ChatRules.membership(viewer(true, true, "Lobby"))).toEqual({ General = "Send" })
 	expect(ChatRules.membership(viewer(false, false, "Over"))).toEqual({ General = "Send" })
 end)
 
-test("rules: the living talk to everyone in General; the wolf chat stays with wolves and ghosts", function()
+test("rules: the living talk to everyone in General; the ghost / wolf chat stays with wolves and ghosts", function()
 	for _, target in { VILLAGER, WOLF, GHOST } do
 		expect(ChatRules.canDeliver("General", VILLAGER, target)).toBe(true)
 	end
-	expect(ChatRules.canDeliver("Wolf", WOLF, WOLF)).toBe(true)
-	expect(ChatRules.canDeliver("Wolf", WOLF, GHOST)).toBe(true) -- ghosts read everything
-	expect(ChatRules.canDeliver("Wolf", WOLF, VILLAGER)).toBe(false)
+	expect(ChatRules.canDeliver("Ghost", WOLF, WOLF)).toBe(true)
+	expect(ChatRules.canDeliver("Ghost", WOLF, GHOST)).toBe(true)
+	expect(ChatRules.canDeliver("Ghost", WOLF, VILLAGER)).toBe(false)
 end)
 
 test("rules: a ghost's words only reach ghosts and the wolf side, in every channel", function()
-	for _, channel in { "General", "Wolf", "Ghost" } do
+	for _, channel in { "General", "Ghost" } do
 		expect(ChatRules.canDeliver(channel, GHOST, VILLAGER)).toBe(false)
 		expect(ChatRules.canDeliver(channel, GHOST, GHOST)).toBe(true)
 		expect(ChatRules.canDeliver(channel, GHOST, WOLF)).toBe(true)
@@ -73,13 +74,11 @@ test("dying: corpse stays, an invisible ghost appears, the chat follows the rule
 	server.waitForPhase("RoleSelect")
 	settle()
 	expect(server.chatAccess("General", 1)).toBe("Send") -- before the roles everyone just talks
-	expect(server.chatAccess("Wolf", 1)).toBeNil()
+	expect(server.chatAccess("Ghost", 1)).toBeNil()
 
 	waitFor(server, "Day", 1)
 	settle()
-	expect(server.chatAccess("Wolf", 1)).toBe("Send")
-	expect(server.chatAccess("Ghost", 1)).toBe("Read")
-	expect(server.chatAccess("Wolf", 2)).toBeNil()
+	expect(server.chatAccess("Ghost", 1)).toBe("Send") -- one chat for ghosts and wolves
 	expect(server.chatAccess("Ghost", 2)).toBeNil()
 	expect(server.chatDelivers("General", 2, 3)).toBe(true)
 
@@ -91,8 +90,7 @@ test("dying: corpse stays, an invisible ghost appears, the chat follows the rule
 	settle()
 
 	-- Bob joined the wolf side in chat.
-	expect(server.chatAccess("Wolf", 2)).toBe("Send")
-	expect(server.chatAccess("Ghost", 2)).toBe("Read")
+	expect(server.chatAccess("Ghost", 2)).toBe("Send")
 
 	-- Cara: the corpse lies where she fell, her character is now a ghost beside it.
 	local corpse = svc.Match.BodyOf(3)
@@ -111,13 +109,11 @@ test("dying: corpse stays, an invisible ghost appears, the chat follows the rule
 
 	-- Cara's chat: reads every channel, her words reach only ghosts and wolves.
 	expect(server.chatAccess("Ghost", 3)).toBe("Send")
-	expect(server.chatAccess("Wolf", 3)).toBe("Send")
 	expect(server.chatDelivers("General", 3, 1)).toBe(true) -- the wolf hears ghosts
 	expect(server.chatDelivers("General", 3, 2)).toBe(true) -- so does the pup
 	expect(server.chatDelivers("Ghost", 3, 1)).toBe(true)
 	-- A living villager does not: a bot cannot chat, so check through a revive later.
-	expect(server.chatDelivers("Wolf", 1, 3)).toBe(true) -- ghosts read the wolf chat
-	expect(server.chatDelivers("Ghost", 1, 3)).toBe(false) -- wolves only read the ghost chat
+	expect(server.chatDelivers("Ghost", 1, 3)).toBe(true) -- the wolf talks to the ghosts there too
 
 	-- A ghost cannot use anything: e.g. hide (prompts check "alive" on the server).
 	server.waitFor("day 2", function()
@@ -138,7 +134,6 @@ test("dying: corpse stays, an invisible ghost appears, the chat follows the rule
 	server.waitForPhase("GameOver", 10)
 	settle()
 	expect(server.chatAccess("Ghost", 3)).toBeNil()
-	expect(server.chatAccess("Wolf", 3)).toBeNil()
 	expect(server.chatDelivers("General", 3, 2)).toBe(true)
 end)
 

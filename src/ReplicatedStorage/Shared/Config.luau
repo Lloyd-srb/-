@@ -92,9 +92,10 @@ Config.Match = {
 --------------------------------------------------------------------------------
 
 Config.RoleSelect = {
+	-- [owner] 18 Nov 2026: the 3 roles are chosen in the Lobby (Role page) and
+	-- saved; there is no role screen in the match.
 	PickCount = 3, -- [GDD] each player picks 3 owned roles
-	Duration = 30, -- [ASSUMED] seconds on the role-selection screen
-	EndWhenAllPicked = true, -- [ASSUMED] start as soon as every player has confirmed
+	Duration = 10, -- [ASSUMED] most seconds to wait for saved profiles before day 1
 	StarterRoles = { "Villager", "Sheriff", "Doctor" } :: { RoleId }, -- [GDD] free for new players
 }
 
@@ -211,7 +212,7 @@ Config.Wolf = {
 	-- AttackSpeed -> AttackCooldown, Vision -> NightVision.
 	WalkSpeed = 20, -- [GDD]
 	AttackDamage = 100, -- [GDD] one hit kills
-	AttackCooldown = 1, -- [GDD]
+	AttackCooldown = 2, -- [owner] 18 Nov 2026 (Attack Speed 3); was 1 s in the GDD
 	NightVision = 150, -- studs the werewolf sees at night (night fog end)
 	AttackRange = 7, -- [ASSUMED] studs
 	AttackMinDot = 0, -- [ASSUMED] target must be in the front half (dot of look and direction)
@@ -592,7 +593,7 @@ Config.SeasonPass = {
 	PremiumDiamondAmount = 10, -- [GDD] after 60; [ASSUMED] also used for the pre-60 slots
 	-- [ASSUMED] not in the GDD (OWNER_TODO 15): a suggestion until the owner
 	-- sets the price. Also the Diamond price (§13: same number).
-	PremiumRobuxPrice = 399,
+	PremiumRobuxPrice = 499, -- [owner] 18 Nov 2026
 	-- Titles on level 1 of each track (GDD §13.2: "Title พิเศษ").
 	FreeTitle = "PassFree",
 	PremiumTitle = "PassPremium",
@@ -636,7 +637,8 @@ Config.DailySpin = {
 export type SkinDef = {
 	Slot: "Gun" | "Knife" | "Wolf",
 	Source: "Shop" | "Pass" | "Spin",
-	Price: number?, -- Robux / Diamonds (Source "Shop" only)
+	Rarity: ("Rare" | "Epic" | "Legendary")?, -- Source "Shop": sets the price (Config.SkinRarityPrice)
+	Price: number?, -- Robux / Diamonds (Source "Shop" only; filled from Rarity)
 	Color: Color3?, -- Gun / Knife
 	Paint: { [string]: Color3 }?, -- Wolf: overrides Config.WolfRig colours
 }
@@ -656,15 +658,23 @@ Config.Skins = {
 		Paint = { Fur = Color3.fromRGB(150, 60, 40), FurDark = Color3.fromRGB(100, 36, 28), Eye = Color3.fromRGB(255, 90, 40) },
 	},
 	-- [ASSUMED] OWNER_TODO 19: example shop skins until the owner sends the real list and prices.
-	GunGold = { Slot = "Gun", Source = "Shop", Price = 99, Color = Color3.fromRGB(255, 200, 60) },
-	KnifeGold = { Slot = "Knife", Source = "Shop", Price = 99, Color = Color3.fromRGB(255, 200, 60) },
+	GunGold = { Slot = "Gun", Source = "Shop", Rarity = "Rare", Color = Color3.fromRGB(255, 200, 60) },
+	KnifeGold = { Slot = "Knife", Source = "Shop", Rarity = "Rare", Color = Color3.fromRGB(255, 200, 60) },
 	WolfShadow = {
 		Slot = "Wolf",
 		Source = "Shop",
-		Price = 199,
+		Rarity = "Epic",
 		Paint = { Fur = Color3.fromRGB(40, 40, 48), FurDark = Color3.fromRGB(24, 24, 30), Belly = Color3.fromRGB(60, 60, 70), Eye = Color3.fromRGB(190, 80, 255) },
 	},
 } :: { [string]: SkinDef }
+
+-- [owner] 18 Nov 2026: shop skins are priced by rarity (Robux = Diamonds).
+Config.SkinRarityPrice = { Rare = 99, Epic = 199, Legendary = 399 }
+for _, def in Config.Skins do
+	if def.Source == "Shop" and def.Rarity then
+		def.Price = Config.SkinRarityPrice[def.Rarity]
+	end
+end
 
 -- Shop / menu order.
 Config.SkinOrder = { "GunGold", "KnifeGold", "WolfShadow", "GunPass", "KnifePass", "WolfPass", "WolfSpin" }
@@ -778,6 +788,14 @@ Config.Map = {
 --------------------------------------------------------------------------------
 -- Lighting presets (§6.5): bright by day, black distance fog at night.
 --------------------------------------------------------------------------------
+
+-- [owner] 18 Nov 2026: at nightfall and in the morning every living player
+-- except the wolf side sees a black screen ("eyes closed") while being moved.
+Config.EyesClosed = {
+	Seconds = 3, -- [owner] about 3 s in all
+	FadeIn = 0.15, -- [ASSUMED] art
+	FadeOut = 0.6, -- [ASSUMED] art
+}
 
 Config.Lighting = {
 	TransitionTime = 4, -- seconds to tween between presets
@@ -988,7 +1006,7 @@ Config.Products = {
 Config.MonsterStatValues = {
 	RunSpeed = { 16, 18, 20, 22, 24 }, -- [ASSUMED] walk speed (people: 16); level 3 = 20 [GDD]
 	AttackPower = { 20, 40, 60, 80, 100 }, -- [ASSUMED] damage per hit (people: 100 HP); level 5 = 100 [owner]
-	AttackSpeed = { 2, 1.5, 1, 0.75, 0.5 }, -- [ASSUMED] seconds between attacks; level 3 = 1 s [GDD]
+	AttackSpeed = { 3, 2.5, 2, 1.5, 1 }, -- [owner] 18 Nov 2026: seconds between attacks
 	Vision = { 90, 120, 150, 180, 210 }, -- [ASSUMED] studs seen at night; level 3 = 150 (same as people)
 } :: { [string]: { number } }
 
@@ -1013,7 +1031,7 @@ Config.Places = {
 Config.Lobby = {
 	PadCount = 4, -- [owner] four pads, 12 seats each (Config.Match.MaxPlayers)
 	FullCountdown = 10, -- [owner] seconds once the pad is full; nobody can step off
-	HostIdleStart = 60, -- [default] with 8+ players the match starts by itself if the host waits this long
+	ReadyCountdown = 20, -- [owner] 18 Nov 2026: with 8-11 players the match starts by itself after this; restarts on join / leave
 	ScanInterval = 0.25, -- seconds between "who stands on which pad" checks
 	LaunchAttempts = 2, -- teleport tries before giving up
 	ReturnCheck = 15, -- seconds after a teleport: anyone still here means it failed

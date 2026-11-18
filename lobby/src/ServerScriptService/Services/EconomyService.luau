@@ -168,6 +168,20 @@ function EconomyService.Start()
 	Net.on("Equip", onEquip, 10, 5)
 	Net.on("SpinRequest", onSpin, 3, 5)
 	Net.on("CodeRedeem", onCode, 5, 10)
+	-- The 3 roles this player wants (owner, 18 Nov 2026); the profile view
+	-- sent after the change shows the saved list.
+	Net.on("SaveRolePicks", function(player: Player, chosen: any)
+		if type(chosen) ~= "table" then
+			return
+		end
+		local clean: { any } = {}
+		for index = 1, Config.RoleSelect.PickCount + 1 do
+			clean[index] = chosen[index]
+		end
+		Profiles.Update(player, function(profile: ProfileLogic.Data)
+			ProfileLogic.setRolePicks(profile, clean)
+		end)
+	end, 10, 5)
 	Net.on("TutorialDone", function(player: Player)
 		Profiles.Update(player, function(profile: ProfileLogic.Data)
 			profile.TutorialSeen = true

@@ -247,7 +247,11 @@ local function skinRow(order: number, skinId: string)
 		then Loc.format("Buy.Diamonds", { price = def.Price }) .. "  ·  " .. Loc.format("Buy.Robux", { price = def.Price })
 		elseif def.Source == "Pass" then Loc.format("Skin.FromPass")
 		else Loc.format("Skin.FromSpin")
-	local row = addRow(order, nameOf("Skin", skinId), Loc.format("Skin.Slot." .. def.Slot), price, if owned then Loc.format("Menu.Owned") else "")
+	local slot = Loc.format("Skin.Slot." .. def.Slot)
+	if def.Rarity then
+		slot = slot .. "  ·  " .. Loc.format("Rarity." .. def.Rarity)
+	end
+	local row = addRow(order, nameOf("Skin", skinId), slot, price, if owned then Loc.format("Menu.Owned") else "")
 	if owned then
 		addEquipButton(row, def.Slot, skinId)
 	elseif def.Source == "Shop" then
@@ -262,8 +266,43 @@ end
 local PAGES: { [string]: () -> () } = {}
 local render: () -> () -- defined below; pages call it to redraw
 
+-- The 3 roles a player wants in matches (owner, 18 Nov 2026), saved on the server.
+local function togglePick(roleId: string)
+	if not view then
+		return
+	end
+	local picks: { string } = table.clone(view.RolePicks or {})
+	local at = table.find(picks, roleId)
+	if at then
+		table.remove(picks, at)
+	elseif #picks >= Config.RoleSelect.PickCount then
+		showToast(Loc.format("Menu.PicksFull", { count = Config.RoleSelect.PickCount }))
+		return
+	else
+		table.insert(picks, roleId)
+	end
+	Remotes.get("SaveRolePicks"):FireServer(picks)
+	Audio.play("UIOpen")
+end
+
 function PAGES.Role()
 	local current = wallet()
+	if view then
+		local names: { string } = {}
+		for _, roleId in view.RolePicks or {} do
+			table.insert(names, Loc.format("Role." .. roleId .. ".Name"))
+		end
+		addText(
+			Loc.format("Menu.YourPicks", {
+				count = #names,
+				max = Config.RoleSelect.PickCount,
+				roles = if #names > 0 then table.concat(names, ", ") else "-",
+			}),
+			-1,
+			Color3.fromRGB(255, 220, 110)
+		)
+		addText(Loc.format("Menu.PicksHint"), 0)
+	end
 	for order, roleId in Config.RoleOrder do
 		local def = Config.Roles[roleId]
 		local price = if def.Free
@@ -282,7 +321,10 @@ function PAGES.Role()
 		end
 		local row = addRow(order, Loc.format("Role." .. roleId .. ".Name"), Loc.format("Role." .. roleId .. ".Desc"), price, level)
 		if current and Shop.owns(current, "Role", roleId) then
-			addButton(row, Loc.format("Menu.Owned"), "Plain", nil, false)
+			local picked = view and table.find(view.RolePicks or {}, roleId) ~= nil
+			addButton(row, Loc.format(if picked then "Menu.Picked" else "Menu.Pick"), if picked then "Coins" else "Plain", function()
+				togglePick(roleId)
+			end, true)
 		elseif current then
 			addBuyButtons(row, "Role", roleId)
 		end
@@ -458,7 +500,10 @@ local function renderMonster()
 	setBox(
 		"PassivePanel",
 		Loc.format("Monster.Passive"),
-		Loc.format("Monster." .. id .. ".Passive", { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed })
+		Loc.format(
+			"Monster." .. id .. ".Passive",
+			{ speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed, cooldown = Config.Wolf.AttackCooldown }
+		)
 	)
 	setBox(
 		"Ability1Panel",

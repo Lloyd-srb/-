@@ -55,20 +55,13 @@ test("VoteUI has everything VoteController looks up", function()
 	expect(silhouette:FindFirstChild("Head") ~= nil and silhouette:FindFirstChild("Body") ~= nil).toBe(true)
 end)
 
-test("RoleSelectUI has everything RoleSelectController looks up", function()
-	local gui = StarterGui:FindFirstChild("RoleSelectUI")
-	expect(gui ~= nil and gui.Enabled == false).toBe(true)
-	for _, name in { "Title", "Counter", "Hint", "StatusLabel" } do
-		expect(path(gui, { "Panel", name }):IsA("TextLabel")).toBe(true)
-	end
-	expect(path(gui, { "Panel", "Grid" }) ~= nil).toBe(true)
-	expect(path(gui, { "Panel", "ConfirmButton" }):IsA("TextButton")).toBe(true)
-	local card = path(gui, { "Templates", "RoleCard" })
-	expect(card:IsA("GuiButton")).toBe(true)
-	for _, name in { "NameLabel", "DescLabel", "LockLabel" } do
-		expect(card:FindFirstChild(name):IsA("TextLabel")).toBe(true)
-	end
-	expect(card:FindFirstChildOfClass("UIStroke") ~= nil).toBe(true)
+test("no role screen in the match (picks are made in the Lobby); EyesUI exists", function()
+	expect(StarterGui:FindFirstChild("RoleSelectUI")).toBeNil()
+	local eyes = StarterGui:FindFirstChild("EyesUI")
+	expect(eyes ~= nil).toBe(true)
+	expect(eyes.Black:IsA("Frame")).toBe(true)
+	expect(eyes.Black.Visible).toBe(false)
+	expect(eyes.DisplayOrder > StarterGui.Hud.DisplayOrder).toBe(true)
 end)
 
 test("PickerUI has everything RoleController looks up", function()

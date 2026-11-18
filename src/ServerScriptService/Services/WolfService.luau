@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Signal = require(ReplicatedStorage.Shared.Signal)
 local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
 local Zones = require(ReplicatedStorage.Shared.Zones)
 
@@ -45,6 +46,8 @@ type WolfState = {
 }
 
 local WolfService = {}
+
+WolfService.FormChanged = Signal.new() -- (memberId, form) "Wolf" | "Pup" | "Human"
 
 local wolves: { [number]: WolfState } = {}
 local forestIds: { number } = {}
@@ -215,6 +218,7 @@ local function transform(member: Roster.Member)
 	if player then
 		Net.fire(player, "FormChanged", form)
 	end
+	WolfService.FormChanged:Fire(member.Id, form)
 end
 
 local function revert(id: number)
@@ -247,6 +251,7 @@ local function revert(id: number)
 	if player then
 		Net.fire(player, "FormChanged", "Human")
 	end
+	WolfService.FormChanged:Fire(id, "Human")
 end
 
 --------------------------------------------------------------------------------

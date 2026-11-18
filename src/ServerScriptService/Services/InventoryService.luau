@@ -737,6 +737,12 @@ function InventoryService.Start()
 
 	RoundService.PhaseStarted:Connect(function(state: PhaseMachine.PhaseState)
 		if state.Phase == "Day" then
+			-- [owner] 18 Nov 2026: an unopened crate is gone the next morning.
+			for _, crate in CollectionService:GetTagged("Crate") do
+				if crate:IsDescendantOf(worldFolder) then
+					crate:Destroy()
+				end
+			end
 			maybeSpawnCrate()
 		end
 	end)

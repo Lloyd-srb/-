@@ -39,7 +39,7 @@ local function onIncoming(message: TextChatMessage): TextChatMessageProperties?
 	if dead[source.UserId] then
 		properties.PrefixText = colored(GRAY, Loc.format("Chat.GhostTag") .. " " .. name)
 		properties.Text = colored(GRAY, message.Text)
-	elseif channel.Name == "Wolf" then
+	elseif channel.Name == "Ghost" then -- a living wolf in the ghost / wolf chat
 		properties.PrefixText = colored(RED, Loc.format("Chat.WolfTag")) .. " " .. colored(WHITE, name)
 	else
 		properties.PrefixText = colored(WHITE, name)

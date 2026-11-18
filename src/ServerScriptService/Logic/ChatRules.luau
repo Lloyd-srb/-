@@ -2,12 +2,13 @@
 --[[
 	ChatRules — pure chat routing (GDD §6.2, §12).
 
-	Channels: General, Wolf, Ghost.
+	Channels: General, Ghost.
 	  Living players       speak in General.
-	  The wolf side        also speaks in Wolf, and reads Ghost.
-	  Ghosts (the dead)    read every channel and may type in General, Wolf
-	                       and Ghost, but whatever a ghost writes reaches only
-	                       other ghosts and the wolf side (shown in gray).
+	  [owner] 18 Nov 2026: the ghost chat and the wolf chat are one channel
+	  ("Ghost"): the wolf side and the ghosts all read and type in it.
+	  Ghosts (the dead)    may also type in General, but whatever a ghost
+	                       writes reaches only other ghosts and the wolf side
+	                       (shown in gray).
 	Before roles are dealt and after the game is over, everyone simply talks
 	in General.
 ]]
@@ -25,17 +26,14 @@ export type Access = "Send" | "Read"
 
 local ChatRules = {}
 
-ChatRules.Channels = { "General", "Wolf", "Ghost" }
+ChatRules.Channels = { "General", "Ghost" }
 
 function ChatRules.membership(viewer: Viewer): { [string]: Access }
 	if viewer.Phase ~= "Match" then
 		return { General = "Send" }
 	end
-	if not viewer.Alive then
-		return { General = "Send", Wolf = "Send", Ghost = "Send" }
-	end
-	if viewer.WolfSide then
-		return { General = "Send", Wolf = "Send", Ghost = "Read" }
+	if not viewer.Alive or viewer.WolfSide then
+		return { General = "Send", Ghost = "Send" }
 	end
 	return { General = "Send" }
 end

@@ -129,18 +129,16 @@ test("village wins: roles revealed, likes, MVP, rewards into profiles", function
 	expect(svc.End.Granted[-1005]).toBeNil() -- bots get nothing
 end)
 
-test("leaving early keeps the nights survived (as a loss); the pup wins with the wolves", function()
+test("leaving while alive gets nothing (owner, 18 Nov 2026); the pup wins with the wolves", function()
 	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Doctor", [3] = "Villager" })
 	waitFor(server, "Night", 1)
 	expect(svc.Combat.Damage(2, 100, "Wolf", 1)).toBe("Converted") -- Bob is the pup now
 	waitFor(server, "Day", 2)
 
-	-- Cara survived one night and leaves: rewarded at once, as a loss.
+	-- Cara is still alive and leaves: no reward at all.
 	server.removePlayer(3)
-	local cara = svc.End.Granted[3]
-	expect(cara.NightsSurvived).toBe(1)
-	expect(cara.Won).toBe(false)
-	expect(cara.Coins).toBe(10)
+	expect(svc.End.Granted[3]).toBeNil()
+	expect(svc.End.Forfeited[3]).toBe(true)
 
 	-- The wolves take the village: every bot falls.
 	for _, member in svc.Match.Roster.Members do
@@ -161,8 +159,11 @@ test("leaving early keeps the nights survived (as a loss); the pup wins with the
 	local bob = server.last("RewardSummary", 2)[1]
 	expect(bob.Won).toBe(true)
 	expect(bob.MasteryRole).toBe("Doctor") -- mastery goes to the role dealt at the start
-	expect(bob.IsMvp).toBe(false) -- nobody liked anyone: no MVP
-	expect(svc.End.Granted[3].Coins).toBe(10) -- Cara was not rewarded twice
+	-- Nobody liked anyone: a random player still here is MVP (owner, 18 Nov 2026).
+	local mvp = server.last("Results", "all")[1].MvpId
+	expect(mvp == 1 or mvp == 2).toBe(true)
+	expect(bob.IsMvp).toBe(mvp == 2)
+	expect(svc.End.Granted[3]).toBeNil() -- Cara never gets anything
 end)
 
 test("mastery: every 20 points is worth 20 diamonds", function()
