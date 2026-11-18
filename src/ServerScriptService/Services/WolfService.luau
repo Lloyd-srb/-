@@ -381,7 +381,7 @@ local function onAttack(player: Player)
 		return
 	end
 	-- Nobody in reach: the swing lands on the door in front, if there is one.
-	HouseService.HitDoorNear(root.CFrame.Position, root.CFrame.LookVector, Config.Door.HitRange, stats.DoorDamage)
+	HouseService.HitDoorNear(root.CFrame.Position, root.CFrame.LookVector, Config.Door.HitRange, stats.DoorDamage, member.Id)
 end
 
 --------------------------------------------------------------------------------

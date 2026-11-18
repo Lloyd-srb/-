@@ -13,6 +13,9 @@
 	        ([owner] 17 Nov 2026: never the Killer or the Fool, whose goal is
 	        different, unless the player picked them), else
 	     b) Villager.
+	5. Lovers ([owner] 18 Nov 2026): two players can be Lovers (Copies = 2).
+	   If only one got it, one random player who was going to be a Villager
+	   becomes the other Lover.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -101,19 +104,20 @@ function RoleAssignment.assign(
 	forced: { [number]: RoleId }?
 ): { [number]: RoleId }
 	local result: { [number]: RoleId } = {}
-	local taken: { [RoleId]: boolean } = {}
+	local taken: { [RoleId]: number } = {} -- how many players have each role
 	local wolves = 0
 	local specialUsed = 0
 	local soloUsed = 0
 
 	local function isFree(roleId: RoleId): boolean
 		local def = Config.Roles[roleId]
+		local used = taken[roleId] or 0
 		if def.Kind == "Special" then
-			return not taken[roleId] and specialUsed < mode.SpecialSlots
+			return used < (def.Copies or 1) and specialUsed < mode.SpecialSlots
 		elseif def.Kind == "Filler" then
 			return true
 		elseif def.Kind == "Solo" then
-			return not taken[roleId] and soloUsed < mode.MaxSolo
+			return used < (def.Copies or 1) and soloUsed < mode.MaxSolo
 		end
 		return false -- Wolf is never picked
 	end
@@ -124,10 +128,10 @@ function RoleAssignment.assign(
 		if def.Kind == "Wolf" then
 			wolves += 1
 		elseif def.Kind == "Special" then
-			taken[roleId] = true
+			taken[roleId] = (taken[roleId] or 0) + 1
 			specialUsed += 1
 		elseif def.Kind == "Solo" then
-			taken[roleId] = true
+			taken[roleId] = (taken[roleId] or 0) + 1
 			soloUsed += 1
 		end
 	end
@@ -183,6 +187,20 @@ function RoleAssignment.assign(
 			end
 		end
 		give(candidate.Id, if #owned > 0 then Rng.pick(owned, rng) else "Villager")
+	end
+
+	-- 4) A lone Lover gets a partner from the would-be Villagers (no slot used).
+	if (taken["Lover"] or 0) == 1 then
+		local villagers: { number } = {}
+		for _, candidate in order do
+			if result[candidate.Id] == "Villager" then
+				table.insert(villagers, candidate.Id)
+			end
+		end
+		if #villagers > 0 then
+			result[Rng.pick(villagers, rng)] = "Lover"
+			taken["Lover"] = 2
+		end
 	end
 
 	return result

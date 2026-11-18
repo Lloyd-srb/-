@@ -97,6 +97,14 @@ function InventoryService.Count(id: number, kind: string): number
 end
 
 -- May this member pick up / receive an item of `kind`?
+-- Items that come with a role (never dropped, stolen or picked up by others).
+local ROLE_ITEMS: { [string]: string } = {
+	Potion = "PlagueDoctor",
+	Handcuffs = "Police",
+	Magnifier = "Detective",
+	OilCan = "FireManiac",
+}
+
 function InventoryService.CanTake(id: number, kind: string): boolean
 	local member = MatchService.Roster.Members[id]
 	if not member or not member.Alive then
@@ -105,8 +113,9 @@ function InventoryService.CanTake(id: number, kind: string): boolean
 	if kind == "Gun" then
 		return Loot.canHoldGun(member.Role, InventoryService.Count(id, "Gun"))
 	end
-	if kind == "Potion" then
-		return member.Role == "PlagueDoctor" -- a role item: only its owner holds it
+	local owner = ROLE_ITEMS[kind]
+	if owner then
+		return member.Role == owner -- a role item: only its role holds it
 	end
 	return Items[kind] ~= nil
 end
@@ -478,6 +487,12 @@ local function onUse(player: Player, itemId: any, aim: any)
 		end
 	elseif kind == "Cross" then
 		Net.fire(player, "Effect", { Kind = "CrossInfo" }) -- passive: nothing to do
+	elseif kind == "Handcuffs" then
+		RoleService.UseCuffs(id)
+	elseif kind == "Magnifier" then
+		RoleService.UseMagnifier(id)
+	elseif kind == "OilCan" then
+		Net.fire(player, "Effect", { Kind = "OilInfo" }) -- the oil is poured at a house wall (hold E)
 	elseif kind == "Potion" then
 		if RoleService.UsePotion(id) then
 			spend(id, item)
@@ -671,6 +686,11 @@ function InventoryService.Start()
 		for _, member in Roster.list(MatchService.Roster) do
 			if member.Role == "PlagueDoctor" then
 				InventoryService.Give(member.Id, "Potion", Config.Abilities.PlagueDoctor.PotionUses)
+			end
+			for kind, roleId in ROLE_ITEMS do
+				if kind ~= "Potion" and member.Role == roleId then
+					InventoryService.Give(member.Id, kind)
+				end
 			end
 		end
 	end)

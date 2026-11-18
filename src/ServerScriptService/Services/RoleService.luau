@@ -16,6 +16,11 @@
 	             night; the potion's victims can never get up (owner, 18 Nov 2026)
 	  Thief      by day, hold E on anyone: steal one random item (not a role
 	             item), once per day (owner, 18 Nov 2026)
+	  Police     handcuffs (item), by day: that person is locked in their house
+	             the coming night; no effect on the main wolf (owner, 18 Nov 2026)
+	  Detective  magnifying glass (item), each morning: white aura = stayed
+	             home last night, yellow = was out; only they see it, 10 s
+	  Lover      two of them; each always sees the other with a white aura
 	  Killer     knife: one-hit kill, 1 per day + 1 per night
 	  Fool       no ability (wins by being voted out)
 
@@ -604,6 +609,105 @@ local function addStealPrompt(member: Roster.Member)
 	stealPrompts[member.Id] = prompt
 end
 
+--------------------------------------------------------------------------------
+-- Police and Detective (owner, 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+local function playTo(memberId: number, key: string)
+	local player = MatchService.PlayerOf(memberId)
+	if player then
+		AudioService.To(player, key)
+	end
+end
+
+local function anyone(): boolean
+	return true
+end
+
+-- Handcuffs: the person in front cannot leave their house the coming night.
+-- On the main wolf it looks the same to the Police but does nothing
+-- ([ASSUMED]: saying "no effect" would tell the Police who the wolf is).
+function RoleService.UseCuffs(id: number): boolean
+	local scopeKey, kind = scope()
+	if kind ~= "Day" or not scopeKey then
+		tell(id, { Kind = "DayOnly" })
+		return false
+	end
+	local cfg = Abilities.Police
+	if AbilityUses.left(uses, id, "Cuff", scopeKey, cfg.UsesPerDay) <= 0 then
+		tell(id, { Kind = "UsedToday" })
+		return false
+	end
+	local target = Melee.findTarget(id, cfg.Reach, cfg.MinDot, anyone)
+	if not target then
+		tell(id, { Kind = "NoTarget" })
+		return false
+	end
+	AbilityUses.tryUse(uses, id, "Cuff", scopeKey, cfg.UsesPerDay)
+	HouseService.Cuff(target.Id) -- the main wolf is skipped when the night begins
+	playTo(id, "Cuff")
+	tell(id, { Kind = "Cuffed", Name = target.Name })
+	return true
+end
+
+-- Magnifying glass: was the person in front out of their house last night?
+function RoleService.UseMagnifier(id: number): boolean
+	local scopeKey, kind = scope()
+	if kind ~= "Day" or not scopeKey then
+		tell(id, { Kind = "DayOnly" })
+		return false
+	end
+	local cfg = Abilities.Detective
+	if AbilityUses.left(uses, id, "Inspect", scopeKey, cfg.UsesPerDay) <= 0 then
+		tell(id, { Kind = "UsedToday" })
+		return false
+	end
+	local target = Melee.findTarget(id, cfg.Reach, cfg.MinDot, anyone)
+	if not target then
+		tell(id, { Kind = "NoTarget" })
+		return false
+	end
+	local wasOut = HouseService.WasOutLastNight(target.Id)
+	if wasOut == nil then
+		tell(id, { Kind = "NoNightYet" }) -- day 1: nothing to find out, nothing used
+		return false
+	end
+	AbilityUses.tryUse(uses, id, "Inspect", scopeKey, cfg.UsesPerDay)
+	local result = if wasOut then "WasOut" else "StayedHome"
+	local player = MatchService.PlayerOf(id)
+	if player then
+		Net.fire(player, "Highlight", { Kind = result, Ids = { target.Id }, Duration = cfg.AuraSeconds })
+		AudioService.To(player, "Inspect")
+	end
+	tell(id, { Kind = result, Name = target.Name })
+	return true
+end
+
+--------------------------------------------------------------------------------
+-- Lovers (owner, 18 Nov 2026): each sees the other with a white aura, always.
+--------------------------------------------------------------------------------
+
+local function sendLovers()
+	local lovers: { Roster.Member } = {}
+	for _, member in Roster.list(MatchService.Roster) do
+		if member.StartRole == "Lover" then
+			table.insert(lovers, member)
+		end
+	end
+	for _, lover in lovers do
+		local player = MatchService.PlayerOf(lover.Id)
+		if player then
+			local ids: { number } = {}
+			for _, other in lovers do
+				if other.Id ~= lover.Id and other.Alive then
+					table.insert(ids, other.Id)
+				end
+			end
+			Net.fire(player, "Highlight", { Kind = "Lover", Ids = ids })
+		end
+	end
+end
+
 local function addRevivePrompt(member: Roster.Member, body: Model)
 	if not member.DiedAtNight then
 		return -- only bodies of people who died at night can be revived (GDD §6.4)
@@ -735,19 +839,27 @@ function RoleService.Start()
 		for _, prompt in stealPrompts do
 			setStealActive(prompt, kind == "Day")
 		end
+		sendLovers()
 		refreshReinforcePrompts()
 		sendAllStates()
 	end)
 
 	MatchService.MatchStarted:Connect(function()
 		sendAllStates()
+		sendLovers()
 		for _, member in Roster.alive(MatchService.Roster) do
 			addStealPrompt(member)
 		end
 	end)
 	-- A new body gets a new steal prompt; a dead one loses it.
-	MatchService.BodyReplaced:Connect(addStealPrompt)
-	MatchService.MemberRevived:Connect(addStealPrompt)
+	MatchService.BodyReplaced:Connect(function(member: Roster.Member)
+		addStealPrompt(member)
+		sendLovers() -- the aura sits on a body: a new body needs it again
+	end)
+	MatchService.MemberRevived:Connect(function(member: Roster.Member)
+		addStealPrompt(member)
+		sendLovers()
+	end)
 	MatchService.MemberDied:Connect(function(member: Roster.Member)
 		local prompt = stealPrompts[member.Id]
 		if prompt then
@@ -755,6 +867,9 @@ function RoleService.Start()
 			stealPrompts[member.Id] = nil
 		end
 		poisoned[member.Id] = nil
+		if member.StartRole == "Lover" then
+			sendLovers()
+		end
 	end)
 	MatchService.MemberDied:Connect(function(member: Roster.Member)
 		blessed[member.Id] = nil
@@ -763,6 +878,9 @@ function RoleService.Start()
 		local member = MatchService.MemberOf(player)
 		if member and member.Alive and not member.IsPup then
 			sendState(member)
+		end
+		if member and member.StartRole == "Lover" then
+			sendLovers()
 		end
 	end)
 end

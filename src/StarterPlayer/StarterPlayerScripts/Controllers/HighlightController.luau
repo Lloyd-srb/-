@@ -26,7 +26,13 @@ local COLOR_KEYS: { [string]: string } = {
 	Howl = "Howl",
 	Seer = "Seer",
 	Bait = "ForestTarget", -- a fish on the ground, seen as someone standing there
+	StayedHome = "StayedHome", -- Detective: white = was home last night
+	WasOut = "WasOut", -- Detective: yellow = was out last night
+	Lover = "Lover", -- each Lover sees the other, always
 }
+
+-- Not wolf-side outlines: they stay when the wolf side turns back into people.
+local KEEP_ON_HUMAN: { [string]: boolean } = { Lover = true, StayedHome = true, WasOut = true }
 
 -- A person-shaped decoy (local to this client) for a bait: torso, head, arms, legs.
 local DECOY_PARTS: { { Size: Vector3, Offset: Vector3 } } = {
@@ -144,7 +150,11 @@ function HighlightController.Start()
 	end
 	Remotes.get("FormChanged").OnClientEvent:Connect(function(form: any)
 		if form == "Human" then
-			clearAll()
+			for kind in active do
+				if not KEEP_ON_HUMAN[kind] then
+					clear(kind)
+				end
+			end
 		end
 	end)
 	ClientState.Changed:Connect(function(key: string)

@@ -88,16 +88,16 @@ local Strings: { [string]: Entry } = {
 	["Monster.Ability"] = { en = "Ability {n:int}", th = "สกิล {n:int}" },
 	["Monster.Folklore"] = { en = "Folklore", th = "ตำนาน" },
 	["Monster.Werewolf.Passive"] = {
-		en = "The first player slain by the Moonfang Stalker becomes a wolf cub ally.",
-		th = "ผู้เล่นคนแรกที่ถูกนักล่าเขี้ยวจันทร์สังหาร จะกลายเป็นลูกหมาป่าพวกเดียวกัน",
+		en = "The first person it kills at night becomes its wolf pup. One hit kills (1 second between attacks). Speed {speed:int} (people: {human:int}).",
+		th = "คนแรกที่ถูกมันฆ่าตอนกลางคืนจะกลายเป็นลูกหมาป่า ตีทีเดียวตาย (ตีได้ทุก 1 วินาที) ความเร็ว {speed:int} (คนปกติ {human:int})",
 	},
 	["Monster.Werewolf.Ability1"] = {
-		en = "Scent Hunt: sniffs the area and highlights nearby enemies for {duration:int} seconds. {cooldown:int} second cooldown.",
-		th = "ดมกลิ่นล่า: ดมกลิ่นรอบตัว เห็นศัตรูที่อยู่ใกล้ {duration:int} วินาที คูลดาวน์ {cooldown:int} วินาที",
+		en = "Sniff: everyone on the map who is outside a house glows for {duration:int} seconds. {cooldown:int} second cooldown.",
+		th = "ดมกลิ่น: เห็นทุกคนในแมพที่อยู่นอกบ้าน {duration:int} วินาที คูลดาวน์ {cooldown:int} วินาที",
 	},
 	["Monster.Werewolf.Ability2"] = {
-		en = "Savage Rush: gains increased speed for {duration:int} seconds and mauls the first enemy it catches. {cooldown:int} second cooldown.",
-		th = "พุ่งโหด: วิ่งเร็วขึ้น {duration:int} วินาที และขย้ำศัตรูคนแรกที่ไล่ทัน คูลดาวน์ {cooldown:int} วินาที",
+		en = "Four-legged run: speed {speed:int} for {duration:int} seconds. A kill during the run mauls the victim for about {maul:int} seconds, and nothing can stun the wolf while it mauls. {cooldown:int} second cooldown.",
+		th = "วิ่ง 4 ขา: ความเร็ว {speed:int} นาน {duration:int} วินาที ถ้าฆ่าคนระหว่างนี้จะขย้ำเหยื่อประมาณ {maul:int} วินาที และระหว่างนั้นสตั้นหมาป่าไม่ได้ คูลดาวน์ {cooldown:int} วินาที",
 	},
 	["Monster.Werewolf.Folklore"] = {
 		en = "Hunters say the Moonfang Stalker prowls when moonlight touches the pines. Its amber stare freezes the brave, and the first soul it fells rises again as a lesser wolf bound to its howl. By dawn, only claw marks and silence remain.",
@@ -296,6 +296,7 @@ local Strings: { [string]: Entry } = {
 	["Ending.Wolf"] = { en = "And the wolf lived happily ever after.", th = "แล้วหมาป่าก็อยู่อย่างมีความสุขตลอดไป" },
 	["Ending.Killer"] = { en = "No one lived happily ever after.", th = "ไม่มีใครได้อยู่อย่างมีความสุขอีกเลย" },
 	["Ending.Fool"] = { en = "The fool laughs last.", th = "คนบ้าได้หัวเราะเป็นคนสุดท้าย" },
+	["Ending.FireManiac"] = { en = "And the whole village went up in flames.", th = "แล้วทั้งหมู่บ้านก็ลุกเป็นไฟ" },
 	["End.Like"] = { en = "Like", th = "ถูกใจ" },
 	["End.Liked"] = { en = "Liked", th = "ถูกใจแล้ว" },
 	["End.LikeHint"] = {
@@ -322,6 +323,7 @@ local Strings: { [string]: Entry } = {
 	["Faction.Wolf"] = { en = "Wolves", th = "ฝ่ายหมาป่า" },
 	["Faction.Killer"] = { en = "Killer", th = "ฆาตกร" },
 	["Faction.Fool"] = { en = "Fool", th = "คนบ้า" },
+	["Faction.FireManiac"] = { en = "Fire Maniac", th = "คนคลั่งไฟ" },
 
 	-- Roles (GDD §8, §9)
 	["Role.Wolf.Name"] = { en = "Werewolf", th = "หมาป่า" },
@@ -381,6 +383,26 @@ local Strings: { [string]: Entry } = {
 		en = "By day, sneak up on anyone and steal one random item from them. Role items cannot be stolen.",
 		th = "ตอนกลางวัน ย่องไปขโมยไอเทมสุ่ม 1 ชิ้นจากใครก็ได้ ขโมยไอเทมประจำ role ไม่ได้",
 	},
+	["Role.Police.Name"] = { en = "Police", th = "ตำรวจ" },
+	["Role.Police.Desc"] = {
+		en = "You carry handcuffs. By day, use them on someone: they cannot leave their house the coming night. They do nothing to the werewolf.",
+		th = "มีกุญแจมือ ตอนกลางวันใช้กับใครก็ได้ คนนั้นจะออกจากบ้านไม่ได้ในคืนที่จะถึง ใช้กับหมาป่าไม่ได้ผล",
+	},
+	["Role.Detective.Name"] = { en = "Detective", th = "นักสืบ" },
+	["Role.Detective.Desc"] = {
+		en = "Each morning, look at someone through your magnifying glass: white = they stayed home last night, yellow = they were out. Only you see it.",
+		th = "ทุกเช้าส่องใครก็ได้ด้วยแว่นขยาย สีขาว = เมื่อคืนอยู่บ้าน สีเหลือง = เมื่อคืนไม่อยู่บ้าน เห็นแค่คุณคนเดียว",
+	},
+	["Role.Lover.Name"] = { en = "Lover", th = "คู่รัก" },
+	["Role.Lover.Desc"] = {
+		en = "There are two Lovers. You always see your partner glowing white, wherever they are.",
+		th = "มีคู่รัก 2 คน คุณจะเห็นคู่ของคุณเป็นออร่าสีขาวตลอดเวลา ไม่ว่าเขาจะอยู่ที่ไหน",
+	},
+	["Role.FireManiac.Name"] = { en = "Fire Maniac", th = "คนคลั่งไฟ" },
+	["Role.FireManiac.Desc"] = {
+		en = "You work alone. Pour oil on every house (hold E right next to a wall): once by day, once by night. Oil them all and you win the next morning. Remember which ones you did!",
+		th = "ทำงานคนเดียว ราดน้ำมันให้ครบทุกบ้าน (ยืนชิดกำแพงแล้วกด E ค้าง) กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง ครบทุกหลังแล้วชนะในเช้าวันถัดไป จำให้ได้ว่าราดหลังไหนไปแล้ว!",
+	},
 	["Role.Killer.Name"] = { en = "Killer", th = "ฆาตกร" },
 	["Role.Killer.Desc"] = {
 		en = "You work alone. Your knife kills in one hit: once per day and once per night. You cannot hold a gun.",
@@ -413,6 +435,12 @@ local Strings: { [string]: Entry } = {
 		en = "Once by day, once by night: a body gets up at once; a living person dies the next night.",
 		th = "ใช้ได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง: ศพฟื้นทันที คนที่ยังมีชีวิตจะตายในคืนถัดไป",
 	},
+	["Item.Handcuffs.Name"] = { en = "Handcuffs", th = "กุญแจมือ" },
+	["Item.Handcuffs.Desc"] = { en = "By day, on someone in front of you: locked in their house tonight.", th = "ตอนกลางวัน ใช้กับคนตรงหน้า: คืนนี้เขาออกจากบ้านไม่ได้" },
+	["Item.Magnifier.Name"] = { en = "Magnifying glass", th = "แว่นขยาย" },
+	["Item.Magnifier.Desc"] = { en = "Each morning, on someone in front of you: were they out last night?", th = "ทุกเช้า ใช้กับคนตรงหน้า: เมื่อคืนเขาออกจากบ้านไหม?" },
+	["Item.OilCan.Name"] = { en = "Oil can", th = "ถังน้ำมัน" },
+	["Item.OilCan.Desc"] = { en = "Hold E right next to a house wall to pour oil on it.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
 	["Item.Fish.Name"] = { en = "Fish", th = "ปลา" },
 	["Item.Fish.Desc"] = {
 		en = "Put it on the ground. To the monster it looks like someone standing there.",
@@ -446,6 +474,17 @@ local Strings: { [string]: Entry } = {
 	["Effect.PotionNoTarget"] = { en = "Nobody close enough.", th = "ไม่มีใครอยู่ใกล้พอ" },
 	["Effect.StealNothing"] = { en = "{name} has nothing to steal.", th = "{name} ไม่มีอะไรให้ขโมย" },
 	["Effect.Stolen"] = { en = "You stole: {item}", th = "ขโมยได้: {item}" },
+	["Effect.DayOnly"] = { en = "Only by day.", th = "ใช้ได้เฉพาะตอนกลางวัน" },
+	["Effect.UsedToday"] = { en = "Already used today. Again tomorrow.", th = "วันนี้ใช้ไปแล้ว พรุ่งนี้ใช้ได้อีก" },
+	["Effect.NoTarget"] = { en = "Nobody in front of you.", th = "ไม่มีใครอยู่ตรงหน้า" },
+	["Effect.Cuffed"] = { en = "{name} cannot leave their house tonight.", th = "{name} ออกจากบ้านไม่ได้ในคืนนี้" },
+	["Effect.LockedIn"] = { en = "You are locked in tonight!", th = "คืนนี้คุณถูกขังอยู่ในบ้าน!" },
+	["Effect.NoNightYet"] = { en = "There has been no night yet.", th = "ยังไม่มีคืนไหนผ่านไปเลย" },
+	["Effect.StayedHome"] = { en = "{name} stayed home last night.", th = "{name} ไม่ได้ออกจากบ้านเมื่อคืน" },
+	["Effect.WasOut"] = { en = "{name} was not home last night!", th = "{name} ไม่อยู่บ้านเมื่อคืน!" },
+	["Effect.OilInfo"] = { en = "Hold E right next to a house wall to pour oil.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
+	["Effect.OilPoured"] = { en = "Oil poured.", th = "ราดน้ำมันแล้ว" },
+	["Effect.OilUsed"] = { en = "Once by day and once by night.", th = "ราดได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง" },
 	["Task.Complete"] = { en = "Task complete! +{coins:int} coins at the end of the game", th = "ภารกิจสำเร็จ! +{coins:int} coin ตอนจบเกม" },
 
 	-- Interaction prompts (hold E)
@@ -467,6 +506,7 @@ local Strings: { [string]: Entry } = {
 	["Prompt.WaterPlot"] = { en = "Water carrots", th = "รดน้ำแครอต" },
 	["Prompt.Fish"] = { en = "Fish", th = "ตกปลา" },
 	["Prompt.Steal"] = { en = "Steal", th = "ขโมย" },
+	["Prompt.Oil"] = { en = "Pour oil", th = "ราดน้ำมัน" },
 	["Prompt.DebugHitDoor"] = { en = "[Debug] Hit door", th = "[Debug] ตีประตู" },
 
 	-- Chat channels (GDD §6.2, §12)

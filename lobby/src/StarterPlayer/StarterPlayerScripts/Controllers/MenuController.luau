@@ -453,9 +453,13 @@ local function renderMonster()
 		end
 	end
 
-	-- Passive, abilities (numbers from Config), folklore.
+	-- Passive, abilities (GDD §8.1; numbers from Config), folklore.
 	local sniff, sprint = Config.Wolf.Sniff, Config.Wolf.Sprint
-	setBox("PassivePanel", Loc.format("Monster.Passive"), Loc.format("Monster." .. id .. ".Passive"))
+	setBox(
+		"PassivePanel",
+		Loc.format("Monster.Passive"),
+		Loc.format("Monster." .. id .. ".Passive", { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed })
+	)
 	setBox(
 		"Ability1Panel",
 		Loc.format("Monster.Ability", { n = 1 }),
@@ -464,7 +468,10 @@ local function renderMonster()
 	setBox(
 		"Ability2Panel",
 		Loc.format("Monster.Ability", { n = 2 }),
-		Loc.format("Monster." .. id .. ".Ability2", { duration = sprint.Duration, cooldown = sprint.Cooldown })
+		Loc.format(
+			"Monster." .. id .. ".Ability2",
+			{ speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }
+		)
 	)
 	setBox("FolklorePanel", Loc.format("Monster.Folklore"), Loc.format("Monster." .. id .. ".Folklore"))
 

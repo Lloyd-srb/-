@@ -53,6 +53,20 @@ local HouseService = {}
 HouseService.Assigned = {} :: { [number]: number }
 HouseService.DoorChanged = Signal.new() -- (houseId, door state)
 
+-- Set by HidingService (it requires this module): a hidden body is parked
+-- far away, so it must not count as "out of the house".
+HouseService.IsHidden = function(_memberId: number): boolean
+	return false
+end
+
+-- Police (owner, 18 Nov 2026): cuffed by day = locked in for the coming night.
+local cuffed: { [number]: boolean } = {}
+local lockedTonight: { [number]: boolean } = {}
+-- Detective (owner, 18 Nov 2026): who was out of their house at night.
+local outTonight: { [number]: boolean } = {}
+local outLastNight: { [number]: boolean }? = nil -- nil until a night has passed
+local scanToken = 0
+
 local houses: { [number]: House } = {}
 local houseCount = 0
 local rng = Rng.wrap(Random.new())
@@ -127,6 +141,22 @@ function HouseService.Count(): number
 	return houseCount
 end
 
+-- House ids, sorted.
+function HouseService.Ids(): { number }
+	local ids: { number } = {}
+	for id in houses do
+		table.insert(ids, id)
+	end
+	table.sort(ids)
+	return ids
+end
+
+-- The invisible box filling a house's inside (its walls are just outside it).
+function HouseService.ZoneOf(houseId: number): BasePart?
+	local house = houses[houseId]
+	return if house then house.Zone else nil
+end
+
 -- Which house interior contains this position (nil = outdoors).
 function HouseService.HouseAt(position: Vector3): number?
 	for id, house in houses do
@@ -156,6 +186,59 @@ function HouseService.IsTrespassing(memberId: number): boolean
 	return not (RoundService.IsNight() and HouseService.Assigned[memberId] == houseId)
 end
 
+--------------------------------------------------------------------------------
+-- Police lock and Detective's "was out last night" (owner, 18 Nov 2026)
+--------------------------------------------------------------------------------
+
+-- By day: this member will be locked in their house the coming night.
+function HouseService.Cuff(memberId: number)
+	cuffed[memberId] = true
+end
+
+function HouseService.IsCuffed(memberId: number): boolean
+	return cuffed[memberId] == true
+end
+
+function HouseService.IsLockedTonight(memberId: number): boolean
+	return lockedTonight[memberId] == true and RoundService.IsNight()
+end
+
+-- true = was outside their own house at some point last night; false = stayed
+-- home; nil = no night has passed yet.
+function HouseService.WasOutLastNight(memberId: number): boolean?
+	if not outLastNight then
+		return nil
+	end
+	return outLastNight[memberId] == true
+end
+
+local function scanNight()
+	for _, member in Roster.alive(MatchService.Roster) do
+		if outTonight[member.Id] or HouseService.IsHidden(member.Id) then
+			continue
+		end
+		local root = MatchService.RootOf(member.Id)
+		local home = HouseService.Assigned[member.Id]
+		if not root then
+			continue
+		end
+		if home == nil or HouseService.HouseAt(root.CFrame.Position) ~= home then
+			outTonight[member.Id] = true
+		end
+	end
+end
+
+local function startNightScan()
+	scanToken += 1
+	local token = scanToken
+	task.spawn(function()
+		while token == scanToken and RoundService.IsNight() and not MatchService.Winner do
+			scanNight()
+			task.wait(Config.Abilities.Detective.ScanInterval)
+		end
+	end)
+end
+
 function HouseService.DoorOf(houseId: number): DoorState.Door?
 	local house = houses[houseId]
 	return if house then house.State else nil
@@ -182,11 +265,13 @@ end
 
 -- A wolf swings at whatever is in front of it: finds the closest closed door
 -- within reach and damages it. Returns the house id that was hit, if any.
-function HouseService.HitDoorNear(position: Vector3, look: Vector3, range: number, amount: number): number?
+function HouseService.HitDoorNear(position: Vector3, look: Vector3, range: number, amount: number, attackerId: number?): number?
 	local bestId: number? = nil
 	local bestDistance = range
+	-- A pup locked in by the Police cannot break its own door from inside.
+	local lockedIn = if attackerId and HouseService.IsLockedTonight(attackerId) then HouseService.Assigned[attackerId] else nil
 	for id, house in houses do
-		if house.State.State == "Closed" then
+		if house.State.State == "Closed" and id ~= lockedIn then
 			local offset = house.Door.CFrame.Position - position
 			local flat = Vector3.new(offset.X, 0, offset.Z)
 			local distance = flat.Magnitude
@@ -248,6 +333,11 @@ local function onOpenPrompt(player: Player, house: House)
 	if RoundService.IsNight() and HouseService.Assigned[member.Id] ~= house.Id then
 		return
 	end
+	-- Locked in by the Police tonight (owner, 18 Nov 2026).
+	if HouseService.IsLockedTonight(member.Id) then
+		Net.fire(player, "Effect", { Kind = "LockedIn" })
+		return
+	end
 	local root = MatchService.RootOf(member.Id)
 	if not root or (root.CFrame.Position - house.Door.CFrame.Position).Magnitude > Config.Human.InteractDistance + 4 then
 		return
@@ -278,6 +368,15 @@ local function beginNight()
 		DoorState.beginNight(house.State)
 		applyDoor(house, false)
 	end
+	-- Today's handcuffs lock people in tonight (a cuffed main wolf: no effect).
+	lockedTonight = {}
+	for memberId in cuffed do
+		local member = MatchService.Roster.Members[memberId]
+		if member and member.Alive and not (Roster.isWolfSide(member) and not member.IsPup) then
+			lockedTonight[memberId] = true
+		end
+	end
+	table.clear(cuffed)
 
 	-- Everyone in the village gets a house. Players in the forest stay there.
 	-- The wolf side always gets one too (their morning spot), but appears at the plaza.
@@ -285,7 +384,12 @@ local function beginNight()
 	local ids: { number } = {}
 	for _, member in Roster.alive(roster) do
 		local root = MatchService.RootOf(member.Id)
-		if member.IsBot or Roster.isWolfSide(member) or (root and Zones.isVillage(root.CFrame.Position)) then
+		if
+			member.IsBot
+			or Roster.isWolfSide(member)
+			or lockedTonight[member.Id]
+			or (root and Zones.isVillage(root.CFrame.Position))
+		then
 			table.insert(ids, member.Id)
 		end
 	end
@@ -295,7 +399,9 @@ local function beginNight()
 		local houseId = HouseService.Assigned[member.Id]
 		local house = if houseId then houses[houseId] else nil
 		local isWolfSide = Roster.isWolfSide(member)
-		if isWolfSide then
+		if isWolfSide and lockedTonight[member.Id] and house then
+			warp(member.Id, Zones.worldCFrame(house.InsideSpawn)) -- a locked-in pup spends the night at home
+		elseif isWolfSide then
 			local spawn = marker(if member.IsPup then "PupSpawn" else "WolfSpawn")
 			if spawn then
 				warp(member.Id, Zones.worldCFrame(spawn))
@@ -309,12 +415,19 @@ local function beginNight()
 			Net.fire(player, "HouseAssigned", if house and not isWolfSide then house.Id else 0)
 		end
 	end
+
+	outTonight = {}
+	startNightScan()
 end
 
 local function beginDay(state: PhaseMachine.PhaseState)
 	if state.Day <= 1 then
 		return
 	end
+	scanToken += 1
+	outLastNight = outTonight
+	outTonight = {}
+	lockedTonight = {}
 	for _, house in houses do
 		DoorState.beginDay(house.State)
 		applyDoor(house, false)
@@ -422,6 +535,10 @@ function HouseService.Start()
 				end
 			end)
 		end
+	end)
+	MatchService.MatchStarted:Connect(function()
+		table.clear(cuffed)
+		lockedTonight, outTonight, outLastNight = {}, {}, nil
 	end)
 	MatchService.SyncRequested:Connect(function(player: Player)
 		local member = MatchService.MemberOf(player)

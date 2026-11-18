@@ -50,6 +50,7 @@ RoleIcons.RingColors = {
 	Wolf = rgb(255, 221, 51),
 	Killer = rgb(230, 70, 80),
 	Fool = rgb(255, 120, 200),
+	FireManiac = rgb(255, 130, 40),
 } :: { [string]: Color3 }
 
 -- A plain round face: shoulders, head, eyes, cheeks, mouth.
@@ -249,6 +250,56 @@ RoleIcons.Designs = {
 		{ X = 81, Y = 86, W = 24, H = 22, R = 0.45, Color = rgb(175, 145, 95) },
 		{ X = 81, Y = 74, W = 9, H = 5, R = 0.3, Color = rgb(135, 105, 65) },
 		{ X = 81, Y = 87, W = 6, H = 6, R = 0.5, Color = Palette.Gold },
+	}),
+
+	-- Police: navy peaked cap with a gold badge, navy shirt, chest badge.
+	Police = join({ background(rgb(70, 110, 185)) }, face(rgb(30, 45, 100)), {
+		{ X = 50, Y = 31, W = 56, H = 20, R = 0.35, Color = rgb(28, 38, 85) },
+		{ X = 50, Y = 38, W = 56, H = 4, R = 0, Color = rgb(15, 20, 50) },
+		{ X = 50, Y = 42, W = 60, H = 6, R = 0.5, Color = rgb(15, 20, 50) },
+		{ X = 50, Y = 30, W = 8, H = 8, R = 0.15, Rot = 45, Color = Palette.Gold, Stroke = { Color = Palette.GoldDark, Width = 1 } },
+		{ X = 36, Y = 90, W = 8, H = 10, R = 0.3, Color = Palette.Gold, Stroke = { Color = Palette.GoldDark, Width = 1 } },
+		{ X = 50, Y = 86, W = 6, H = 6, R = 0.1, Rot = 45, Color = rgb(20, 28, 70) },
+	}),
+
+	-- Detective: brown hat, trench coat collar, magnifying glass.
+	Detective = join({ background(rgb(120, 98, 75)) }, face(rgb(195, 165, 115)), {
+		{ X = 38, Y = 86, W = 14, H = 14, R = 0.1, Rot = 45, Color = rgb(165, 135, 88) },
+		{ X = 62, Y = 86, W = 14, H = 14, R = 0.1, Rot = 45, Color = rgb(165, 135, 88) },
+		{ X = 50, Y = 39, W = 76, H = 8, R = 0.5, Color = rgb(105, 75, 48) },
+		{ X = 50, Y = 28, W = 46, H = 20, R = 0.35, Color = rgb(120, 88, 55) },
+		{ X = 50, Y = 34, W = 46, H = 4, R = 0, Color = rgb(60, 40, 25) },
+		{ X = 79, Y = 88, W = 5, H = 16, R = 0.3, Rot = -35, Color = rgb(110, 75, 40) },
+		{ X = 71, Y = 75, W = 18, H = 18, R = 0.5, T = 0.35, Color = rgb(190, 230, 255), Stroke = { Color = rgb(90, 90, 100), Width = 2.5 } },
+	}),
+
+	-- Lover: pink, a big smile and a heart.
+	Lover = join({ background(rgb(255, 165, 200)) }, face(rgb(230, 90, 130), { MouthW = 13 }), {
+		{ X = 50, Y = 37, W = 52, H = 12, R = 0.45, Color = rgb(150, 85, 55) },
+		{ X = 44, Y = 22, W = 14, H = 14, R = 0.5, Color = rgb(235, 45, 85) },
+		{ X = 56, Y = 22, W = 14, H = 14, R = 0.5, Color = rgb(235, 45, 85) },
+		{ X = 50, Y = 27, W = 13, H = 13, R = 0.1, Rot = 45, Color = rgb(235, 45, 85) },
+		{ X = 34, Y = 66, W = 9, H = 6, R = 0.5, T = 0.1, Color = rgb(255, 120, 150) },
+		{ X = 66, Y = 66, W = 9, H = 6, R = 0.5, T = 0.1, Color = rgb(255, 120, 150) },
+	}),
+
+	-- Fire Maniac: flames behind, wide eyes, a wild grin, a red oil can.
+	FireManiac = join({
+		background(rgb(95, 30, 22)),
+		{ X = 28, Y = 32, W = 18, H = 18, R = 0.2, Rot = 45, Color = rgb(255, 120, 30) },
+		{ X = 72, Y = 32, W = 18, H = 18, R = 0.2, Rot = 45, Color = rgb(255, 120, 30) },
+		{ X = 50, Y = 22, W = 24, H = 24, R = 0.2, Rot = 45, Color = rgb(255, 90, 20) },
+		{ X = 50, Y = 27, W = 12, H = 12, R = 0.2, Rot = 45, Color = rgb(255, 210, 60) },
+	}, face(rgb(70, 60, 55), { NoEyes = true, NoMouth = true }), {
+		{ X = 50, Y = 38, W = 50, H = 10, R = 0.4, Color = rgb(60, 35, 25) },
+		{ X = 40, Y = 56, W = 11, H = 11, R = 0.5, Color = Palette.White, Stroke = { Color = Palette.Ink, Width = 1 } },
+		{ X = 60, Y = 56, W = 11, H = 11, R = 0.5, Color = Palette.White, Stroke = { Color = Palette.Ink, Width = 1 } },
+		{ X = 40, Y = 56, W = 3, H = 3, R = 0.5, Color = Palette.Ink },
+		{ X = 60, Y = 56, W = 3, H = 3, R = 0.5, Color = Palette.Ink },
+		{ X = 50, Y = 70, W = 18, H = 6, R = 0.5, Color = Palette.White, Stroke = { Color = Palette.Ink, Width = 1 } },
+		{ X = 63, Y = 65, W = 7, H = 3, R = 0.5, T = 0.4, Color = rgb(60, 50, 50) },
+		{ X = 86, Y = 76, W = 4, H = 9, R = 0.2, Rot = 30, Color = rgb(150, 150, 160) },
+		{ X = 79, Y = 87, W = 14, H = 17, R = 0.15, Color = rgb(200, 55, 40), Stroke = { Color = rgb(120, 30, 20), Width = 1 } },
 	}),
 
 	-- Black hood, scarf over the mouth, red eyes, knife.

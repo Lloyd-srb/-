@@ -42,7 +42,7 @@ test("role screen: options are private, bad picks are rejected, all confirmed = 
 	-- Everyone gets their own option list.
 	for _, id in { 1, 2, 3 } do
 		local options = server.last("RoleOptions", id)[1]
-		expect(#options.Usable).toBe(12)
+		expect(#options.Usable).toBe(16)
 		expect(options.PickCount).toBe(3)
 		expect(table.find(options.Usable, "Wolf")).toBeNil() -- the wolf can never be picked
 	end
@@ -128,7 +128,8 @@ test("an 8-player match: 1 wolf, at most 4 special roles, at most one of Killer 
 	end
 	expect(total).toBe(8)
 	expect(counts.Wolf).toBe(1)
-	expect(special <= 4).toBe(true)
-	expect((counts.Killer or 0) + (counts.Fool or 0) <= 1).toBe(true)
+	-- A Lover's partner may come from the villagers (no slot).
+	expect(special - (if counts.Lover == 2 then 1 else 0) <= 4).toBe(true)
+	expect((counts.Killer or 0) + (counts.Fool or 0) + (counts.FireManiac or 0) <= 1).toBe(true)
 	finish(server, svc)
 end)

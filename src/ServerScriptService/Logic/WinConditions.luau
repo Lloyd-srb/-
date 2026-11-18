@@ -8,12 +8,15 @@
 	          OR the game ends by wolf parity while the living Killer has more
 	          kills than the wolf side.
 	Fool    : is voted out (everyone else loses).
+	FireManiac: has poured oil on every house; wins the next morning if alive
+	          (owner, 18 Nov 2026; checked by ArsonService). Like the Fool, a
+	          living Fire Maniac does not stop the village from winning.
 
 	GDD examples: 2 wolves + 2 villagers + killer -> continue;
 	              2 wolves + 1 villager + killer -> over, compare kill counts.
 ]]
 
-export type Winner = "Village" | "Wolf" | "Killer" | "Fool"
+export type Winner = "Village" | "Wolf" | "Killer" | "Fool" | "FireManiac"
 
 export type Snapshot = {
 	WolfSideAlive: number, -- wolf + pup
@@ -66,6 +69,11 @@ function WinConditions.onWolfLeft(pupAlive: boolean): Winner?
 		return "Village"
 	end
 	return nil
+end
+
+-- Morning check for the Fire Maniac: every house oiled, and still alive.
+function WinConditions.fireManiacWins(oiled: number, houses: number, alive: boolean): boolean
+	return alive and houses > 0 and oiled >= houses
 end
 
 function WinConditions.didWin(faction: string, winner: Winner): boolean

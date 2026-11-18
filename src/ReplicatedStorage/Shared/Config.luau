@@ -15,11 +15,12 @@
 local RunService = game:GetService("RunService")
 
 -- Role ids: "Wolf", "Villager", "Sheriff", "Doctor", "Seer", "Chief",
--- "Bodyguard", "Priest", "Engineer", "PlagueDoctor", "Thief", "Killer", "Fool"
+-- "Bodyguard", "Priest", "Engineer", "PlagueDoctor", "Thief", "Police",
+-- "Detective", "Lover", "Killer", "Fool", "FireManiac"
 -- (keys of Config.Roles).
 export type RoleId = string
 
--- "Village" | "Wolf" | "Killer" | "Fool"
+-- "Village" | "Wolf" | "Killer" | "Fool" | "FireManiac"
 export type Faction = string
 
 
@@ -39,6 +40,7 @@ export type RoleDef = {
 	RobuxPrice: number, -- also the Diamond price (§13: same number)
 	RequiredLevel: number,
 	Free: boolean,
+	Copies: number?, -- how many players can have it in one match (default 1; Lover 2)
 }
 
 -- How many of each kind of role a match of N players has (see Config.Match).
@@ -102,21 +104,28 @@ Config.RoleSelect = {
 
 Config.Roles = {
 	-- [owner] 18 Nov 2026: every role you buy costs the same as the most
-	-- expensive one (5,000 coins / 399 R$ or Diamonds). Level gates unchanged.
+	-- expensive one (5,000 coins / 399 R$ or Diamonds), and no role needs a
+	-- level any more (RequiredLevel 1 everywhere).
 	Wolf = { Faction = "Wolf", Kind = "Wolf", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Villager = { Faction = "Village", Kind = "Filler", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Sheriff = { Faction = "Village", Kind = "Special", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
 	Doctor = { Faction = "Village", Kind = "Special", CoinPrice = 0, RobuxPrice = 0, RequiredLevel = 1, Free = true },
-	Chief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 5, Free = false },
-	Bodyguard = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 5, Free = false },
-	Seer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
-	Priest = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
-	Engineer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
-	-- [owner] 18 Nov 2026 new roles; level [ASSUMED] like the other tier-2 roles.
-	PlagueDoctor = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
-	Thief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 10, Free = false },
-	Killer = { Faction = "Killer", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
-	Fool = { Faction = "Fool", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 20, Free = false },
+	Chief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Bodyguard = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Seer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Priest = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Engineer = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	-- [owner] 18 Nov 2026 new roles.
+	PlagueDoctor = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Thief = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Police = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Detective = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	-- Two players share this role (Copies = 2); a lone Lover gets a partner
+	-- from the players who would have been Villagers.
+	Lover = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false, Copies = 2 },
+	FireManiac = { Faction = "FireManiac", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Killer = { Faction = "Killer", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Fool = { Faction = "Fool", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
 } :: { [RoleId]: RoleDef }
 
 -- Display / iteration order (role screen, scoreboard).
@@ -131,8 +140,12 @@ Config.RoleOrder = {
 	"Engineer",
 	"PlagueDoctor",
 	"Thief",
+	"Police",
+	"Detective",
+	"Lover",
 	"Killer",
 	"Fool",
+	"FireManiac",
 } :: { RoleId }
 
 --------------------------------------------------------------------------------
@@ -409,6 +422,32 @@ Config.Abilities = {
 		StealsPerDay = 1, -- [ASSUMED] the owner gave no limit
 		StealHold = 1.5, -- [ASSUMED]
 	},
+	-- [owner] 18 Nov 2026: handcuffs. By day, use them on someone: that person
+	-- cannot leave their house the coming night (cannot open their own door).
+	-- No effect on the main wolf; works on the pup.
+	Police = {
+		UsesPerDay = 1, -- [ASSUMED] the owner gave no limit
+		Reach = 7, -- [ASSUMED]
+		MinDot = 0, -- [ASSUMED] the person must be in front
+	},
+	-- [owner] 18 Nov 2026: magnifying glass. Each morning, use it on someone:
+	-- white aura = stayed home last night, yellow = was out. Only the
+	-- Detective sees it; it fades after 10 s. The same person again is fine.
+	Detective = {
+		UsesPerDay = 1, -- [owner] "every morning"
+		AuraSeconds = 10, -- [owner]
+		Reach = 7, -- [ASSUMED]
+		MinDot = 0, -- [ASSUMED]
+		ScanInterval = 1, -- [ASSUMED] how often the night is checked (who is out of their house)
+	},
+	-- [owner] 18 Nov 2026: oil every house (all different) and win the next
+	-- morning. Hold E right next to a house wall; 1 by day + 1 by night.
+	FireManiac = {
+		UsesPerPhase = 1, -- [owner]
+		Hold = 2, -- [ASSUMED] seconds holding E
+		WallReach = 4, -- [ASSUMED] studs from the wall for the prompt to show
+		PromptSpacing = 7, -- [ASSUMED] studs between prompts along a wall
+	},
 	Killer = {
 		KillsPerDay = 1, -- [GDD]
 		KillsPerNight = 1, -- [GDD]
@@ -449,6 +488,10 @@ Config.Items = {
 	Flashlight = { Range = 45, Angle = 60, Brightness = 2 }, -- [ASSUMED]
 	-- [owner] 18 Nov 2026: the Plague Doctor's red potion (a role item: never dropped or stolen).
 	Potion = { Uses = 3, RoleItem = true },
+	-- [owner] 18 Nov 2026: role items of the Police, the Detective and the Fire Maniac.
+	Handcuffs = { RoleItem = true },
+	Magnifier = { RoleItem = true },
+	OilCan = { RoleItem = true },
 	-- [owner] 18 Nov 2026: from fishing. Put it on the ground: at night the monster
 	-- side sees a red aura there, as if a person were standing on that spot.
 	Fish = { Uses = 1 },
@@ -467,6 +510,9 @@ Config.ItemLook = {
 	Cross = { Color = Color3.fromRGB(240, 200, 70), Size = Vector3.new(0.3, 1.4, 0.3) },
 	Flashlight = { Color = Color3.fromRGB(240, 210, 60), Size = Vector3.new(0.4, 0.4, 1.2) },
 	Potion = { Color = Color3.fromRGB(210, 30, 40), Size = Vector3.new(0.6, 1, 0.6) }, -- red bottle
+	Handcuffs = { Color = Color3.fromRGB(190, 195, 205), Size = Vector3.new(0.9, 0.2, 0.5) },
+	Magnifier = { Color = Color3.fromRGB(150, 110, 60), Size = Vector3.new(0.3, 1.2, 0.3) },
+	OilCan = { Color = Color3.fromRGB(200, 60, 40), Size = Vector3.new(0.9, 1.1, 0.6) },
 	Fish = { Color = Color3.fromRGB(120, 170, 210), Size = Vector3.new(0.5, 0.4, 1.4) },
 }
 
@@ -768,6 +814,9 @@ Config.Highlights = {
 	Sniff = Color3.fromRGB(255, 120, 40), -- §8.1
 	Howl = Color3.fromRGB(255, 40, 40), -- §8.2
 	Seer = Color3.fromRGB(255, 255, 255), -- §9
+	StayedHome = Color3.fromRGB(255, 255, 255), -- [owner] Detective: was home last night
+	WasOut = Color3.fromRGB(255, 220, 40), -- [owner] Detective: was out last night
+	Lover = Color3.fromRGB(255, 255, 255), -- [owner] each Lover sees the other
 }
 
 --------------------------------------------------------------------------------
@@ -843,6 +892,9 @@ Config.Sounds = {
 	SpinTick = 0,
 	SpinWin = 0,
 	PotionUse = 0, -- the Plague Doctor's potion
+	Cuff = 0, -- the Police locks someone in
+	Inspect = 0, -- the Detective's magnifying glass
+	OilPour = 0, -- the Fire Maniac pours oil on a house
 	Steal = 0, -- the Thief takes something
 	WaterFetch = 0, -- filling the bucket at the stream
 	FishCatch = 0, -- a fish bites
@@ -906,6 +958,10 @@ Config.Products = {
 		RoleEngineer = 0,
 		RolePlagueDoctor = 0,
 		RoleThief = 0,
+		RolePolice = 0,
+		RoleDetective = 0,
+		RoleLover = 0,
+		RoleFireManiac = 0,
 		RoleKiller = 0,
 		RoleFool = 0,
 		SkinGunGold = 0,

@@ -194,6 +194,7 @@ end
 
 function HidingService.Start()
 	Net.on("HideExit", onExit, 6, 5)
+	HouseService.IsHidden = HidingService.IsHidden -- a hidden body is parked far away, not "out"
 
 	RoundService.PhaseStarted:Connect(function(phase: PhaseMachine.PhaseState)
 		if phase.Phase == "Night" then

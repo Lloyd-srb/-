@@ -25,6 +25,8 @@ local function summarize(result)
 	return counts, total
 end
 
+-- Special slots used. A second Lover may be a partner taken from the
+-- villagers (no slot), so a Lover pair is counted as one slot at least.
 local function specialCount(counts)
 	local n = 0
 	for roleId, count in counts do
@@ -33,6 +35,10 @@ local function specialCount(counts)
 		end
 	end
 	return n
+end
+
+local function slotsUsed(counts)
+	return specialCount(counts) - (if counts.Lover == 2 then 1 else 0)
 end
 
 test("Casual, 12 new players: 1 wolf, unique Sheriff/Doctor, the rest villagers", function()
@@ -61,14 +67,19 @@ test("Casual, everyone owns everything: no duplicates, at most 6 special roles",
 		local counts, total = summarize(result)
 		expect(total).toBe(12)
 		expect(counts.Wolf).toBe(1)
-		expect(specialCount(counts)).toBe(6)
+		local slots = slotsUsed(counts)
+		expect(slots == 5 or slots == 6).toBe(true) -- 5 + a Lover pair from picks = 6 slots
+		expect(specialCount(counts) >= 6 and specialCount(counts) <= 7).toBe(true)
 		for roleId, count in counts do
-			if roleId ~= "Villager" then
+			if roleId == "Lover" then
+				expect(count).toBe(2) -- Lovers always come in pairs
+			elseif roleId ~= "Villager" then
 				expect(count).toBe(1)
 			end
 		end
-		-- Killer and Fool do not use special slots; they replace villagers.
-		expect((counts.Killer or 0) + (counts.Fool or 0) + (counts.Villager or 0)).toBe(5)
+		-- Solo roles do not use special slots; they replace villagers.
+		local solo = (counts.Killer or 0) + (counts.Fool or 0) + (counts.FireManiac or 0)
+		expect(solo + (counts.Villager or 0) + specialCount(counts)).toBe(11)
 	end
 end)
 
@@ -88,7 +99,7 @@ test("roles follow the player count: 8 to 12", function()
 			local counts, total = summarize(result)
 			expect(total).toBe(players)
 			expect(counts.Wolf).toBe(1)
-			expect(specialCount(counts) <= special).toBe(true)
+			expect(slotsUsed(counts) <= special).toBe(true)
 			local solo = (counts.Killer or 0) + (counts.Fool or 0)
 			-- Killer and Fool together only with 11-12 players (owner, 17 Nov 2026).
 			expect(solo).toBe(if players >= 11 then 2 else 1)
@@ -156,12 +167,38 @@ test("forced debug role is honoured", function()
 	expect(result[1] ~= "Wolf" and result[3] ~= "Wolf").toBe(true)
 end)
 
-test("usableRoles applies ownership and level gates", function()
-	local usable = RoleAssignment.usableRoles({ Chief = true, Killer = true }, 5)
+test("usableRoles: owned roles only; no level gates any more (owner, 18 Nov 2026)", function()
+	local usable = RoleAssignment.usableRoles({ Chief = true, Killer = true }, 1)
 	expect(usable.Villager).toBe(true)
 	expect(usable.Chief).toBe(true)
-	expect(usable.Killer).toBeNil() -- owned but needs level 20
+	expect(usable.Killer).toBe(true) -- level 1 is enough now
 	expect(usable.Seer).toBeNil() -- not owned
+	for _, def in Config.Roles do
+		expect(def.RequiredLevel).toBe(1)
+	end
+end)
+
+test("Lovers: two can pick it; a lone Lover gets a partner from the would-be Villagers", function()
+	for seed = 1, 100 do
+		-- Only player 1 picks Lover (others: starter roles).
+		local list = candidates(10, { "Villager", "Sheriff", "Doctor" }, STARTER)
+		list[1] = { Id = 1, Picks = { "Lover", "Sheriff", "Doctor" }, Usable = ALL }
+		local result = RoleAssignment.assign(list, RoleAssignment.composition(10), Rng.seeded(seed), { [2] = "Wolf", [1] = "Lover" })
+		local counts = summarize(result)
+		expect(counts.Lover).toBe(2)
+		expect(result[1]).toBe("Lover")
+		expect(counts.Wolf).toBe(1)
+		expect((counts.Sheriff or 0) <= 1 and (counts.Doctor or 0) <= 1).toBe(true)
+	end
+	-- Everybody picks Lover: never more than two.
+	for seed = 1, 50 do
+		local result = RoleAssignment.assign(candidates(12, { "Lover", "Seer", "Chief" }, ALL), RoleAssignment.composition(12), Rng.seeded(seed))
+		local counts = summarize(result)
+		expect(counts.Lover).toBe(2)
+	end
+	-- Nobody picks it: no Lovers at all.
+	local none = summarize(RoleAssignment.assign(candidates(12, { "Villager", "Sheriff", "Doctor" }, STARTER), RoleAssignment.composition(12), Rng.seeded(3)))
+	expect(none.Lover).toBeNil()
 end)
 
 test("validatePicks rejects bad input", function()

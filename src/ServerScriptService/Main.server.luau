@@ -25,6 +25,7 @@ local ordered: { Service } = {
 	require(Services.WolfService),
 	require(Services.RoleService),
 	require(Services.InventoryService),
+	require(Services.ArsonService),
 	require(Services.TaskService),
 	require(Services.GhostService),
 	require(Services.ChatService),

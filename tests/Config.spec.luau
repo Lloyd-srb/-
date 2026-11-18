@@ -5,7 +5,7 @@ test("every role in RoleOrder is defined and Wolf is not pickable", function()
 		expect(Config.Roles[roleId] ~= nil).toBe(true)
 		expect(roleId ~= "Wolf").toBe(true)
 	end
-	expect(#Config.RoleOrder).toBe(12)
+	expect(#Config.RoleOrder).toBe(16)
 end)
 
 test("starter roles are free", function()
@@ -14,7 +14,7 @@ test("starter roles are free", function()
 	end
 end)
 
-test("every paid role costs the same: the old top price (owner, 18 Nov 2026); levels stay", function()
+test("every paid role costs the same: the old top price; no level gates (owner, 18 Nov 2026)", function()
 	local paid = 0
 	for roleId, def in Config.Roles do
 		if not def.Free and roleId ~= "Wolf" then
@@ -23,9 +23,9 @@ test("every paid role costs the same: the old top price (owner, 18 Nov 2026); le
 			expect(def.RobuxPrice).toBe(399)
 		end
 	end
-	expect(paid).toBe(9)
-	for roleId, level in { Chief = 5, Bodyguard = 5, Seer = 10, Priest = 10, Engineer = 10, Killer = 20, Fool = 20 } do
-		expect(Config.Roles[roleId].RequiredLevel).toBe(level)
+	expect(paid).toBe(13)
+	for _, def in Config.Roles do
+		expect(def.RequiredLevel).toBe(1)
 	end
 	-- Every paid role can be bought with Robux once its product id is set.
 	for roleId, def in Config.Roles do

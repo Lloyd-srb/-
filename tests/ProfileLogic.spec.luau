@@ -84,14 +84,11 @@ test("match grant: coins, EXP, mastery diamonds and pass EXP in one go", functio
 	expect(kinds(rewards)).toEqual({ "Title:PassFree" })
 end)
 
-test("shop: roles need the coins, the level, and are bought once", function()
+test("shop: roles need the coins (no level), and are bought once", function()
 	local data = fresh()
 	data.Coins = 5300
+	-- No level needed any more (owner, 18 Nov 2026).
 	local ok, reason = ProfileLogic.buy(data, "Role", "Chief", "Coins")
-	expect(ok).toBe(false)
-	expect(reason).toBe("Level") -- level 5 needed
-	data.Exp = Config.PlayerLevel.ExpPerLevel * 4 -- level 5
-	ok = ProfileLogic.buy(data, "Role", "Chief", "Coins")
 	expect(ok).toBe(true)
 	expect(data.Coins).toBe(300)
 	expect(data.Roles.Chief).toBe(true)

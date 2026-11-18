@@ -32,7 +32,7 @@ local function shopResult(server, id)
 	return server.last("ShopResult", id)[1]
 end
 
-test("lobby shop: wallet sent; a role for coins; level gate; Robux opens Roblox's window", function()
+test("lobby shop: wallet sent; a role for coins (no level needed); Robux opens Roblox's window", function()
 	local server = open(1)
 	local first = view(server, 1)
 	expect(first.Coins).toBe(0)
@@ -40,12 +40,7 @@ test("lobby shop: wallet sent; a role for coins; level gate; Robux opens Roblox'
 	change(server, 1, function(data)
 		data.Coins = 5300
 	end)
-	server.fireServer("ShopBuy", 1, "Role", "Chief", "Coins")
-	expect(shopResult(server, 1).Reason).toBe("Level")
-	change(server, 1, function(data)
-		data.Exp = 1200 -- level 5
-	end)
-	server.fireServer("ShopBuy", 1, "Role", "Chief", "Coins")
+	server.fireServer("ShopBuy", 1, "Role", "Chief", "Coins") -- level 1 is enough (owner, 18 Nov 2026)
 	local result = shopResult(server, 1)
 	expect(result.Ok).toBe(true)
 	local now = view(server, 1)

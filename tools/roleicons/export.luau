@@ -105,9 +105,9 @@ out.monster = {
 		{ text("Monster.Stat.Vision"), monster.Stats.Vision },
 	},
 	boxes = {
-		{ text("Monster.Passive"), text("Monster." .. monster.Id .. ".Passive") },
+		{ text("Monster.Passive"), text("Monster." .. monster.Id .. ".Passive", { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed }) },
 		{ text("Monster.Ability", { n = 1 }), text("Monster." .. monster.Id .. ".Ability1", { duration = sniff.Duration, cooldown = sniff.Cooldown }) },
-		{ text("Monster.Ability", { n = 2 }), text("Monster." .. monster.Id .. ".Ability2", { duration = sprint.Duration, cooldown = sprint.Cooldown }) },
+		{ text("Monster.Ability", { n = 2 }), text("Monster." .. monster.Id .. ".Ability2", { speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }) },
 		{ text("Monster.Folklore"), text("Monster." .. monster.Id .. ".Folklore") },
 	},
 	locked = Config.MonsterLockedSlots,

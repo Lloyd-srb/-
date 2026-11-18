@@ -186,7 +186,8 @@ local function onEffect(data: any)
 	elseif data.Kind == "Stolen" and type(data.Item) == "string" and Loc.has("Item." .. data.Item .. ".Name") then
 		showToast(Loc.format("Effect.Stolen", { item = Loc.format("Item." .. data.Item .. ".Name") }))
 	elseif type(data.Kind) == "string" and Loc.has("Effect." .. data.Kind) then
-		-- Boots, Poisoned, PotionRevived, PotionUsed, PotionNoTarget, StealNothing
+		-- Boots, Poisoned, PotionRevived, PotionUsed, PotionNoTarget, StealNothing,
+		-- Cuffed, LockedIn, StayedHome, WasOut, NoNightYet, Oil*, DayOnly, ...
 		local name = if type(data.Name) == "string" then data.Name else ""
 		showToast(Loc.format("Effect." .. data.Kind, { name = name }))
 	end

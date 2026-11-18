@@ -315,6 +315,13 @@ local function finish(winner: string)
 	Net.fireAll("GameOver", { Winner = winner, EndingKey = "Ending." .. winner })
 end
 
+-- A win that is not about who is alive (the Fire Maniac's oil, owner 18 Nov 2026).
+function MatchService.DeclareWinner(winner: string)
+	if MatchService.Started then
+		finish(winner)
+	end
+end
+
 function MatchService.CheckWin()
 	if MatchService.Winner or not MatchService.Started then
 		return

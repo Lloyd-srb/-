@@ -3,7 +3,7 @@
 	Rewards — pure end-of-match reward maths (GDD §13).
 
 	Per night survived: 20 coins / 50 EXP. Win = full, lose = half.
-	Killer / Fool win: +50%. Each finished task: +20 coins (win or lose).
+	Killer / Fool / Fire Maniac win: +50%. Each finished task: +20 coins (win or lose).
 	MVP (most likes): +20% on the whole reward.
 	Season Pass EXP: 150 win / 50 lose. Mastery points: 2 win / 1 lose.
 ]]
@@ -32,7 +32,7 @@ local Rewards = {}
 function Rewards.compute(input: Input): Output
 	local cfg = Config.Rewards
 	local multiplier = if input.Won then 1 else cfg.LoseMultiplier
-	if input.Won and (input.Faction == "Killer" or input.Faction == "Fool") then
+	if input.Won and (input.Faction == "Killer" or input.Faction == "Fool" or input.Faction == "FireManiac") then
 		multiplier *= cfg.SoloWinMultiplier
 	end
 

@@ -19,7 +19,7 @@ Tutorial.Pages = {
 	{ Key = "Tutorial.2", Icons = { "Chief", "Villager", "Sheriff" } }, -- the day, tasks, the meeting
 	{ Key = "Tutorial.3", Icons = { "Wolf", "Pup" } }, -- the night
 	{ Key = "Tutorial.4", Icons = { "Doctor", "Seer", "Bodyguard", "Priest", "Engineer" } }, -- roles
-	{ Key = "Tutorial.5", Icons = { "Killer", "Fool" } }, -- special roles (Killer, Fool): not on your side
+	{ Key = "Tutorial.5", Icons = { "Killer", "Fool", "FireManiac" } }, -- special roles (Killer, Fool, Fire Maniac): not on your side
 	{ Key = "Tutorial.6", Icons = { "Villager", "Sheriff", "Doctor" } }, -- survive!
 } :: { Page }
 
