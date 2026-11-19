@@ -463,10 +463,10 @@ local Strings: { [string]: Entry } = {
 	["Task.PickApples"] = { en = "Pick apples in the forest ({done:int}/{total:int})", th = "เก็บแอปเปิ้ลในป่า ({done:int}/{total:int})" },
 	["Task.ChopTrees"] = { en = "Chop trees ({done:int}/{total:int})", th = "ตัดต้นไม้ ({done:int}/{total:int})" },
 	["Task.WaterCarrots"] = {
-		en = "Fetch water at the stream, then water the carrots ({done:int}/{total:int})",
-		th = "ตักน้ำที่ลำธาร แล้วรดน้ำแปลงแครอต ({done:int}/{total:int})",
+		en = "Fetch water at the river pier, then water the carrots ({done:int}/{total:int})",
+		th = "ตักน้ำที่ท่าน้ำริมแม่น้ำ แล้วรดน้ำแปลงแครอต ({done:int}/{total:int})",
 	},
-	["Task.Fishing"] = { en = "Catch a fish at the stream", th = "ตกปลาที่ลำธาร" },
+	["Task.Fishing"] = { en = "Catch a fish at the river pier", th = "ตกปลาที่ท่าน้ำริมแม่น้ำ" },
 	["Hud.Task"] = { en = "Task: {task}", th = "ภารกิจ: {task}" },
 	["Hud.TaskDone"] = { en = "Task done", th = "ทำภารกิจแล้ว" },
 	["Effect.Gained"] = { en = "You got: {item}", th = "ได้รับ: {item}" },

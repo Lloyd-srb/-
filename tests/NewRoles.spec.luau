@@ -352,23 +352,48 @@ end)
 -- The map and the shop
 --------------------------------------------------------------------------------
 
-test("map: a stream with a bridge in the village's top-right corner, water and fishing spots on it", function()
+test("map: a wide river in the top-right with a pier; no trees in the water; the shore is walled (owner, 19 Nov 2026)", function()
 	local server = startServer({ Players = {}, Debug = { Enabled = false } })
 	local CollectionService = server.game:GetService("CollectionService")
+	local cfg = server.Config.Map.River
 	local water = CollectionService:GetTagged("WaterSpot")
 	local fishing = CollectionService:GetTagged("FishingSpot")
 	expect(#water).toBe(1)
 	expect(#fishing).toBe(1)
 	local map = server.game.Workspace.Map
-	local stream = map:FindFirstChild("Stream", true)
-	expect(stream ~= nil).toBe(true)
-	expect(stream:FindFirstChild("Bridge", true) ~= nil).toBe(true)
-	local deck = stream:FindFirstChild("Deck", true)
-	expect(deck.CanCollide).toBe(true)
-	-- Top right of the village: +X and -Z of the centre (the map's "north" is -Z).
+	local river = map:FindFirstChild("River")
+	expect(river ~= nil).toBe(true)
+	expect(river.Pier.Deck.CanCollide).toBe(true)
+	-- The river's centre is far out to the north-east; the shore is ShoreDistance from the plaza.
+	local centre = Vector3.new(math.sin(cfg.Angle), 0, -math.cos(cfg.Angle)) * (cfg.ShoreDistance + cfg.Curve)
+	local function inRiver(position)
+		return (Vector3.new(position.X, 0, position.Z) - centre).Magnitude < cfg.Curve
+	end
+	-- Top right of the village (north = -Z), out over the water at the end of the pier.
 	local at = water[1].CFrame.Position
-	expect(at.X > 0).toBe(true)
-	expect(at.Z < 0).toBe(true)
+	expect(at.X > 0 and at.Z < 0).toBe(true)
+	expect(inRiver(at)).toBe(true)
+	expect(inRiver(fishing[1].CFrame.Position)).toBe(true)
+	expect(inRiver(Vector3.zero)).toBe(false)
+	-- No tree, bush or rock stands in the water.
+	for _, part in map:GetDescendants() do
+		if part:IsA("BasePart") and (part.Name == "Trunk" or part.Name == "DarkTrunk" or part.Name == "Bush" or part.Name == "Rock") then
+			expect(inRiver(part.CFrame.Position)).toBe(false)
+		end
+	end
+	-- An invisible wall follows the shore, and walls keep people on the pier.
+	expect(#river.Shore:GetChildren() > 50).toBe(true)
+	for _, wall in river.Shore:GetChildren() do
+		expect(wall.Transparency).toBe(1)
+		expect(wall.CanCollide).toBe(true)
+	end
+	local pierWalls = 0
+	for _, part in river.Pier:GetChildren() do
+		if part.Name == "PierWall" then
+			pierWalls += 1
+		end
+	end
+	expect(pierWalls).toBe(3)
 end)
 
 test("Plague Doctor and Thief: village side, for sale, with icons and text", function()

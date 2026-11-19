@@ -712,6 +712,19 @@ end
 --------------------------------------------------------------------------------
 
 -- Random points in a ring, at least `spacing` apart (rejection sampling).
+-- The river (owner, 19 Nov 2026): see buildRiver.
+local RIVER = MapCfg.River
+local WATER = Color3.fromRGB(70, 150, 220)
+local RIVERBED = Color3.fromRGB(40, 70, 90)
+local SAND = Color3.fromRGB(214, 196, 150)
+local RIVER_CENTRE = onRing(RIVER.ShoreDistance + RIVER.Curve, RIVER.Angle)
+
+-- Is this point in the river (or within `margin` studs of its shore)?
+local function inRiver(point: Vector3, margin: number?): boolean
+	local flat = Vector3.new(point.X, 0, point.Z)
+	return (flat - RIVER_CENTRE).Magnitude < RIVER.Curve + (margin or 0)
+end
+
 local function scatter(count: number, innerRadius: number, outerRadius: number, spacing: number, taken: { Vector3 }): { Vector3 }
 	local points: { Vector3 } = {}
 	local attempts = 0
@@ -719,7 +732,7 @@ local function scatter(count: number, innerRadius: number, outerRadius: number, 
 		attempts += 1
 		local radius = math.sqrt(range(innerRadius * innerRadius, outerRadius * outerRadius))
 		local point = onRing(radius, range(0, math.pi * 2))
-		local ok = true
+		local ok = not inRiver(point, 6) -- nothing grows in (or right at) the river
 		for _, other in taken do
 			if (other - point).Magnitude < spacing then
 				ok = false
@@ -772,77 +785,109 @@ local function buildTaskTree(parent: Instance, treeId: number, position: Vector3
 end
 
 --------------------------------------------------------------------------------
--- Stream and bridge (owner, 18 Nov 2026): north-east forest, for the
--- "fetch water" and "fishing" tasks
+-- River and pier (owner, 19 Nov 2026, from the owner's drawing): a wide river
+-- fills the north-east of the map; a wooden pier reaches out over the water
+-- (fetch water, fishing). Nobody can walk into the water: an invisible wall
+-- follows the shore, with a gap for the pier.
 --------------------------------------------------------------------------------
 
-local WATER = Color3.fromRGB(70, 150, 220)
-local RIVERBED = Color3.fromRGB(95, 85, 70)
-
--- Builds the stream and returns points along it, so trees keep away.
-local function buildStream(): { Vector3 }
-	local cfg = MapCfg.Stream
-	local stream = folder("Stream", Map)
-	-- X = along the stream (tangent), Z = across it (towards the centre).
-	local frame = facingCentre(cfg.Radius, cfg.Angle)
-	decor(block("Riverbed", Vector3.new(cfg.Length, 0.1, cfg.Width + 2), frame * CFrame.new(0, 0.06, 0), RIVERBED, stream))
-	local water = decor(block("Water", Vector3.new(cfg.Length, 0.3, cfg.Width), frame * CFrame.new(0, 0.3, 0), WATER, stream))
+-- Builds the river and the pier; returns points that trees keep away from
+-- (the way from the fence to the pier).
+local function buildRiver(): { Vector3 }
+	local river = folder("River", Map)
+	local disc = RIVER.Curve * 2
+	cylinder("Beach", disc + RIVER.BeachWidth * 2, 1, RIVER_CENTRE + Vector3.new(0, -0.55, 0), SAND, river)
+	decor(cylinder("Riverbed", disc, 1, RIVER_CENTRE + Vector3.new(0, -0.48, 0), RIVERBED, river))
+	local water = decor(cylinder("Water", disc, 0.6, RIVER_CENTRE + Vector3.new(0, -0.05, 0), WATER, river))
 	water.Transparency = 0.25
 	water.Material = Enum.Material.Glass
-	for side = -1, 1, 2 do
-		decor(block(
-			"Bank",
-			Vector3.new(cfg.Length, 0.5, 1.2),
-			frame * CFrame.new(0, 0.25, side * (cfg.Width / 2 + 0.6)),
-			Palette.Rock,
-			stream
-		))
-	end
 
-	-- The bridge crosses the stream; people walk out on it to reach the water.
-	local bridge = model("Bridge", stream)
-	local deckLength = cfg.Width + 8
-	local deck = block("Deck", Vector3.new(cfg.BridgeWidth, 0.6, deckLength), frame * CFrame.new(0, 1, 0), Palette.Wood, bridge)
-	bridge.PrimaryPart = deck
+	-- The pier: from just inland, straight out over the water.
+	local pier = model("Pier", river)
+	local width, length = RIVER.PierWidth, RIVER.PierLength
+	local inland = 3
+	local midRadius = RIVER.ShoreDistance + (length - inland) / 2
+	-- facingCentre: local -Z points at the plaza, so +Z points out over the water.
+	local frame = facingCentre(midRadius, RIVER.Angle)
+	local deckLength = length + inland
+	local deck = block("Deck", Vector3.new(width, 0.6, deckLength), frame * CFrame.new(0, 1, 0), Palette.Wood, pier)
+	pier.PrimaryPart = deck
+	block("Ramp", Vector3.new(width, 0.4, 3), frame * CFrame.new(0, 0.5, -deckLength / 2 - 1.3) * CFrame.Angles(math.rad(12), 0, 0), Palette.Wood, pier)
 	for side = -1, 1, 2 do
-		decor(block(
-			"Rail",
-			Vector3.new(0.4, 1.2, deckLength),
-			frame * CFrame.new(side * (cfg.BridgeWidth / 2 - 0.2), 1.9, 0),
-			Palette.WoodDark,
-			bridge
-		))
-		block(
-			"Ramp",
-			Vector3.new(cfg.BridgeWidth, 0.4, 3),
-			frame * CFrame.new(0, 0.5, side * (deckLength / 2 + 1.3)) * CFrame.Angles(side * math.rad(-12), 0, 0),
-			Palette.Wood,
-			bridge
-		)
+		decor(block("Rail", Vector3.new(0.4, 1.2, deckLength), frame * CFrame.new(side * (width / 2 - 0.2), 1.9, 0), Palette.WoodDark, pier))
+		for post = 0, 3 do
+			local z = -deckLength / 2 + post * deckLength / 3
+			decor(block("Post", Vector3.new(0.8, 3, 0.8), frame * CFrame.new(side * (width / 2 - 0.2), 0.3, z), Palette.WoodDark, pier))
+		end
+		-- Nobody falls (or jumps) into the water from the pier.
+		local guard = invisible(block("PierWall", Vector3.new(1, 40, deckLength), frame * CFrame.new(side * (width / 2 + 0.5), 20, 0), Palette.White, pier))
+		guard.CanTouch = false
 	end
+	decor(block("Rail", Vector3.new(width, 1.2, 0.4), frame * CFrame.new(0, 1.9, deckLength / 2 - 0.2), Palette.WoodDark, pier))
+	local endWall = invisible(block("PierWall", Vector3.new(width + 2, 40, 1), frame * CFrame.new(0, 20, deckLength / 2 + 0.5), Palette.White, pier))
+	endWall.CanTouch = false
 
-	-- Task spots in the middle of the bridge: water on one side, fishing on the other.
-	local waterSpot = invisible(decor(block("WaterSpot", Vector3.new(1, 1, 1), frame * CFrame.new(-(cfg.BridgeWidth / 2 - 1), 2, 0), WATER, bridge)))
+	-- Task spots at the end of the pier: water on one side, fishing on the other.
+	local spotZ = deckLength / 2 - 2
+	local waterSpot = invisible(decor(block("WaterSpot", Vector3.new(1, 1, 1), frame * CFrame.new(-(width / 2 - 1), 2, spotZ), WATER, pier)))
 	waterSpot:AddTag("WaterSpot")
 	waterSpot:SetAttribute("SpotId", 1)
 	attachment("PromptAnchor", CFrame.new(), waterSpot)
-	local fishing = invisible(decor(block("FishingSpot", Vector3.new(1, 1, 1), frame * CFrame.new(cfg.BridgeWidth / 2 - 1, 2, 0), WATER, bridge)))
+	local fishing = invisible(decor(block("FishingSpot", Vector3.new(1, 1, 1), frame * CFrame.new(width / 2 - 1, 2, spotZ), WATER, pier)))
 	fishing:AddTag("FishingSpot")
 	fishing:SetAttribute("SpotId", 1)
 	attachment("PromptAnchor", CFrame.new(), fishing)
 
-	local points: { Vector3 } = {}
-	for along = -cfg.Length / 2, cfg.Length / 2, 6 do
-		table.insert(points, (frame * CFrame.new(along, 0, 0)).Position)
+	-- An invisible wall along the shore (just in the water), with a gap for the pier.
+	local shore = folder("Shore", river)
+	local toPlaza = (Vector3.zero - RIVER_CENTRE).Unit
+	local baseAngle = math.atan2(toPlaza.Z, toPlaza.X)
+	local wallRadius = RIVER.Curve - 0.5
+	local stepLength = 2
+	local step = stepLength / wallRadius
+	local pierAxis = Vector3.new(math.sin(RIVER.Angle), 0, -math.cos(RIVER.Angle))
+	local reach = MapCfg.ForestOuterRadius + 6
+	for side = -1, 1, 2 do
+		local index = 0
+		while true do
+			local a1 = baseAngle + side * index * step
+			local a2 = baseAngle + side * (index + 1) * step
+			local p1 = RIVER_CENTRE + Vector3.new(math.cos(a1), 0, math.sin(a1)) * wallRadius
+			local p2 = RIVER_CENTRE + Vector3.new(math.cos(a2), 0, math.sin(a2)) * wallRadius
+			local mid = (p1 + p2) / 2
+			if mid.Magnitude > reach then
+				break
+			end
+			-- Sideways distance from the pier's line: the pier's gap stays open.
+			local offset = mid - pierAxis * mid:Dot(pierAxis)
+			if offset.Magnitude > width / 2 + 1 then
+				local along = (p2 - p1)
+				local wall = invisible(block(
+					"ShoreWall",
+					Vector3.new(along.Magnitude + 0.4, 40, 1),
+					CFrame.lookAt(mid + Vector3.new(0, 20, 0), mid + Vector3.new(0, 20, 0) + along:Cross(Vector3.yAxis)),
+					Palette.White,
+					shore
+				))
+				wall.CanTouch = false
+			end
+			index += 1
+		end
 	end
-	return points
+
+	-- Keep the way from the fence to the pier clear of trees.
+	local path: { Vector3 } = {}
+	for radius = MapCfg.FenceRadius, RIVER.ShoreDistance, 6 do
+		table.insert(path, onRing(radius, RIVER.Angle))
+	end
+	return path
 end
 
-local function buildForest(streamPoints: { Vector3 })
+local function buildForest(keepClear: { Vector3 })
 	local forest = folder("Forest", Map)
 	local trees = folder("Trees", forest)
 	local props = folder("Props", forest)
-	local taken: { Vector3 } = table.clone(streamPoints)
+	local taken: { Vector3 } = table.clone(keepClear)
 
 	local inner = MapCfg.FenceRadius + 10
 	local outer = MapCfg.ForestOuterRadius - 12
@@ -903,6 +948,9 @@ local function buildOuterForest()
 	local hedgeStep = math.pi * 2 / hedgeSegments
 	local hedgeRadius = wallRadius + 6
 	for segment = 0, hedgeSegments - 1 do
+		if inRiver(onRing(hedgeRadius, segment * hedgeStep), 4) then
+			continue -- the river runs on past the edge of the map
+		end
 		decor(block(
 			"Hedge",
 			Vector3.new(2 * hedgeRadius * math.tan(hedgeStep / 2) + 2, range(20, 30), 7),
@@ -942,7 +990,7 @@ buildGround()
 buildPlaza()
 buildHouses()
 buildFence()
-buildForest(buildStream())
+buildForest(buildRiver())
 buildOuterForest()
 
 stats.Houses = MapCfg.HouseCount

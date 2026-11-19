@@ -773,14 +773,17 @@ Config.Map = {
 	ForestOuterRadius = 200, -- invisible wall
 	OuterForestRadius = 250, -- dense dark forest beyond the wall
 	TaskTreeCount = 44,
-	-- [owner] 18 Nov 2026: a stream with a wooden bridge in the top-right (north-east)
-	-- of the map, outside the fence. Sizes are art defaults.
-	Stream = {
-		Angle = math.rad(45), -- ring angle of the bridge (0 = north / -Z, clockwise)
-		Radius = 135, -- distance of the bridge from the centre
-		Length = 110, -- the stream runs across the forest, crossing the ring
-		Width = 12,
-		BridgeWidth = 6,
+	-- [owner] 19 Nov 2026 (from the owner's drawing): a wide river fills the
+	-- top-right (north-east) of the map, past the edge of the forest, with a
+	-- wooden pier to walk out on (fetch water, fishing). The shore is a gentle
+	-- curve: part of a huge circle whose centre lies far outside the map.
+	River = {
+		Angle = math.rad(45), -- direction of the river from the plaza (0 = north / -Z, clockwise)
+		ShoreDistance = 128, -- [owner drawing] studs from the plaza to the nearest shore (the pier)
+		Curve = 333, -- radius of the shore's curve (bigger = straighter shore)
+		BeachWidth = 4, -- sand strip along the water
+		PierLength = 30, -- [ASSUMED] studs the pier reaches out over the water
+		PierWidth = 6, -- [ASSUMED]
 	},
 	Seed = 20261116, -- deterministic prop placement
 }

@@ -20,7 +20,7 @@ SS = 2  # supersampling
 
 HOUSE_COUNT, HOUSE_RING = 12, 64
 FENCE, FOREST = 96, 200
-STREAM_ANGLE, STREAM_RADIUS = math.radians(45), 135
+RIVER_ANGLE, PIER_RADIUS = math.radians(45), 128 + 15
 
 
 def font(size, bold=True):
@@ -101,9 +101,20 @@ def main(src, out):
     # Outlines and labels.
     ann = ImageDraw.Draw(img)
     cx0, cy0 = px(0, 0)
+    # River: a huge circle (see build/BuildVillage.luau buildRiver).
+    river_c = (math.sin(RIVER_ANGLE) * (128 + 333), -math.cos(RIVER_ANGLE) * (128 + 333))
+
+    def wet(x, z):
+        return math.hypot(x - river_c[0], z - river_c[1]) < 333
+
     for radius, color, width in ((FENCE, (255, 255, 255, 150), 3), (FOREST, (255, 80, 80, 200), 4)):
-        r = radius * scale
-        ann.ellipse([cx0 - r, cy0 - r, cx0 + r, cy0 + r], outline=color, width=width * SS)
+        steps = 720
+        for i in range(steps):
+            a1, a2 = i / steps * math.tau, (i + 1) / steps * math.tau
+            p1 = (math.sin(a1) * radius, -math.cos(a1) * radius)
+            p2 = (math.sin(a2) * radius, -math.cos(a2) * radius)
+            if not wet(*p1) and not wet(*p2):
+                ann.line([px(*p1), px(*p2)], fill=color, width=width * SS)
 
     label = font(26 * SS)
     small = font(20 * SS)
@@ -125,8 +136,9 @@ def main(src, out):
         ann.text((tx - w / 2, ty - 12 * SS), text, font=small, fill=fill)
 
     tag("Plaza + meeting table", 0, 18)
-    sx, sz = math.sin(STREAM_ANGLE) * STREAM_RADIUS, -math.cos(STREAM_ANGLE) * STREAM_RADIUS
-    tag("Stream + bridge (water / fishing)", sx + 30, sz - 62, fill=(140, 220, 255, 255))
+    sx, sz = math.sin(RIVER_ANGLE) * PIER_RADIUS, -math.cos(RIVER_ANGLE) * PIER_RADIUS
+    tag("Pier (fetch water / fishing)", sx - 46, sz - 22, fill=(255, 225, 170, 255))
+    tag("River", 150, -150, fill=(200, 235, 255, 255), back=(20, 60, 110, 210))
     tag("Village (inside the fence)", 0, -FENCE + 12)
     tag("Forest (glows red for the wolf at night)", 0, -FENCE - 40, fill=(255, 170, 170, 255))
     tag("Invisible wall", -150, 150, fill=(255, 120, 120, 255))
@@ -155,7 +167,8 @@ def main(src, out):
         ((110, 80, 50), "Carrot plots behind the houses"),
         ((110, 210, 120), "Task trees (44) in the forest"),
         ((150, 150, 160), "Rocks / bushes"),
-        ((90, 160, 210), "Stream (top right) + bridge"),
+        ((90, 160, 210), "River (top right) + pier"),
+        ((214, 196, 150), "Beach along the river"),
         ((255, 80, 80), "Invisible wall (r 200)"),
         ((25, 60, 30), "Dark outer forest (scenery)"),
     ]
@@ -167,8 +180,10 @@ def main(src, out):
     notes = [
         "Scale: 1 grid unit = 1 stud;",
         "the whole image is 430 x 430 studs.",
-        "Walk from the plaza to the bridge:",
-        "about 135 studs (~8 s at speed 16).",
+        "Walk from the plaza to the pier end:",
+        "about 155 studs (~10 s at speed 16).",
+        "The river cannot be entered;",
+        "only the pier goes out over it.",
     ]
     y += 20
     for line in notes:
