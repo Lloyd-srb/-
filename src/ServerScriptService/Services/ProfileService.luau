@@ -79,6 +79,12 @@ function ProfileService.RolePicks(player: Player, rng: any): { Config.RoleId }
 	return picks
 end
 
+-- The monster this player plays when dealt the wolf (owner, 19 Nov 2026).
+function ProfileService.Monster(player: Player): string
+	local data = Profiles.Get(player)
+	return if data then ProfileLogic.monster(data) else "Werewolf"
+end
+
 -- The skin this player wears in a slot ("Gun" / "Knife" / "Wolf"), if any.
 function ProfileService.Skin(player: Player?, slot: string): string?
 	local data = if player then Profiles.Get(player) else nil

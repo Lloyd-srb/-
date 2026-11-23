@@ -63,7 +63,7 @@ local WolfService = require(script.Parent.WolfService)
 local Abilities = Config.Abilities
 local REACH_SLACK = 4 -- extra studs allowed over a prompt's activation distance (lag)
 local REVIVE_RISE = 2.5 -- a revived body stands up this far above the corpse's centre
-local WOLF_DAMAGE_CAUSES = { Wolf = true, Pup = true, Killer = true }
+local WOLF_DAMAGE_CAUSES = { Wolf = true, Pup = true, Lurker = true, Killer = true }
 
 local RoleService = {}
 

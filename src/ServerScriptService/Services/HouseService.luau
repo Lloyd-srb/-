@@ -44,6 +44,7 @@ type House = {
 	InsideSpawn: Attachment,
 	FrontSpawn: Attachment,
 	OpenPrompt: ProximityPrompt,
+	KnockPrompt: ProximityPrompt,
 	DebugPrompt: ProximityPrompt?,
 }
 
@@ -68,6 +69,9 @@ local outLastNight: { [number]: boolean }? = nil -- nil until a night has passed
 local scanToken = 0
 
 local houses: { [number]: House } = {}
+local lastKnock: { [number]: number } = {} -- member id -> os.clock()
+
+HouseService.Knocked = Signal.new() -- (houseId, memberId) someone knocked on a door
 local houseCount = 0
 local rng = Rng.wrap(Random.new())
 local openTween = TweenInfo.new(Config.Door.OpenTweenTime, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -321,6 +325,30 @@ function HouseService.ReinforceDoor(houseId: number): boolean
 	return true
 end
 
+-- Knock (owner, 23 Nov 2026): anyone alive, on a house that is not their
+-- own (the house they were given last night). The monster may knock too; it
+-- does not end its invisibility. Nearby players hear it.
+local function onKnockPrompt(player: Player, house: House)
+	local member = MatchService.MemberOf(player)
+	if not member or not member.Alive or not MatchService.Started or MatchService.Winner then
+		return
+	end
+	if HouseService.Assigned[member.Id] == house.Id or HouseService.IsHidden(member.Id) then
+		return
+	end
+	local root = MatchService.RootOf(member.Id)
+	if not root or (root.CFrame.Position - house.Door.CFrame.Position).Magnitude > Config.Human.InteractDistance + 4 then
+		return
+	end
+	local now = os.clock()
+	if now - (lastKnock[member.Id] or -math.huge) < Config.Knock.Cooldown then
+		return
+	end
+	lastKnock[member.Id] = now
+	AudioService.At("DoorKnock", house.Door.CFrame.Position, Config.Knock.HearRadius)
+	HouseService.Knocked:Fire(house.Id, member.Id)
+end
+
 local function onOpenPrompt(player: Player, house: House)
 	local member = MatchService.MemberOf(player)
 	if not member or not member.Alive or Roster.isWolfSide(member) then
@@ -501,8 +529,16 @@ local function register(model: Instance)
 		InsideSpawn = inside,
 		FrontSpawn = front,
 		OpenPrompt = Prompts.create(anchor, "OpenPrompt", "Prompt.OpenDoor", Config.Door.OpenHold),
+		KnockPrompt = Prompts.create(anchor, "KnockPrompt", "Prompt.Knock", 0),
 		DebugPrompt = nil,
 	}
+	house.KnockPrompt:SetAttribute("HouseId", id)
+	house.KnockPrompt:SetAttribute("Audience", "NotOwner") -- everyone but the occupant
+	house.KnockPrompt:SetAttribute("Active", true)
+	house.KnockPrompt.Enabled = true
+	house.KnockPrompt.Triggered:Connect(function(player: Player)
+		onKnockPrompt(player, house)
+	end)
 	house.OpenPrompt:SetAttribute("HouseId", id)
 	house.OpenPrompt:SetAttribute("Audience", "Owner") -- shown to the occupant only
 	house.OpenPrompt.Triggered:Connect(function(player: Player)

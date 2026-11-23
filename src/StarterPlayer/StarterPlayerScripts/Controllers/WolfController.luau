@@ -23,6 +23,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Loc = require(ReplicatedStorage.Shared.Loc)
+
+local Aim = require(script.Parent.Aim)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local ClientState = require(script.Parent.ClientState)
@@ -33,13 +35,14 @@ type Action = {
 	Ability: string?, -- nil = the attack
 	TitleKey: string,
 	Sink: boolean?, -- keep the key from Roblox's own uses (shift lock)
+	Aimed: boolean?, -- sends the aim direction (mouse / camera) with the press
 	Inputs: { Enum.KeyCode | Enum.UserInputType },
 }
 
 local ACTIONS: { Action } = {
 	{
 		Id = "WolfAttack",
-		Forms = { "Wolf", "Pup" },
+		Forms = { "Wolf", "Pup", "Lurker" },
 		Ability = nil,
 		TitleKey = "Ability.Attack",
 		Inputs = { Enum.UserInputType.MouseButton1, Enum.KeyCode.ButtonR2 },
@@ -66,6 +69,23 @@ local ACTIONS: { Action } = {
 		TitleKey = "Ability.Howl",
 		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 },
 	},
+	-- The Lurker (owner, 19 / 23 Nov 2026).
+	{
+		Id = "LurkerWaterBolt",
+		Forms = { "Lurker" },
+		Ability = "WaterBolt",
+		TitleKey = "Ability.WaterBolt",
+		Aimed = true,
+		Inputs = { Enum.KeyCode.Q, Enum.KeyCode.ButtonL2 },
+	},
+	{
+		Id = "LurkerVanish",
+		Forms = { "Lurker" },
+		Ability = "Vanish",
+		TitleKey = "Ability.Vanish",
+		Sink = true,
+		Inputs = { Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonY },
+	},
 }
 
 local WolfController = {}
@@ -90,9 +110,15 @@ local function bind(action: Action)
 		return
 	end
 	bound[action.Id] = true
-	ContextActionService:BindActionAtPriority(action.Id, function(_name: string, state: Enum.UserInputState): Enum.ContextActionResult
+	ContextActionService:BindActionAtPriority(action.Id, function(_name: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
 		if state == Enum.UserInputState.Begin then
-			if action.Ability then
+			if action.Ability and action.Aimed then
+				local fromTouch = input.UserInputType == Enum.UserInputType.Touch
+				local direction = Aim.direction(Config.Lurker.Bullet.Range, fromTouch)
+				if direction then
+					Remotes.get("WolfAbility"):FireServer(action.Ability, direction)
+				end
+			elseif action.Ability then
 				Remotes.get("WolfAbility"):FireServer(action.Ability)
 			else
 				Remotes.get("WolfAttack"):FireServer()
@@ -112,6 +138,15 @@ end
 
 local VISION_BIND = "WolfVision"
 local visionBound = false
+local visionForm = ""
+
+-- How far each monster sees at night (its Vision bar).
+local function visionFor(form: string): number
+	if form == "Lurker" then
+		return Config.monsterStat("Lurker", "Vision")
+	end
+	return Config.Wolf.NightVision
+end
 
 -- How far the werewolf sees at night: the fog on this screen only.
 local function setVision(on: boolean)
@@ -124,7 +159,7 @@ local function setVision(on: boolean)
 		return
 	end
 	local night = Config.Lighting.Night
-	local fogEnd = Config.Wolf.NightVision
+	local fogEnd = visionFor(ClientState.Form)
 	local fogStart = fogEnd * night.FogStart / night.FogEnd
 	RunService:BindToRenderStep(VISION_BIND, Enum.RenderPriority.Last.Value, function()
 		-- The server's night preset replicates over this; set it back each frame.
@@ -136,7 +171,12 @@ local function setVision(on: boolean)
 end
 
 local function refresh()
-	setVision(ClientState.Alive and ClientState.Form == "Wolf" and Config.Wolf.NightVision ~= Config.Lighting.Night.FogEnd)
+	local beast = ClientState.Form == "Wolf" or ClientState.Form == "Lurker"
+	if visionBound and visionForm ~= ClientState.Form then
+		setVision(false) -- another monster: start again with its own distance
+	end
+	visionForm = ClientState.Form
+	setVision(ClientState.Alive and beast and visionFor(ClientState.Form) ~= Config.Lighting.Night.FogEnd)
 	for _, action in ACTIONS do
 		if ClientState.Alive and table.find(action.Forms, ClientState.Form) then
 			bind(action)

@@ -216,7 +216,7 @@ def monster_page(data, path):
         if i == 0:
             draw.ellipse([x + 52, sy + 34, x + 76, sy + 58], fill=(90, 200, 110, 255))
             draw.text((x + 57, sy + 35), "✓", font=font(17), fill=(255, 255, 255, 255))
-    draw.text((cx + 10, sy + 118), m["skins"][0]["name"] + "  ·  Equipped", font=font(16, False), fill=sub)
+    draw.text((cx + 10, sy + 118), m["skins"][0]["name"] + ("  ·  Equipped" if len(m["skins"]) > 1 else ""), font=font(16, False), fill=sub)
     draw.rounded_rectangle([cx + 8, sy + 144, cx + 128, sy + 188], radius=12, fill=(80, 160, 255, 140))
     draw.text((cx + 26, sy + 155), "Equipped", font=font(18), fill=(255, 255, 255, 255))
     # right column
@@ -248,10 +248,13 @@ def monster_page(data, path):
         y += h + 8
     # carousel + Select
     ky = oy + H - 8 - 96
-    x = ox + 14
-    draw.rounded_rectangle([x, ky + 4, x + 88, ky + 92], radius=12, fill=light, outline=gold, width=3)
-    c_ic = icon(m["skins"][0]["shapes"], m["ring"], 76)
-    img.alpha_composite(c_ic, (x + (88 - c_ic.width) // 2, ky + 4 + (88 - c_ic.height) // 2))
+    x = ox + 14 - 98
+    for index, shapes in enumerate(m.get("carousel") or [m["skins"][0]["shapes"]], start=1):
+        x += 98
+        current = index == m.get("current", 1)
+        draw.rounded_rectangle([x, ky + 4, x + 88, ky + 92], radius=12, fill=light, outline=gold if current else None, width=3)
+        c_ic = icon(shapes, m["ring"], 76)
+        img.alpha_composite(c_ic, (x + (88 - c_ic.width) // 2, ky + 4 + (88 - c_ic.height) // 2))
     for k in range(m["locked"]):
         x += 98
         draw.rounded_rectangle([x, ky + 4, x + 88, ky + 92], radius=12, fill=light)

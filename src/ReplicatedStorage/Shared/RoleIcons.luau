@@ -325,6 +325,41 @@ RoleIcons.Designs = {
 		{ X = 50, Y = 37, W = 54, H = 8, R = 0.4, Color = Palette.Gold },
 	}),
 
+	-- The Lurker (owner, 19 Nov 2026): a blocky river creature, dark blue scales,
+	-- sea-green fins, glowing cyan eyes and runes, pale whiskers, open jaws.
+	Lurker = join({
+		background(rgb(18, 52, 70)),
+		{ X = 50, Y = 94, W = 100, H = 14, R = 0, T = 0.35, Color = rgb(70, 150, 220) },
+		-- spiky fins round the head
+		{ X = 22, Y = 40, W = 16, H = 16, R = 0.1, Rot = 45, Color = rgb(70, 160, 130) },
+		{ X = 78, Y = 40, W = 16, H = 16, R = 0.1, Rot = 45, Color = rgb(70, 160, 130) },
+		{ X = 32, Y = 24, W = 16, H = 16, R = 0.1, Rot = 45, Color = rgb(90, 180, 150) },
+		{ X = 68, Y = 24, W = 16, H = 16, R = 0.1, Rot = 45, Color = rgb(90, 180, 150) },
+		{ X = 50, Y = 17, W = 18, H = 18, R = 0.1, Rot = 45, Color = rgb(110, 200, 165) },
+		-- shoulders and head
+		{ X = 50, Y = 100, W = 80, H = 34, R = 0.4, Color = rgb(30, 50, 80) },
+		{ X = 50, Y = 50, W = 54, H = 42, R = 0.3, Color = rgb(34, 58, 92) },
+		{ X = 50, Y = 33, W = 54, H = 8, R = 0.3, Color = rgb(28, 48, 78) },
+		-- snout and open jaws
+		{ X = 50, Y = 71, W = 42, H = 24, R = 0.3, Color = rgb(44, 72, 108) },
+		{ X = 50, Y = 76, W = 32, H = 11, R = 0.3, Color = rgb(110, 40, 90) },
+		{ X = 40, Y = 72, W = 4, H = 7, R = 0.1, Color = rgb(240, 232, 205) },
+		{ X = 46, Y = 71.5, W = 3, H = 5, R = 0.1, Color = rgb(240, 232, 205) },
+		{ X = 54, Y = 71.5, W = 3, H = 5, R = 0.1, Color = rgb(240, 232, 205) },
+		{ X = 60, Y = 72, W = 4, H = 7, R = 0.1, Color = rgb(240, 232, 205) },
+		{ X = 44, Y = 81, W = 3, H = 5, R = 0.1, Color = rgb(240, 232, 205) },
+		{ X = 56, Y = 81, W = 3, H = 5, R = 0.1, Color = rgb(240, 232, 205) },
+		-- glowing eyes (slanted) and runes
+		{ X = 38, Y = 49, W = 13, H = 6, R = 0.45, Rot = 18, Color = rgb(120, 255, 240) },
+		{ X = 62, Y = 49, W = 13, H = 6, R = 0.45, Rot = -18, Color = rgb(120, 255, 240) },
+		{ X = 50, Y = 40, W = 12, H = 3, R = 0.5, Color = rgb(90, 230, 220) },
+		{ X = 35, Y = 96, W = 9, H = 3, R = 0.5, Color = rgb(90, 230, 220) },
+		{ X = 65, Y = 96, W = 9, H = 3, R = 0.5, Color = rgb(90, 230, 220) },
+		-- whiskers
+		{ X = 21, Y = 64, W = 24, H = 2.5, R = 0.5, Rot = 22, Color = rgb(230, 222, 190) },
+		{ X = 79, Y = 64, W = 24, H = 2.5, R = 0.5, Rot = -22, Color = rgb(230, 222, 190) },
+	}),
+
 	-- Grey werewolf under the full moon, glowing yellow eyes.
 	Wolf = join({
 		background(rgb(35, 45, 85)),

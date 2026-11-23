@@ -9,12 +9,21 @@
 	- Wolf: sniff (outline everyone outdoors) and four-legged sprint; a kill
 	  while sprinting locks the wolf in a ~3 s maul.
 	- Pup: half damage and a howl that outlines nearby players for the pack.
-	- Players in the forest are outlined in red for the wolf side only.
+	- Players in the forest are outlined in red for the wolf side only, for
+	  the first Config.Wolf.ForestRevealSeconds of each night (owner, 23 Nov 2026).
+	- The Lurker (owner, 19 / 23 Nov 2026), the monster a player can pick
+	  instead of the werewolf: its own stats, no pup, a water bolt (shares the
+	  attack cooldown) and invisibility (ends when it attacks, spits or goes
+	  into the water). In its matches a water channel winds round the
+	  village: it swims there faster, sunk to its head and back fins and
+	  silent; people wade through slowly.
+	- Nobody's name shows over their head at night (owner, 19 Nov 2026).
 
 	Outlines are never created here: the server tells the allowed viewers which
 	ids to highlight, and their clients draw them locally.
 ]]
 
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -26,6 +35,8 @@ local Zones = require(ReplicatedStorage.Shared.Zones)
 local Roster = require(script.Parent.Parent.Logic.Roster)
 
 local CombatService = require(script.Parent.CombatService)
+local ForestService = require(script.Parent.ForestService)
+local Sight = require(script.Parent.Sight)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local AudioService = require(script.Parent.AudioService)
@@ -37,7 +48,9 @@ local Net = require(script.Parent.Net)
 local RoundService = require(script.Parent.RoundService)
 
 type WolfState = {
-	Form: string, -- "Wolf" | "Pup"
+	Form: string, -- "Wolf" | "Pup" | "Lurker"
+	Vanished: boolean, -- The Lurker is invisible
+	Submerged: boolean, -- The Lurker is swimming in the channel
 	Shell: Model?,
 	LastAttack: number,
 	SprintUntil: number,
@@ -50,6 +63,7 @@ local WolfService = {}
 WolfService.FormChanged = Signal.new() -- (memberId, form) "Wolf" | "Pup" | "Human"
 
 local wolves: { [number]: WolfState } = {}
+local setVanished: (id: number, wolf: WolfState, vanished: boolean) -> ()
 local forestIds: { number } = {}
 local forestLoopToken = 0
 local baitIds: { number } = {}
@@ -99,6 +113,23 @@ local function prey(): { Roster.Member }
 	return list
 end
 
+-- Numbers for a form: the werewolf / pup from Config, The Lurker from its stat bars.
+type Stats = { WalkSpeed: number, AttackDamage: number, AttackCooldown: number, AttackRange: number, DoorDamage: number }
+local function statsOf(form: string): Stats
+	if form == "Pup" then
+		return Config.Pup :: any
+	elseif form == "Lurker" then
+		return {
+			WalkSpeed = Config.monsterStat("Lurker", "RunSpeed"),
+			AttackDamage = Config.monsterStat("Lurker", "AttackPower"),
+			AttackCooldown = Config.monsterStat("Lurker", "AttackSpeed"),
+			AttackRange = Config.Wolf.AttackRange,
+			DoorDamage = Config.Lurker.DoorDamage,
+		}
+	end
+	return Config.Wolf :: any
+end
+
 --------------------------------------------------------------------------------
 -- Transformation
 --------------------------------------------------------------------------------
@@ -133,10 +164,33 @@ local function setBodyHidden(character: Model, shell: Model?, hidden: boolean)
 	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		-- No name tag over a werewolf.
-		humanoid.DisplayDistanceType = if hidden
+		-- No name tag over a werewolf (and nobody's at night).
+		humanoid.DisplayDistanceType = if hidden or RoundService.IsNight()
 			then Enum.HumanoidDisplayDistanceType.None
 			else Enum.HumanoidDisplayDistanceType.Viewer
+	end
+end
+
+-- Night: no name over anyone's head (owner, 19 Nov 2026). Restored at dawn.
+local function hideNightName(body: Instance)
+	local humanoid = body:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.DisplayDistanceType ~= Enum.HumanoidDisplayDistanceType.None then
+		humanoid:SetAttribute("NightName", true)
+		humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	end
+end
+
+local function setNightNames(night: boolean)
+	for _, body in CollectionService:GetTagged("MemberBody") do
+		if night then
+			hideNightName(body)
+		else
+			local humanoid = body:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid:GetAttribute("NightName") then
+				humanoid:SetAttribute("NightName", nil)
+				humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+			end
+		end
 	end
 end
 
@@ -184,7 +238,7 @@ local function transform(member: Roster.Member)
 	if wolves[member.Id] or not character then
 		return
 	end
-	local form = if member.IsPup then "Pup" else "Wolf"
+	local form = if member.IsPup then "Pup" elseif member.Monster == "Lurker" then "Lurker" else "Wolf"
 	-- Paws cannot hold items: put away whatever was in hand.
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -199,13 +253,15 @@ local function transform(member: Roster.Member)
 	end
 	character:SetAttribute("FlashlightOn", nil)
 	local shell = attachShell(character, form)
-	if shell then
+	if shell and form ~= "Lurker" then -- the wolf skins are for the werewolf
 		paintShell(shell, MatchService.PlayerOf(member.Id))
 	end
 	setBodyHidden(character, shell, true)
 	character:SetAttribute("Form", form)
 	wolves[member.Id] = {
 		Form = form,
+		Vanished = false,
+		Submerged = false,
 		Shell = shell,
 		LastAttack = 0,
 		SprintUntil = 0,
@@ -213,7 +269,7 @@ local function transform(member: Roster.Member)
 		ReadyAt = {},
 	}
 	MoveService.ClearModifier(member.Id, "Boots") -- boots are for human feet
-	MoveService.SetBase(member.Id, if member.IsPup then Config.Pup.WalkSpeed else Config.Wolf.WalkSpeed)
+	MoveService.SetBase(member.Id, statsOf(form).WalkSpeed)
 	local player = MatchService.PlayerOf(member.Id)
 	if player then
 		Net.fire(player, "FormChanged", form)
@@ -243,6 +299,10 @@ local function revert(id: number)
 	end
 	MoveService.ClearModifier(id, "Sprint")
 	MoveService.ClearModifier(id, "Maul")
+	MoveService.ClearModifier(id, "Swim")
+	if character then
+		character:SetAttribute("Vanished", nil)
+	end
 	MoveService.SetBase(id, Config.Human.WalkSpeed)
 	if member and member.Alive and member.HasBoots then
 		MoveService.SetModifier(id, "Boots", { Add = Config.Boots.SpeedBonus })
@@ -313,19 +373,28 @@ local function scanForest()
 	scanBaits()
 end
 
+local stopForestLoop: () -> ()
+
 local function startForestLoop()
 	forestLoopToken += 1
 	local token = forestLoopToken
 	forestIds = {}
+	local started = os.clock()
+	local window = Config.Wolf.ForestRevealSeconds * (if Config.Debug.Enabled then Config.Debug.TimerScale else 1)
 	task.spawn(function()
 		while token == forestLoopToken and RoundService.IsNight() and not MatchService.Winner do
+			if os.clock() - started >= window then
+				-- Only the first moments of the night (owner, 23 Nov 2026).
+				stopForestLoop()
+				return
+			end
 			scanForest()
 			task.wait(Config.Wolf.ForestScanInterval)
 		end
 	end)
 end
 
-local function stopForestLoop()
+function stopForestLoop()
 	forestLoopToken += 1
 	forestIds = {}
 	sendHighlight(wolfSidePlayers(), "Forest", {}, nil)
@@ -336,6 +405,38 @@ end
 --------------------------------------------------------------------------------
 -- Attack
 --------------------------------------------------------------------------------
+
+-- The Lurker's invisibility: the costume (and its shadow) disappears.
+function setVanished(id: number, wolf: WolfState, vanished: boolean)
+	if wolf.Vanished == vanished then
+		return
+	end
+	wolf.Vanished = vanished
+	local shell = wolf.Shell
+	if shell then
+		for _, part in shell:GetDescendants() do
+			if part:IsA("BasePart") then
+				if vanished then
+					part:SetAttribute("ShellTransparency", part.Transparency)
+					part:SetAttribute("ShellShadow", part.CastShadow)
+					part.Transparency = 1
+					part.CastShadow = false
+				else
+					local transparency = part:GetAttribute("ShellTransparency")
+					local shadow = part:GetAttribute("ShellShadow")
+					part.Transparency = if type(transparency) == "number" then transparency else 0
+					part.CastShadow = shadow ~= false
+					part:SetAttribute("ShellTransparency", nil)
+					part:SetAttribute("ShellShadow", nil)
+				end
+			end
+		end
+	end
+	local character = MatchService.CharacterOf(id) or MatchService.BodyOf(id)
+	if character then
+		character:SetAttribute("Vanished", if vanished then true else nil)
+	end
+end
 
 local function startMaul(id: number, wolf: WolfState)
 	local duration = Config.Wolf.Sprint.MaulDuration
@@ -361,8 +462,7 @@ local function onAttack(player: Player)
 	if not member or not wolf or not member.Alive or not RoundService.IsNight() or MatchService.Winner then
 		return
 	end
-	local isPup = wolf.Form == "Pup"
-	local stats = if isPup then Config.Pup else Config.Wolf
+	local stats = statsOf(wolf.Form)
 	local now = os.clock()
 	if now < wolf.MaulUntil or now - wolf.LastAttack < stats.AttackCooldown or CombatService.IsStunned(member.Id) then
 		return
@@ -372,6 +472,7 @@ local function onAttack(player: Player)
 		return
 	end
 	wolf.LastAttack = now
+	setVanished(member.Id, wolf, false) -- attacking shows The Lurker
 	setAnimation(wolf, "Attack")
 	AudioService.At("WolfAttack", root.CFrame.Position)
 
@@ -455,7 +556,70 @@ local function howl(player: Player, id: number, wolf: WolfState)
 	sendHighlight(wolfSidePlayers(), "Howl", ids, cfg.Duration)
 end
 
-local function onAbility(player: Player, ability: any)
+local function isDirection(value: any): boolean
+	return typeof(value) == "Vector3"
+		and value.X == value.X -- not NaN
+		and value.Y == value.Y
+		and value.Z == value.Z
+		and value.Magnitude > 1e-3
+		and value.Magnitude < 1e6
+end
+
+-- The Lurker's water bolt: the first body on the line takes its Attack Power.
+-- Doors and walls stop it (and take nothing). Shares the attack cooldown.
+local function waterBolt(player: Player, id: number, wolf: WolfState, aim: any)
+	if not isDirection(aim) then
+		return
+	end
+	local stats = statsOf("Lurker")
+	local now = os.clock()
+	if now - wolf.LastAttack < stats.AttackCooldown then
+		return
+	end
+	local root = MatchService.RootOf(id)
+	if not root or HouseService.IsTrespassing(id) then
+		return
+	end
+	wolf.LastAttack = now
+	setVanished(id, wolf, false)
+	setAnimation(wolf, "Attack")
+	local cfg = Config.Lurker.Bullet
+	local origin = root.CFrame.Position + Vector3.new(0, 1.5, 0)
+	local ray = (aim :: Vector3).Unit * cfg.Range
+	local hitId = Sight.firstBody(origin, ray, MatchService.CharacterOf(id))
+	local target = if hitId then MatchService.Roster.Members[hitId] else nil
+	if target and (not target.Alive or Roster.isWolfSide(target)) then
+		target = nil
+	end
+	local hitRoot = if target then MatchService.RootOf(target.Id) else nil
+	local to = if hitRoot then hitRoot.CFrame.Position else origin + ray * (Sight.clearDistance(origin, ray) / cfg.Range)
+	Net.fireAll("Effect", { Kind = "WaterBolt", From = origin, To = to, Speed = cfg.Speed })
+	AudioService.At("WaterBolt", origin)
+	Net.fire(player, "AbilityState", { Name = "WaterBolt", ReadyAt = workspace:GetServerTimeNow() + stats.AttackCooldown })
+	if target then
+		CombatService.Damage(target.Id, stats.AttackDamage, "Lurker", id)
+	end
+end
+
+local function vanish(player: Player, id: number, wolf: WolfState)
+	if wolf.Vanished or wolf.Submerged then
+		return -- already invisible; in the water it cannot hide this way
+	end
+	local cfg = Config.Lurker.Vanish
+	if not useCooldown(player, wolf, "Vanish", cfg.Cooldown) then
+		return
+	end
+	setVanished(id, wolf, true)
+	if cfg.MaxDuration > 0 then
+		task.delay(cfg.MaxDuration, function()
+			if wolves[id] == wolf then
+				setVanished(id, wolf, false)
+			end
+		end)
+	end
+end
+
+local function onAbility(player: Player, ability: any, aim: any)
 	local member = MatchService.MemberOf(player)
 	local wolf = if member then wolves[member.Id] else nil
 	if not member or not wolf or not member.Alive or not RoundService.IsNight() or type(ability) ~= "string" then
@@ -470,7 +634,80 @@ local function onAbility(player: Player, ability: any)
 		sprint(player, member.Id, wolf)
 	elseif wolf.Form == "Pup" and ability == "Howl" then
 		howl(player, member.Id, wolf)
+	elseif wolf.Form == "Lurker" and ability == "WaterBolt" then
+		waterBolt(player, member.Id, wolf, aim)
+	elseif wolf.Form == "Lurker" and ability == "Vanish" then
+		vanish(player, member.Id, wolf)
 	end
+end
+
+--------------------------------------------------------------------------------
+-- The water channel (The Lurker's matches, owner 19 Nov 2026)
+--------------------------------------------------------------------------------
+
+-- Sinks The Lurker's costume so only its head and back fins show above the water.
+local function setSubmerged(wolf: WolfState, submerged: boolean)
+	if wolf.Submerged == submerged then
+		return
+	end
+	wolf.Submerged = submerged
+	local shell = wolf.Shell
+	local root = shell and shell.Parent and shell.Parent:FindFirstChild("HumanoidRootPart")
+	local shellRoot = shell and shell.PrimaryPart
+	if not shell or not shellRoot or not (root and root:IsA("BasePart")) then
+		return
+	end
+	shell:SetAttribute("Submerged", if submerged then true else nil)
+	local weld = shellRoot:FindFirstChildOfClass("WeldConstraint")
+	if weld then
+		weld.Enabled = false
+	end
+	local depth = if submerged then Config.Lurker.SubmergeDepth else 0
+	shell:PivotTo(root.CFrame * CFrame.new(0, -depth, 0))
+	if weld then
+		weld.Enabled = true
+	end
+end
+
+local waterToken = 0
+
+-- Who is in the channel: people wade (slow), The Lurker swims (+5, sunk, silent).
+local function scanWater()
+	local wade = Config.Map.Moat.WadeSpeed
+	for _, member in Roster.list(MatchService.Roster) do
+		local root = if member.Alive then MatchService.RootOf(member.Id) else nil
+		local inWater = root ~= nil and not HidingService.IsHidden(member.Id) and ForestService.InMoat(root.CFrame.Position)
+		local wolf = wolves[member.Id]
+		local character = MatchService.CharacterOf(member.Id)
+		if wolf and wolf.Form == "Lurker" then
+			MoveService.ClearModifier(member.Id, "Wade")
+			if inWater then
+				MoveService.SetModifier(member.Id, "Swim", { Add = Config.Lurker.WaterSpeedBonus })
+				setVanished(member.Id, wolf, false) -- going into the water shows it
+			else
+				MoveService.ClearModifier(member.Id, "Swim")
+			end
+			setSubmerged(wolf, inWater)
+		elseif inWater then
+			MoveService.SetModifier(member.Id, "Wade", { Override = wade })
+		else
+			MoveService.ClearModifier(member.Id, "Wade")
+		end
+		if character then
+			character:SetAttribute("InWater", if inWater then true else nil)
+		end
+	end
+end
+
+local function startWaterLoop()
+	waterToken += 1
+	local token = waterToken
+	task.spawn(function()
+		while token == waterToken and MatchService.Started and not MatchService.Winner do
+			scanWater()
+			task.wait(0.2)
+		end
+	end)
 end
 
 --------------------------------------------------------------------------------
@@ -491,6 +728,20 @@ function WolfService.Start()
 			end
 			MatchService.SendPack()
 			startForestLoop()
+			setNightNames(true)
+		elseif phase.Phase == "Day" then
+			setNightNames(false)
+		end
+	end)
+
+	-- The Lurker's passive: its matches have the water channel (owner, 19 Nov 2026).
+	MatchService.MatchStarted:Connect(function()
+		for _, member in Roster.list(MatchService.Roster) do
+			if member.Faction == "Wolf" and member.Monster == "Lurker" then
+				ForestService.ShowMoat()
+				startWaterLoop()
+				break
+			end
 		end
 	end)
 
@@ -522,6 +773,12 @@ function WolfService.Start()
 	-- Revived, or a fresh body after a reset: the old body (and costume) is gone.
 	local function onNewBody(member: Roster.Member)
 		wolves[member.Id] = nil
+		if RoundService.IsNight() then
+			local body = MatchService.CharacterOf(member.Id)
+			if body then
+				hideNightName(body)
+			end
+		end
 		if Roster.isWolfSide(member) and RoundService.IsNight() then
 			transform(member)
 		end

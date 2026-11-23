@@ -110,6 +110,28 @@ local Strings: { [string]: Entry } = {
 		en = "Hunters say the Moonfang Stalker prowls when moonlight touches the pines. Its amber stare freezes the brave, and the first soul it fells rises again as a lesser wolf bound to its howl. By dawn, only claw marks and silence remain.",
 		th = "นายพรานเล่าว่านักล่าเขี้ยวจันทร์จะออกล่าเมื่อแสงจันทร์ทาบยอดสน ดวงตาสีอำพันของมันทำให้คนกล้าตัวแข็งทื่อ และวิญญาณดวงแรกที่มันโค่นลงจะลุกขึ้นอีกครั้งเป็นหมาป่าตัวน้อยที่ผูกพันกับเสียงหอนของมัน พอรุ่งสาง เหลือไว้เพียงรอยกรงเล็บและความเงียบงัน",
 	},
+	-- The Lurker (owner, 19 Nov 2026), inspired by river-guardian legends.
+	["Monster.Lurker.Name"] = { en = "The Lurker", th = "ผู้ซุ่มใต้น้ำ" },
+	["Monster.Lurker.Passive"] = {
+		en = "A water channel winds round the village from the river. In it, The Lurker swims {bonus:int} faster, makes no sound, and only its head and back fins show. People can only wade through it slowly (speed {wade:int}).",
+		th = "มีสายน้ำไหลวนรอบหมู่บ้านจากแม่น้ำ ผู้ซุ่มใต้น้ำว่ายในนั้นได้เร็วขึ้น {bonus:int} ไม่มีเสียง และโผล่ให้เห็นแค่หัวกับครีบหลัง ส่วนผู้รอดชีวิตต้องลุยน้ำอย่างช้าๆ (ความเร็ว {wade:int})",
+	},
+	["Monster.Lurker.Ability1"] = {
+		en = "Water Bolt: spits a bolt of water up to {range:int} studs: {damage:int} damage to the first survivor it hits. It cannot hurt doors. Shares the {cooldown:int} second cooldown of the normal attack.",
+		th = "พ่นกระสุนน้ำ: พ่นน้ำไปได้ไกล {range:int} studs ทำดาเมจ {damage:int} ใส่ผู้รอดชีวิตคนแรกที่โดน พ่นใส่ประตูไม่ได้ ใช้คูลดาวน์ {cooldown:int} วินาทีร่วมกับการตีธรรมดา",
+	},
+	["Monster.Lurker.Ability2"] = {
+		en = "Vanish: becomes invisible. Attacking, spitting or going into the water ends it at once; knocking on a door does not. {cooldown:int} second cooldown.",
+		th = "หายตัว: ล่องหนจนมองไม่เห็น ถ้าตี พ่นน้ำ หรือลงน้ำ จะปรากฏตัวทันที แต่เคาะประตูไม่ทำให้ปรากฏตัว คูลดาวน์ {cooldown:int} วินาที",
+	},
+	["Monster.Lurker.Folklore"] = {
+		en = "Old river tales speak of guardians that sleep in deep, dark water and wake when the river is wronged. The Lurker is one gone sour: it follows the current to the village, moves without a ripple, and wears the faces of those it hunts. When the water's edge is silent, it is already there.",
+		th = "ตำนานเก่าแก่ริมแม่น้ำเล่าถึงผู้พิทักษ์ที่หลับใหลอยู่ในน้ำลึกอันมืดมิด และจะตื่นขึ้นเมื่อสายน้ำถูกล่วงเกิน ผู้ซุ่มใต้น้ำคือหนึ่งในนั้นที่กลายเป็นร้าย มันตามกระแสน้ำมาถึงหมู่บ้าน เคลื่อนไหวโดยไม่มีแม้แต่ระลอกคลื่น และสวมใบหน้าของเหยื่อที่มันล่า เมื่อริมน้ำเงียบสงัด มันก็มาถึงแล้ว",
+	},
+	["Monster.Price"] = { en = "{coins:int} coins  ·  {robux:int} R$ / Diamonds", th = "{coins:int} coin  ·  {robux:int} R$ / Diamond" },
+	["Monster.NoSkins"] = { en = "No skins for this monster yet.", th = "มอนสเตอร์ตัวนี้ยังไม่มีสกิน" },
+	["Monster.NotOwned"] = { en = "Not owned", th = "ยังไม่มี" },
+	["Monster.BuyFirst"] = { en = "Buy this monster first.", th = "ต้องซื้อมอนสเตอร์ตัวนี้ก่อน" },
 	["Monster.Select"] = { en = "Select", th = "เลือก" },
 	["Monster.Selected"] = { en = "Selected", th = "เลือกแล้ว" },
 	["Monster.Locked"] = { en = "More monsters are coming soon!", th = "มอนสเตอร์ตัวใหม่กำลังจะมาเร็วๆ นี้!" },
@@ -267,6 +289,8 @@ local Strings: { [string]: Entry } = {
 	["Ability.Sniff"] = { en = "Sniff", th = "ดมกลิ่น" },
 	["Ability.Sprint"] = { en = "Sprint", th = "วิ่ง 4 ขา" },
 	["Ability.Howl"] = { en = "Howl", th = "หอน" },
+	["Ability.WaterBolt"] = { en = "Water Bolt", th = "พ่นน้ำ" },
+	["Ability.Vanish"] = { en = "Vanish", th = "หายตัว" },
 	["Ability.Shoot"] = { en = "Shoot", th = "ยิง" },
 	["Ability.See"] = { en = "See", th = "มองทะลุ" },
 	["Ability.Dash"] = { en = "Dash", th = "พุ่ง" },
@@ -517,6 +541,7 @@ local Strings: { [string]: Entry } = {
 	["Prompt.Fish"] = { en = "Fish", th = "ตกปลา" },
 	["Prompt.Steal"] = { en = "Steal", th = "ขโมย" },
 	["Prompt.Oil"] = { en = "Pour oil", th = "ราดน้ำมัน" },
+	["Prompt.Knock"] = { en = "Knock", th = "เคาะประตู" },
 	["Prompt.DebugHitDoor"] = { en = "[Debug] Hit door", th = "[Debug] ตีประตู" },
 
 	-- Chat channels (GDD §6.2, §12)

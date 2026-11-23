@@ -65,7 +65,7 @@ export type Item = {
 local Items = Config.Items
 local REACH_SLACK = 4
 local THROW_HEIGHT = 1.5
-local SHIELD_CAUSES = { Wolf = true, Pup = true, Killer = true, Sheriff = true }
+local SHIELD_CAUSES = { Wolf = true, Pup = true, Lurker = true, Killer = true, Sheriff = true }
 
 local InventoryService = {}
 

@@ -12,6 +12,7 @@ type Service = { Init: () -> (), Start: () -> () }
 local ordered: { Service } = {
 	require(Services.Net),
 	require(Services.AudioService),
+	require(Services.ForestService), -- before anything that looks for task trees
 	require(Services.ProfileService),
 	require(Services.MatchService),
 	require(Services.RoundService),

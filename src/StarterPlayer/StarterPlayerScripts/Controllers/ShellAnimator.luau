@@ -8,6 +8,8 @@
 	  - Attack / Maul / Howl are started by the server (shell attributes
 	    "Anim" + "AnimAt").
 	  - Idle / Walk / Run follow the character's actual speed.
+	  - Swim when the shell is "Submerged" (The Lurker in the water channel).
+	  - The Lurker invisible ("Vanished"): its own player still sees it faintly.
 
 	Two kinds of rig are supported:
 	  - the block rig (build/BuildWolfRig.luau): one Motor6D per joint;
@@ -16,6 +18,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -110,6 +113,10 @@ local function currentAnimation(shell: Instance): (WolfAnimData.Animation, numbe
 		end
 	end
 
+	-- The Lurker in the water slithers (one-shot attacks above still win).
+	if shell:GetAttribute("Submerged") then
+		return animations.Swim, os.clock()
+	end
 	local speed = 0
 	local character = shell.Parent
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -126,9 +133,38 @@ local function currentAnimation(shell: Instance): (WolfAnimData.Animation, numbe
 	return animations.Idle, now
 end
 
+local VANISHED_SELF = 0.75 -- how see-through the invisible Lurker looks to its own player
+
 local function step(deltaTime: number)
 	local blend = 1 - math.exp(-deltaTime * BLEND_RATE)
+	local me = Players.LocalPlayer.Character
 	for shell, rig in rigs do
+		-- Swimming is silent: mute the footsteps under a submerged Lurker.
+		local character = shell.Parent
+		local body = character and character:FindFirstChild("HumanoidRootPart")
+		local running = body and body:FindFirstChild("Running")
+		if running and running:IsA("Sound") then
+			if shell:GetAttribute("Submerged") then
+				if running:GetAttribute("DryVolume") == nil then
+					running:SetAttribute("DryVolume", running.Volume)
+				end
+				running.Volume = 0
+			elseif running:GetAttribute("DryVolume") ~= nil then
+				running.Volume = running:GetAttribute("DryVolume") :: number
+				running:SetAttribute("DryVolume", nil)
+			end
+		end
+		-- Invisible to everyone else; faintly visible to itself (local only).
+		if me and shell.Parent == me and me:GetAttribute("Vanished") then
+			for _, part in shell:GetDescendants() do
+				if part:IsA("BasePart") and part.Transparency >= 1 and part:GetAttribute("ShellTransparency") ~= nil then
+					local original = part:GetAttribute("ShellTransparency") :: number
+					if original < 1 then
+						part.Transparency = math.max(original, VANISHED_SELF)
+					end
+				end
+			end
+		end
 		local animation, t = currentAnimation(shell)
 		for _, joint in WolfAnimData.Joints do
 			local target = WolfAnimData.pose(animation, joint, t, rig.Scale)

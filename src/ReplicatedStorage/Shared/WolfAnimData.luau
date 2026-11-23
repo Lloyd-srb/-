@@ -187,6 +187,29 @@ Animations.Howl = {
 	}),
 }
 
+-- The Lurker swimming in the channel (owner, 19 Nov 2026): lying flat and
+-- slithering like a reptile; arms and legs tucked back, the body and tail
+-- swinging side to side. Only its head and back fins are above the water.
+Animations.Swim = {
+	Length = 1.2,
+	Loop = true,
+	Priority = "Movement",
+	Tracks = {
+		Torso = { { 0, -70, -14, 0 }, { 0.6, -70, 14, 0 }, { 1.2, -70, -14, 0 } },
+		Chest = { { 0, -10, 12, 0 }, { 0.6, -10, -12, 0 }, { 1.2, -10, 12, 0 } },
+		Head = { { 0, 70, -6, 0 }, { 0.6, 70, 6, 0 }, { 1.2, 70, -6, 0 } },
+		LeftUpperArm = { { 0, -80, 0, -20 }, { 0.6, -60, 0, -20 }, { 1.2, -80, 0, -20 } },
+		RightUpperArm = { { 0, -60, 0, 20 }, { 0.6, -80, 0, 20 }, { 1.2, -60, 0, 20 } },
+		LeftLowerArm = { { 0, 30, 0, 0 } },
+		RightLowerArm = { { 0, 30, 0, 0 } },
+		LeftUpperLeg = { { 0, 60, 0, 0 }, { 0.6, 40, 0, 0 }, { 1.2, 60, 0, 0 } },
+		RightUpperLeg = { { 0, 40, 0, 0 }, { 0.6, 60, 0, 0 }, { 1.2, 40, 0, 0 } },
+		LeftLowerLeg = { { 0, 20, 0, 0 } },
+		RightLowerLeg = { { 0, 20, 0, 0 } },
+		Tail = { { 0, 0, 30, 0 }, { 0.6, 0, -30, 0 }, { 1.2, 0, 30, 0 } },
+	},
+}
+
 WolfAnimData.Animations = Animations
 
 -- Animation name -> Config.Animations key (published asset id).

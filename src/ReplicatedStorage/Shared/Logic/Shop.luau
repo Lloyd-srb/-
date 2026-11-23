@@ -5,14 +5,14 @@
 	server would refuse, and the server checks everything again.
 
 	Currencies:
-	  "Coins"     roles only (GDD §13.1)
+	  "Coins"     roles and monsters (GDD §13.1, owner 19 Nov 2026)
 	  "Diamonds"  everything Robux buys, at the same number (GDD §13)
 	  "Robux"     a Developer Product (Config.Products.DevProducts)
 ]]
 
 local Config = require(script.Parent.Parent.Config)
 
-export type Kind = string -- "Role" | "Skin" | "Premium" | "Coins"
+export type Kind = string -- "Role" | "Skin" | "Premium" | "Coins" | "Monster"
 export type Currency = string -- "Coins" | "Diamonds" | "Robux"
 
 export type Offer = {
@@ -33,6 +33,7 @@ export type Wallet = {
 	Roles: { [string]: boolean },
 	Skins: { [string]: boolean },
 	Premium: boolean,
+	Monsters: { [string]: boolean }?, -- bought monsters (free ones are implicit)
 }
 
 local Shop = {}
@@ -62,6 +63,20 @@ function Shop.offer(kind: Kind, id: string): Offer?
 			return nil
 		end
 		local offer: Offer = { Kind = "Skin", Id = id, Gems = def.Price, ProductKey = "Skin" .. id, OneTime = true }
+		return offer
+	elseif kind == "Monster" then
+		local def = Config.monsterDef(id)
+		if not def or def.Free then
+			return nil
+		end
+		local offer: Offer = {
+			Kind = "Monster",
+			Id = id,
+			Coins = def.CoinPrice,
+			Gems = def.RobuxPrice,
+			ProductKey = "Monster" .. id,
+			OneTime = true,
+		}
 		return offer
 	elseif kind == "Premium" then
 		local price = Config.SeasonPass.PremiumRobuxPrice
@@ -93,7 +108,7 @@ function Shop.offerForProduct(productKey: string): Offer?
 	if productKey == "SeasonPassPremium" then
 		return Shop.offer("Premium", "Premium")
 	end
-	for _, prefix in { "Role", "Skin", "Coins" } do
+	for _, prefix in { "Role", "Skin", "Coins", "Monster" } do
 		if productKey:sub(1, #prefix) == prefix then
 			return Shop.offer(prefix, productKey:sub(#prefix + 1))
 		end
@@ -109,6 +124,9 @@ function Shop.owns(wallet: Wallet, kind: Kind, id: string): boolean
 		return wallet.Skins[id] == true
 	elseif kind == "Premium" then
 		return wallet.Premium
+	elseif kind == "Monster" then
+		local def = Config.monsterDef(id)
+		return (def ~= nil and def.Free) or (wallet.Monsters ~= nil and wallet.Monsters[id] == true)
 	end
 	return false
 end

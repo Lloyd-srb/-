@@ -10,6 +10,7 @@
 ]]
 
 local fs = require("@lune/fs")
+local process = require("@lune/process")
 
 local Harness = require("./lib/Harness")
 local Places = require("./lib/Places")
@@ -54,6 +55,11 @@ for _, place in Places.All do
 	print(`wrote {place.Out} ({#loaded.scripts} scripts)`)
 
 	if place.Name == "Match" then
+		-- The forest is made at runtime (random each match): add one example,
+		-- with the Lurker's channel shown, for the top-down picture only.
+		local forest = loaded.require(loaded.game.ServerScriptService.Services.ForestService)
+		forest.Generate(tonumber(process.env.FOREST_SEED) or 7)
+		forest.ShowMoat()
 		-- A dump of every part for a quick top-down layout check (tools/wolfmesh-style renders).
 		local lines = {}
 		for _, instance in loaded.game:GetService("Workspace"):GetDescendants() do

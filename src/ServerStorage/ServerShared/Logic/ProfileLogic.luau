@@ -34,6 +34,8 @@ export type Data = {
 	Receipts: { string }, -- recent Robux purchase ids, oldest first
 	TutorialSeen: boolean, -- read the how-to-play pages
 	RolePicks: { string }, -- the 3 roles chosen in the Lobby (owner, 18 Nov 2026)
+	Monsters: { [string]: boolean }, -- bought monsters (free ones are implicit)
+	Monster: string, -- the monster played when dealt the wolf (owner, 19 Nov 2026)
 }
 
 export type Reward = {
@@ -77,6 +79,8 @@ function ProfileLogic.template(): Data
 		Receipts = {},
 		TutorialSeen = false,
 		RolePicks = table.clone(Config.RoleSelect.StarterRoles),
+		Monsters = {},
+		Monster = "Werewolf",
 	}
 end
 
@@ -146,6 +150,10 @@ function ProfileLogic.reconcile(raw: any): Data
 		data.Spin.Extra = count(raw.Spin.Extra)
 	end
 	data.TutorialSeen = raw.TutorialSeen == true
+	data.Monsters = flags(raw.Monsters)
+	if type(raw.Monster) == "string" and Config.monsterDef(raw.Monster) then
+		data.Monster = raw.Monster
+	end
 	if type(raw.RolePicks) == "table" then
 		local picks: { string } = {}
 		for _, roleId in raw.RolePicks do
@@ -197,7 +205,27 @@ function ProfileLogic.wallet(data: Data): Shop.Wallet
 		Roles = ProfileLogic.ownedRoles(data),
 		Skins = data.Skins,
 		Premium = data.Pass.Premium,
+		Monsters = data.Monsters,
 	}
+end
+
+function ProfileLogic.ownsMonster(data: Data, monsterId: string): boolean
+	local def = Config.monsterDef(monsterId)
+	return def ~= nil and (def.Free or data.Monsters[monsterId] == true)
+end
+
+-- The monster this player plays (the one picked, if still owned).
+function ProfileLogic.monster(data: Data): string
+	return if ProfileLogic.ownsMonster(data, data.Monster) then data.Monster else "Werewolf"
+end
+
+-- Picks the monster to play; only an owned one.
+function ProfileLogic.selectMonster(data: Data, monsterId: string): boolean
+	if not ProfileLogic.ownsMonster(data, monsterId) then
+		return false
+	end
+	data.Monster = monsterId
+	return true
 end
 
 -- The equipped skin for a slot, if it is still a known skin of that slot.
@@ -242,6 +270,11 @@ function ProfileLogic.applyReward(data: Data, reward: Reward): Reward
 			return { Kind = "None" }
 		end
 		data.Roles[reward.Id] = true
+	elseif kind == "Monster" and reward.Id and Config.monsterDef(reward.Id) then
+		if ProfileLogic.ownsMonster(data, reward.Id) then
+			return { Kind = "None" }
+		end
+		data.Monsters[reward.Id] = true
 	elseif kind == "Premium" then
 		if data.Pass.Premium then
 			return { Kind = "None" }
@@ -324,6 +357,8 @@ local function give(data: Data, offer: Shop.Offer): { Reward }
 		return { ProfileLogic.applyReward(data, { Kind = "Role", Id = offer.Id }) }
 	elseif offer.Kind == "Skin" then
 		return { ProfileLogic.applyReward(data, { Kind = "Skin", Id = offer.Id }) }
+	elseif offer.Kind == "Monster" then
+		return { ProfileLogic.applyReward(data, { Kind = "Monster", Id = offer.Id }) }
 	elseif offer.Kind == "Premium" then
 		local rewards = ProfileLogic.unlockPremium(data)
 		table.insert(rewards, 1, { Kind = "Premium" })
@@ -491,6 +526,16 @@ function ProfileLogic.view(data: Data, now: number): { [string]: any }
 			Premium = data.Pass.Premium,
 		},
 		TutorialSeen = data.TutorialSeen,
+		Monsters = (function()
+			local owned: { [string]: boolean } = {}
+			for _, monster in Config.Monsters do
+				if ProfileLogic.ownsMonster(data, monster.Id) then
+					owned[monster.Id] = true
+				end
+			end
+			return owned
+		end)(),
+		Monster = ProfileLogic.monster(data),
 		RolePicks = ProfileLogic.rolePicks(data),
 		Spin = {
 			Free = DailySpin.freeReady(data.Spin, now),

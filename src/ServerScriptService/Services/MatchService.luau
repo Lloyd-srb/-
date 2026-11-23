@@ -558,6 +558,12 @@ function MatchService.BeginMatch()
 	-- The roles follow the number of people actually in the match (8-12).
 	local composition = RoleAssignment.composition(#candidates)
 	Roster.setRoles(roster, RoleAssignment.assign(candidates, composition, rng, forced))
+	-- The wolf plays the monster picked in the Lobby (owner, 19 Nov 2026).
+	for _, member in Roster.list(roster) do
+		local player = MatchService.PlayerOf(member.Id)
+		local forcedMonster = if Config.Debug.Enabled then Config.Debug.ForceMonster else nil
+		member.Monster = forcedMonster or (if player then ProfileService.Monster(player) else "Werewolf")
+	end
 	MatchService.Started = true
 
 	for _, player in Players:GetPlayers() do

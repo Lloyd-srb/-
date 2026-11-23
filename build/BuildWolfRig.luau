@@ -6,6 +6,7 @@
 	Creates, idempotently:
 	  ServerStorage.Rigs.Wolf            Motor6D rig (PrimaryPart "Root")
 	  ServerStorage.Rigs.Pup             the same rig scaled down (GDD §8.2)
+	  ServerStorage.Rigs.Lurker          The Lurker (owner, 19 Nov 2026), same joints
 	  ServerStorage.WolfAnimations.*     KeyframeSequences made from
 	                                     Shared.WolfAnimData, ready to publish
 
@@ -78,6 +79,57 @@ for prefix, side in SIDES do
 end
 
 --------------------------------------------------------------------------------
+-- The Lurker (owner, 19 Nov 2026): a blocky river creature from the owner's
+-- reference sheet: dark blue scales, sea-green fins on the head, back, arms,
+-- legs and tail, glowing cyan eyes and runes, pale whiskers and claws, long
+-- arms. Same joint names as the werewolf, so the same animations drive it.
+--------------------------------------------------------------------------------
+
+local LURKER_SPECS: { PartSpec } = {
+	spec("Torso", V(2.4, 2.2, 1.8), V(0, 0.6, 0.1), "Belly", "Root", V(0, -0.4, 0.1)),
+	spec("BellyPlate", V(1.4, 2.4, 0.2), V(0, 0.9, -0.85), "Belly", "Torso"),
+	spec("Chest", V(3.8, 3.0, 2.6), V(0, 2.9, -0.4), "Scale", "Torso", V(0, 1.6, 0)),
+	spec("ChestRune", V(1.8, 0.4, 0.1), V(0, 3.4, -1.75), "Rune", "Chest"),
+	spec("Head", V(2.0, 1.8, 2.2), V(0, 4.6, -1.7), "Scale", "Chest", V(0, 4.1, -1.2)),
+	spec("Snout", V(1.4, 0.8, 2.0), V(0, 4.45, -3.6), "Scale", "Head"),
+	spec("Jaw", V(1.3, 0.45, 1.8), V(0, 3.75, -3.4), "Scale", "Head"),
+	spec("Mouth", V(1.1, 0.3, 1.5), V(0, 4.0, -3.5), "Mouth", "Head"),
+	spec("Teeth", V(1.15, 0.25, 0.2), V(0, 4.05, -4.45), "Claw", "Head"),
+	spec("HeadRune", V(0.9, 0.2, 0.1), V(0, 5.2, -2.82), "Rune", "Head"),
+	spec("HeadFin", V(0.3, 1.6, 2.2), V(0, 6.0, -1.3), "Fin", "Head"),
+	spec("BackFin1", V(0.3, 1.8, 1.6), V(0, 4.4, 1.0), "Fin", "Chest"),
+	spec("BackFin2", V(0.3, 1.6, 1.4), V(0, 2.3, 1.2), "Fin", "Torso"),
+	spec("BackFin3", V(0.3, 1.2, 1.2), V(0, 0.9, 1.2), "Fin", "Torso"),
+	spec("Tail", V(0.9, 0.9, 3.4), V(0, 0.0, 2.7), "Scale", "Torso", V(0, 0.3, 1.0)),
+	spec("TailFin", V(0.25, 1.9, 1.9), V(0, 0.5, 4.6), "Fin", "Tail"),
+}
+for prefix, side in SIDES do
+	local function add(name: string, size: Vector3, center: Vector3, color: string, parent: string, pivot: Vector3?)
+		local function mirrored(point: Vector3): Vector3
+			return V(point.X * side, point.Y, point.Z)
+		end
+		local parentName = if parent == "Chest" or parent == "Torso" or parent == "Head" then parent else prefix .. parent
+		table.insert(LURKER_SPECS, spec(prefix .. name, size, mirrored(center), color, parentName, if pivot then mirrored(pivot) else nil))
+	end
+	add("Eye", V(0.5, 0.3, 0.12), V(0.55, 4.85, -2.82), "Eye", "Head")
+	add("Whisker", V(1.8, 0.15, 0.15), V(1.45, 4.15, -3.9), "Whisker", "Head")
+	add("SideFin", V(0.3, 1.2, 1.4), V(1.0, 5.5, -1.1), "Fin", "Head")
+	add("Shoulder", V(1.6, 1.3, 1.9), V(2.6, 4.0, -0.5), "Scale", "Chest")
+	add("ShoulderFin", V(0.3, 1.4, 1.4), V(3.25, 4.9, 0.2), "Fin", "Chest")
+	add("UpperArm", V(1.2, 2.8, 1.2), V(2.6, 2.2, -0.5), "Scale", "Chest", V(2.6, 3.5, -0.5))
+	add("ArmRune", V(0.1, 0.9, 0.5), V(3.22, 2.4, -0.5), "Rune", "UpperArm")
+	add("LowerArm", V(1.1, 2.8, 1.1), V(2.6, -0.4, -0.5), "Scale", "UpperArm", V(2.6, 0.9, -0.5))
+	add("ArmFin", V(0.25, 1.8, 1.2), V(3.2, -0.4, 0.25), "Fin", "LowerArm")
+	for claw = 1, 3 do
+		add("Claw" .. claw, V(0.25, 1.1, 0.25), V(2.6 + (claw - 2) * 0.42, -2.3, -0.9), "Claw", "LowerArm")
+	end
+	add("UpperLeg", V(1.2, 1.5, 1.4), V(0.8, -0.95, 0.1), "Scale", "Torso", V(0.8, -0.3, 0.1))
+	add("LegFin", V(0.25, 1.0, 1.0), V(1.45, -1.0, 0.6), "Fin", "UpperLeg")
+	add("LowerLeg", V(1.1, 1.3, 1.2), V(0.8, -2.35, 0.1), "Scale", "UpperLeg", V(0.8, -1.7, 0.1))
+	add("Foot", V(1.3, 0.5, 2.0), V(0.8, -2.75, -0.3), "Scale", "LowerLeg")
+end
+
+--------------------------------------------------------------------------------
 
 local function resetFolder(name: string): Folder
 	local old = ServerStorage:FindFirstChild(name)
@@ -90,7 +142,9 @@ local function resetFolder(name: string): Folder
 	return folder
 end
 
-local function buildRig(name: string, scale: number, parent: Instance): Model
+local function buildRig(name: string, scale: number, parent: Instance, specs: { PartSpec }?, palette: { [string]: any }?): Model
+	local list = specs or SPECS
+	local colors = palette or Config.WolfRig
 	-- Scale around the ground point so the feet stay on the floor.
 	local function place(point: Vector3): Vector3
 		return GROUND + (point - GROUND) * scale
@@ -110,13 +164,13 @@ local function buildRig(name: string, scale: number, parent: Instance): Model
 	root.Transparency = 1
 	parts.Root = root
 
-	for _, item in SPECS do
+	for _, item in list do
 		local part = Instance.new("Part")
 		part.Name = item.Name
 		part.Size = item.Size * scale
-		part.Color = Config.WolfRig[item.Color]
+		part.Color = colors[item.Color]
 		part:SetAttribute("Paint", item.Color) -- wolf skins recolour by this key
-		part.Material = if item.Color == "Eye" then Enum.Material.Neon else Enum.Material.SmoothPlastic
+		part.Material = if item.Color == "Eye" or item.Color == "Rune" then Enum.Material.Neon else Enum.Material.SmoothPlastic
 		part.TopSurface = Enum.SurfaceType.Smooth
 		part.BottomSurface = Enum.SurfaceType.Smooth
 		parts[item.Name] = part
@@ -135,7 +189,7 @@ local function buildRig(name: string, scale: number, parent: Instance): Model
 	end
 	rig.PrimaryPart = root
 
-	for _, item in SPECS do
+	for _, item in list do
 		local parentPart = parts[item.Parent]
 		local childPart = parts[item.Name]
 		assert(parentPart, `BuildWolfRig: {item.Name} has unknown parent {item.Parent}`)
@@ -212,6 +266,7 @@ end
 local rigs = resetFolder("Rigs")
 buildRig("Wolf", 1, rigs)
 buildRig("Pup", Config.Pup.Scale, rigs)
+buildRig("Lurker", 1, rigs, LURKER_SPECS, Config.LurkerRig)
 
 local animations = resetFolder("WolfAnimations")
 local count = 0
@@ -220,4 +275,4 @@ for name, animation in WolfAnimData.Animations do
 	count += 1
 end
 
-print(string.format("[BuildWolfRig] done: 2 rigs (%d parts each), %d animations", #SPECS + 1, count))
+print(string.format("[BuildWolfRig] done: 3 rigs (wolf %d parts, lurker %d), %d animations", #SPECS + 1, #LURKER_SPECS + 1, count))

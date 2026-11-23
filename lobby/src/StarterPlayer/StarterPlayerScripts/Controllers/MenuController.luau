@@ -51,7 +51,7 @@ local spinInfo: TextLabel? = nil
 
 local monsterWindow: Frame
 local monsterIndex = 1 -- the monster shown
-local selectedMonster = "Werewolf" -- the one this player plays (only one exists so far)
+local selectedMonster = "Werewolf" -- the one this player plays (from the profile)
 local previewSkin: string? = nil -- skin shown in the portrait (nil = plain)
 local previewSet = false -- false: follow the skin worn
 
@@ -70,6 +70,8 @@ local function nameOf(kind: string, id: string?): string
 		return Loc.format("Title." .. id .. ".Name")
 	elseif kind == "Premium" then
 		return Loc.format("Reward.Premium")
+	elseif kind == "Monster" and id and Loc.has("Monster." .. id .. ".Name") then
+		return Loc.format("Monster." .. id .. ".Name")
 	end
 	return tostring(id)
 end
@@ -202,6 +204,7 @@ local function wallet(): Shop.Wallet?
 		Roles = view.Roles,
 		Skins = view.Skins,
 		Premium = view.Pass.Premium,
+		Monsters = view.Monsters,
 	}
 end
 
@@ -377,7 +380,31 @@ local function monsterPicture(def: any, size: number, skinId: string?): GuiObjec
 		image.Image = "rbxassetid://" .. tostring(def.Image)
 		return image
 	end
+	if def.Id ~= "Werewolf" and RoleIcons.Designs[def.Id] then
+		return RoleIcons.create(def.Id, size, RoleIcons.RingColors.Wolf)
+	end
 	return RoleIcons.create("Wolf", size, RoleIcons.RingColors.Wolf, RoleIcons.wolfDesign(paintOf(skinId)))
+end
+
+local function ownsMonster(monsterId: string): boolean
+	local def = Config.monsterDef(monsterId)
+	return def ~= nil and (def.Free or (view ~= nil and view.Monsters ~= nil and view.Monsters[monsterId] == true))
+end
+
+-- Text numbers for each monster's passive and abilities (all from Config).
+local function monsterTexts(id: string): ({ [string]: any }, { [string]: any }, { [string]: any })
+	if id == "Lurker" then
+		local lurker = Config.Lurker
+		local damage = Config.monsterStat("Lurker", "AttackPower")
+		local cooldown = Config.monsterStat("Lurker", "AttackSpeed")
+		return { bonus = lurker.WaterSpeedBonus, wade = Config.Map.Moat.WadeSpeed },
+			{ damage = damage, range = lurker.Bullet.Range, cooldown = cooldown },
+			{ cooldown = lurker.Vanish.Cooldown }
+	end
+	local sniff, sprint = Config.Wolf.Sniff, Config.Wolf.Sprint
+	return { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed, cooldown = Config.Wolf.AttackCooldown },
+		{ duration = sniff.Duration, cooldown = sniff.Cooldown },
+		{ speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }
 end
 
 local function skinLine(skinId: string?): string
@@ -436,9 +463,20 @@ local function renderMonster()
 	(skins:WaitForChild("TitleLabel") :: TextLabel).Text = Loc.format("Monster.Skins")
 	local skinList = skins:WaitForChild("SkinList")
 	clearGui(skinList)
-	local choices: { string } = { "" }
+	clearGui(skins:WaitForChild("Buttons"))
+	if id ~= "Werewolf" then
+		-- No skins for this monster yet; buy it here when it is not owned.
+		local owned = ownsMonster(id);
+		(skins:WaitForChild("SkinInfo") :: TextLabel).Text = if owned
+			then Loc.format("Monster.NoSkins")
+			else Loc.format("Monster.Price", { coins = def.CoinPrice, robux = def.RobuxPrice })
+		if view and not owned then
+			addBuyButtons(skins, "Monster", id)
+		end
+	end
+	local choices: { string } = if id == "Werewolf" then { "" } else {}
 	for _, skinId in Config.SkinOrder do
-		if Config.Skins[skinId].Slot == "Wolf" then
+		if Config.Skins[skinId].Slot == "Wolf" and id == "Werewolf" then
 			table.insert(choices, skinId)
 		end
 	end
@@ -465,9 +503,10 @@ local function renderMonster()
 		end)
 		slot.Parent = skinList
 	end
-	(skins:WaitForChild("SkinInfo") :: TextLabel).Text = skinLine(previewSkin)
-	clearGui(skins:WaitForChild("Buttons"))
-	if view then
+	if id == "Werewolf" then
+		(skins:WaitForChild("SkinInfo") :: TextLabel).Text = skinLine(previewSkin)
+	end
+	if view and id == "Werewolf" then
 		local owned = previewSkin == nil or view.Skins[previewSkin :: string] == true
 		if owned then
 			addEquipButton(skins, "Wolf", previewSkin)
@@ -495,29 +534,11 @@ local function renderMonster()
 		end
 	end
 
-	-- Passive, abilities (GDD §8.1; numbers from Config), folklore.
-	local sniff, sprint = Config.Wolf.Sniff, Config.Wolf.Sprint
-	setBox(
-		"PassivePanel",
-		Loc.format("Monster.Passive"),
-		Loc.format(
-			"Monster." .. id .. ".Passive",
-			{ speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed, cooldown = Config.Wolf.AttackCooldown }
-		)
-	)
-	setBox(
-		"Ability1Panel",
-		Loc.format("Monster.Ability", { n = 1 }),
-		Loc.format("Monster." .. id .. ".Ability1", { duration = sniff.Duration, cooldown = sniff.Cooldown })
-	)
-	setBox(
-		"Ability2Panel",
-		Loc.format("Monster.Ability", { n = 2 }),
-		Loc.format(
-			"Monster." .. id .. ".Ability2",
-			{ speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }
-		)
-	)
+	-- Passive, abilities (GDD §8.1 / the owner's text; numbers from Config), folklore.
+	local passive, ability1, ability2 = monsterTexts(id)
+	setBox("PassivePanel", Loc.format("Monster.Passive"), Loc.format("Monster." .. id .. ".Passive", passive))
+	setBox("Ability1Panel", Loc.format("Monster.Ability", { n = 1 }), Loc.format("Monster." .. id .. ".Ability1", ability1))
+	setBox("Ability2Panel", Loc.format("Monster.Ability", { n = 2 }), Loc.format("Monster." .. id .. ".Ability2", ability2))
 	setBox("FolklorePanel", Loc.format("Monster.Folklore"), Loc.format("Monster." .. id .. ".Folklore"))
 
 	-- The monster list: real ones, then locked "?" slots.
@@ -554,9 +575,10 @@ local function renderMonster()
 
 	local select = monsterWindow:WaitForChild("SelectButton") :: TextButton
 	local chosen = selectedMonster == id
-	select.Text = Loc.format(if chosen then "Monster.Selected" else "Monster.Select")
-	select.AutoButtonColor = not chosen
-	select.BackgroundTransparency = if chosen then DISABLED_TRANSPARENCY else 0
+	local usable = not chosen and ownsMonster(id)
+	select.Text = Loc.format(if chosen then "Monster.Selected" elseif ownsMonster(id) then "Monster.Select" else "Monster.NotOwned")
+	select.AutoButtonColor = usable
+	select.BackgroundTransparency = if usable then 0 else DISABLED_TRANSPARENCY
 end
 
 local function closeMonster()
@@ -774,6 +796,9 @@ local function onView(newView: any)
 		return
 	end
 	view = newView
+	if type(newView.Monster) == "string" then
+		selectedMonster = newView.Monster
+	end
 	local coins = walletBar:FindFirstChild("CoinsLabel") :: TextLabel?
 	local diamonds = walletBar:FindFirstChild("DiamondsLabel") :: TextLabel?
 	local level = walletBar:FindFirstChild("LevelLabel") :: TextLabel?
@@ -860,10 +885,15 @@ function MenuController.Start()
 	local select = monsterWindow:WaitForChild("SelectButton") :: TextButton
 	select.Activated:Connect(function()
 		local def = Config.Monsters[monsterIndex]
-		if def and selectedMonster ~= def.Id then
-			selectedMonster = def.Id
-			renderMonster()
+		if not def or selectedMonster == def.Id then
+			return
 		end
+		if not ownsMonster(def.Id) then
+			showToast(Loc.format("Monster.BuyFirst"))
+			return
+		end
+		Remotes.get("SelectMonster"):FireServer(def.Id) -- the profile view that comes back shows it
+		Audio.play("UIOpen")
 	end)
 	local close = window:WaitForChild("CloseButton") :: TextButton
 	close.Text = Loc.format("Menu.Close")

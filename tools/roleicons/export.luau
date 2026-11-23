@@ -18,7 +18,7 @@ local function color(c)
 	return { math.round(c.R * 255), math.round(c.G * 255), math.round(c.B * 255) }
 end
 
-local order = { "Wolf", "Pup" }
+local order = { "Wolf", "Pup", "Lurker" }
 for _, roleId in Config.RoleOrder do
 	table.insert(order, roleId)
 end
@@ -44,7 +44,8 @@ for _, roleId in order do
 end
 local Strings = loaded.require(Shared.Strings)
 for _, roleId in order do
-	out.names[roleId] = { en = Strings["Role." .. roleId .. ".Name"].en, th = Strings["Role." .. roleId .. ".Name"].th }
+	local entry = Strings["Role." .. roleId .. ".Name"] or Strings["Monster." .. roleId .. ".Name"]
+	out.names[roleId] = { en = entry.en, th = entry.th }
 end
 
 -- The how-to-play pages (pictures + English text) for the tutorial preview.
@@ -78,9 +79,11 @@ local function shapesOf(design)
 end
 
 -- The lobby's Monster window (first monster, every wolf skin).
-local monster = Config.Monsters[1]
-local skins = { { name = Strings["Monster.PlainSkin"].en, shapes = shapesOf(RoleIcons.wolfDesign(nil)) } }
-for _, skinId in Config.SkinOrder do
+local monster = Config.monsterDef(process.env.MONSTER or "Werewolf")
+local skins = if monster.Id == "Werewolf"
+	then { { name = Strings["Monster.PlainSkin"].en, shapes = shapesOf(RoleIcons.wolfDesign(nil)) } }
+	else { { name = Strings["Monster.NoSkins"].en, shapes = shapesOf(RoleIcons.Designs[monster.Id]) } }
+for _, skinId in if monster.Id == "Werewolf" then Config.SkinOrder else {} do
 	local def = Config.Skins[skinId]
 	if def.Slot == "Wolf" then
 		table.insert(skins, { name = Strings["Skin." .. skinId .. ".Name"].en, shapes = shapesOf(RoleIcons.wolfDesign(def.Paint)) })
@@ -104,12 +107,34 @@ out.monster = {
 		{ text("Monster.Stat.AttackSpeed"), monster.Stats.AttackSpeed },
 		{ text("Monster.Stat.Vision"), monster.Stats.Vision },
 	},
-	boxes = {
-		{ text("Monster.Passive"), text("Monster." .. monster.Id .. ".Passive", { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed, cooldown = Config.Wolf.AttackCooldown }) },
-		{ text("Monster.Ability", { n = 1 }), text("Monster." .. monster.Id .. ".Ability1", { duration = sniff.Duration, cooldown = sniff.Cooldown }) },
-		{ text("Monster.Ability", { n = 2 }), text("Monster." .. monster.Id .. ".Ability2", { speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }) },
-		{ text("Monster.Folklore"), text("Monster." .. monster.Id .. ".Folklore") },
-	},
+	boxes = if monster.Id == "Lurker"
+		then {
+			{ text("Monster.Passive"), text("Monster.Lurker.Passive", { bonus = Config.Lurker.WaterSpeedBonus, wade = Config.Map.Moat.WadeSpeed }) },
+			{ text("Monster.Ability", { n = 1 }), text("Monster.Lurker.Ability1", { damage = Config.monsterStat("Lurker", "AttackPower"), range = Config.Lurker.Bullet.Range, cooldown = Config.monsterStat("Lurker", "AttackSpeed") }) },
+			{ text("Monster.Ability", { n = 2 }), text("Monster.Lurker.Ability2", { cooldown = Config.Lurker.Vanish.Cooldown }) },
+			{ text("Monster.Folklore"), text("Monster.Lurker.Folklore") },
+		}
+		else {
+			{ text("Monster.Passive"), text("Monster." .. monster.Id .. ".Passive", { speed = Config.Wolf.WalkSpeed, human = Config.Human.WalkSpeed, cooldown = Config.Wolf.AttackCooldown }) },
+			{ text("Monster.Ability", { n = 1 }), text("Monster." .. monster.Id .. ".Ability1", { duration = sniff.Duration, cooldown = sniff.Cooldown }) },
+			{ text("Monster.Ability", { n = 2 }), text("Monster." .. monster.Id .. ".Ability2", { speed = sprint.Speed, duration = sprint.Duration, maul = sprint.MaulDuration, cooldown = sprint.Cooldown }) },
+			{ text("Monster.Folklore"), text("Monster." .. monster.Id .. ".Folklore") },
+		},
+	carousel = (function()
+		local list = {}
+		for _, m in Config.Monsters do
+			table.insert(list, shapesOf(if m.Id == "Werewolf" then RoleIcons.wolfDesign(nil) else RoleIcons.Designs[m.Id]))
+		end
+		return list
+	end)(),
+	current = (function()
+		for index, m in Config.Monsters do
+			if m.Id == monster.Id then
+				return index
+			end
+		end
+		return 1
+	end)(),
 	locked = Config.MonsterLockedSlots,
 	labels = { skins = text("Monster.Skins"), stats = text("Monster.Stats"), select = text("Monster.Selected") },
 }

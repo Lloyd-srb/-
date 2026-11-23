@@ -62,6 +62,7 @@ Remotes.Names = {
 	"WolfAbility",
 	"HideExit",
 	"SaveRolePicks", -- Lobby: the 3 roles this player wants (owner, 18 Nov 2026)
+	"SelectMonster", -- Lobby: the monster to play when dealt the wolf (owner, 19 Nov 2026)
 	"ShopBuy", -- Lobby: buy (kind, id, currency)
 	"Equip", -- Lobby: wear a skin / title (slot, id or "")
 	"SpinRequest", -- Lobby: use a Daily Spin

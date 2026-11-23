@@ -9,7 +9,8 @@
 
 	Layout (GDD §5): 12 houses in a ring around the plaza and meeting table, a
 	garden behind every house, a fence (village / forest border), a walkable
-	forest with task trees, then a dark outer forest behind invisible walls.
+	forest (filled at runtime), the river with its pier, then a dark outer forest
+	behind invisible walls.
 
 	Contract with the game scripts (tags / attributes / names):
 	  Tag "House"          Model, attr HouseId. Children: Floor (attachments
@@ -108,7 +109,7 @@ local Palette = {
 -- Helpers
 --------------------------------------------------------------------------------
 
-local stats = { Parts = 0, Houses = 0, TaskTrees = 0 }
+local stats = { Parts = 0, Houses = 0 }
 
 local function newPart(className: string, name: string, size: Vector3, cframe: CFrame, color: Color3, parent: Instance): BasePart
 	local part = (Instance.new :: any)(className) :: BasePart
@@ -194,10 +195,6 @@ end
 -- CFrame on the ring, facing the map centre.
 local function facingCentre(radius: number, angle: number): CFrame
 	return CFrame.new(onRing(radius, angle)) * yawToCentre(angle)
-end
-
-local function pick<T>(list: { T }): T
-	return list[rng:NextInteger(1, #list)]
 end
 
 local function range(min: number, max: number): number
@@ -747,43 +744,6 @@ local function scatter(count: number, innerRadius: number, outerRadius: number, 
 	return points
 end
 
-local function buildTaskTree(parent: Instance, treeId: number, position: Vector3)
-	local tree = model(string.format("Tree%02d", treeId), parent)
-	local scale = range(0.9, 1.25)
-	local trunkHeight = 9 * scale
-	local spin = CFrame.Angles(0, range(0, math.pi * 2), 0)
-	local base = CFrame.new(position) * spin
-
-	local trunk = block(
-		"Trunk",
-		Vector3.new(2.2 * scale, trunkHeight, 2.2 * scale),
-		base * CFrame.new(0, trunkHeight / 2, 0),
-		Palette.Trunk,
-		tree
-	)
-	local leaf = pick(Palette.Leaves)
-	local y = trunkHeight
-	for index, size in { { 9, 4.5 }, { 7, 4 }, { 4.5, 3.2 } } do
-		local width, height = size[1] * scale, size[2] * scale
-		decor(block(
-			"Leaves" .. index,
-			Vector3.new(width, height, width),
-			base * CFrame.new(0, y + height / 2 - 0.5, 0) * CFrame.Angles(0, index * 0.5, 0),
-			leaf,
-			tree
-		)).CastShadow =
-			true
-		y += height - 0.5
-	end
-
-	tree.PrimaryPart = trunk
-	tree:AddTag("TaskTree")
-	tree:SetAttribute("TreeId", treeId)
-	attachment("PromptAnchor", CFrame.new(0, -trunkHeight / 2 + 3.5, 0), trunk)
-	attachment("AppleSpot", CFrame.new(0, trunkHeight / 2 + 1, -3.4 * scale), trunk)
-	attachment("CrateSpot", CFrame.new(4.2 * scale, -trunkHeight / 2 + 1.2, 0), trunk)
-end
-
 --------------------------------------------------------------------------------
 -- River and pier (owner, 19 Nov 2026, from the owner's drawing): a wide river
 -- fills the north-east of the map; a wooden pier reaches out over the water
@@ -791,9 +751,8 @@ end
 -- follows the shore, with a gap for the pier.
 --------------------------------------------------------------------------------
 
--- Builds the river and the pier; returns points that trees keep away from
--- (the way from the fence to the pier).
-local function buildRiver(): { Vector3 }
+-- Builds the river and the pier (trees keep away: Logic.ForestLayout).
+local function buildRiver()
 	local river = folder("River", Map)
 	local disc = RIVER.Curve * 2
 	cylinder("Beach", disc + RIVER.BeachWidth * 2, 1, RIVER_CENTRE + Vector3.new(0, -0.55, 0), SAND, river)
@@ -874,48 +833,6 @@ local function buildRiver(): { Vector3 }
 			index += 1
 		end
 	end
-
-	-- Keep the way from the fence to the pier clear of trees.
-	local path: { Vector3 } = {}
-	for radius = MapCfg.FenceRadius, RIVER.ShoreDistance, 6 do
-		table.insert(path, onRing(radius, RIVER.Angle))
-	end
-	return path
-end
-
-local function buildForest(keepClear: { Vector3 })
-	local forest = folder("Forest", Map)
-	local trees = folder("Trees", forest)
-	local props = folder("Props", forest)
-	local taken: { Vector3 } = table.clone(keepClear)
-
-	local inner = MapCfg.FenceRadius + 10
-	local outer = MapCfg.ForestOuterRadius - 12
-	for treeId, position in scatter(MapCfg.TaskTreeCount, inner, outer, 15, taken) do
-		buildTaskTree(trees, treeId, position)
-	end
-	stats.TaskTrees = #trees:GetChildren()
-
-	for _, position in scatter(34, inner - 4, outer + 6, 7, taken) do
-		local size = range(2.5, 4.5)
-		decor(block(
-			"Bush",
-			Vector3.new(size * 1.3, size * 0.8, size * 1.3),
-			CFrame.new(position + Vector3.new(0, size * 0.4, 0)) * CFrame.Angles(0, range(0, 3), 0),
-			pick(Palette.Leaves),
-			props
-		))
-	end
-	for _, position in scatter(22, inner - 4, outer + 6, 7, taken) do
-		local size = range(1.5, 3.5)
-		block(
-			"Rock",
-			Vector3.new(size * 1.4, size, size * 1.2),
-			CFrame.new(position + Vector3.new(0, size * 0.35, 0)) * CFrame.Angles(range(-0.2, 0.2), range(0, 3), 0),
-			Palette.Rock,
-			props
-		)
-	end
 end
 
 --------------------------------------------------------------------------------
@@ -990,15 +907,10 @@ buildGround()
 buildPlaza()
 buildHouses()
 buildFence()
-buildForest(buildRiver())
+buildRiver() -- the walkable forest (trees, bushes, rocks) is built per match by ForestService
 buildOuterForest()
 
 stats.Houses = MapCfg.HouseCount
-print(string.format(
-	"[BuildVillage] done: %d parts, %d houses, %d task trees",
-	stats.Parts,
-	stats.Houses,
-	stats.TaskTrees
-))
+print(string.format("[BuildVillage] done: %d parts, %d houses", stats.Parts, stats.Houses))
 
 return stats

@@ -182,6 +182,19 @@ function EconomyService.Start()
 			ProfileLogic.setRolePicks(profile, clean)
 		end)
 	end, 10, 5)
+	-- The monster to play when dealt the wolf (owner, 19 Nov 2026): owned only.
+	Net.on("SelectMonster", function(player: Player, monsterId: any)
+		if type(monsterId) ~= "string" or #monsterId > 40 then
+			return
+		end
+		local ok = false
+		Profiles.Update(player, function(profile: ProfileLogic.Data)
+			ok = ProfileLogic.selectMonster(profile, monsterId)
+		end)
+		if not ok then
+			result(player, { Ok = false, Reason = "NotOwned", Kind = "Monster", Id = monsterId })
+		end
+	end, 10, 5)
 	Net.on("TutorialDone", function(player: Player)
 		Profiles.Update(player, function(profile: ProfileLogic.Data)
 			profile.TutorialSeen = true

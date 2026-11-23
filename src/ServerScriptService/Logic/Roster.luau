@@ -29,6 +29,7 @@ export type Member = {
 	DeathCause: DeathCause?,
 	DiedAtNight: boolean, -- only night deaths leave a body the Doctor can revive
 	HasBoots: boolean, -- from the watering task: faster for the rest of the match
+	Monster: string, -- the monster this member plays if on the wolf side ("Werewolf" | "Lurker")
 }
 
 export type Roster = {
@@ -71,6 +72,7 @@ function Roster.add(roster: Roster, id: number, name: string, isBot: boolean): M
 		DeathCause = nil,
 		DiedAtNight = false,
 		HasBoots = false,
+		Monster = "Werewolf",
 	}
 	roster.Members[id] = member
 	table.insert(roster.Order, id)
@@ -169,7 +171,7 @@ function Roster.snapshot(roster: Roster): WinConditions.Snapshot
 end
 
 local function credit(roster: Roster, killerId: number?, cause: DeathCause)
-	if cause == "Wolf" or cause == "Pup" then
+	if cause == "Wolf" or cause == "Pup" or cause == "Lurker" then
 		roster.WolfKills += 1
 	elseif cause == "Killer" then
 		roster.KillerKills += 1

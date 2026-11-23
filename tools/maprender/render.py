@@ -165,7 +165,8 @@ def main(src, out):
         ((255, 255, 255), "Fence = village / forest line"),
         ((240, 160, 70), "12 houses (coloured roofs, r 64)"),
         ((110, 80, 50), "Carrot plots behind the houses"),
-        ((110, 210, 120), "Task trees (44) in the forest"),
+        ((110, 210, 120), "Task trees (44): new spots every match"),
+        ((70, 150, 220), "Water channel: Lurker matches only"),
         ((150, 150, 160), "Rocks / bushes"),
         ((90, 160, 210), "River (top right) + pier"),
         ((214, 196, 150), "Beach along the river"),
@@ -184,6 +185,9 @@ def main(src, out):
         "about 155 studs (~10 s at speed 16).",
         "The river cannot be entered;",
         "only the pier goes out over it.",
+        "Trees, rocks and the channel's",
+        "course are random each match",
+        "(this picture is one example).",
     ]
     y += 20
     for line in notes:

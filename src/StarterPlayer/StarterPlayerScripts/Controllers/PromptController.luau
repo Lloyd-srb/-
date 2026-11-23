@@ -5,6 +5,7 @@
 	- Shows each prompt only to its audience (the server still validates
 	  every use):
 	    "Owner"  the occupant of that house tonight (open door)
+	    "NotOwner" anyone else (knock on the door)
 	    "Human"  human form (hide)
 	    "Wolf"   wolf / pup form (search)
 	  The server marks usable prompts with the "Active" attribute; this script
@@ -32,6 +33,8 @@ local function isForMe(prompt: ProximityPrompt, audience: string): boolean
 		return true
 	elseif audience == "Owner" then
 		return prompt:GetAttribute("HouseId") == ClientState.HouseId
+	elseif audience == "NotOwner" then
+		return prompt:GetAttribute("HouseId") ~= ClientState.HouseId -- knock on other people's doors
 	elseif audience == "Human" then
 		return ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden
 	elseif audience == "Wolf" then

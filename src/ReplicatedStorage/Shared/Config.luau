@@ -65,6 +65,8 @@ export type DebugConfig = {
 	ForceRoles: { [number]: RoleId }?,
 	TimerScale: number,
 	SkipRoleSelect: boolean,
+	ForestSeed: number?, -- the same forest every time (tests); nil = random
+	ForceMonster: string?, -- the monster the wolf plays, whatever was picked
 }
 
 local Config = {}
@@ -217,6 +219,7 @@ Config.Wolf = {
 	AttackRange = 7, -- [ASSUMED] studs
 	AttackMinDot = 0, -- [ASSUMED] target must be in the front half (dot of look and direction)
 	ForestScanInterval = 0.5, -- seconds between "who is in the forest" updates (§6.4)
+	ForestRevealSeconds = 10, -- [owner] 23 Nov 2026: the forest glow shows only this long after nightfall
 	SearchHold = 1, -- [GDD §6.4] hold E on a bed / wardrobe to search it
 	Sniff = {
 		Duration = 3, -- [GDD]
@@ -255,6 +258,18 @@ Config.Pup = {
 --------------------------------------------------------------------------------
 -- Werewolf look (art defaults). The rig is built by build/BuildWolfRig.luau.
 --------------------------------------------------------------------------------
+
+-- The Lurker's colours (from the owner's reference sheet).
+Config.LurkerRig = {
+	Scale = Color3.fromRGB(34, 58, 92), -- dark blue scales
+	Belly = Color3.fromRGB(120, 170, 150), -- pale green front
+	Fin = Color3.fromRGB(80, 170, 140), -- sea-green fins
+	Rune = Color3.fromRGB(90, 235, 225), -- glowing runes (Neon)
+	Eye = Color3.fromRGB(120, 255, 240), -- glowing cyan eyes (Neon)
+	Claw = Color3.fromRGB(235, 228, 205),
+	Whisker = Color3.fromRGB(230, 222, 190),
+	Mouth = Color3.fromRGB(110, 40, 90),
+}
 
 Config.WolfRig = {
 	Fur = Color3.fromRGB(112, 114, 122),
@@ -785,7 +800,26 @@ Config.Map = {
 		PierLength = 30, -- [ASSUMED] studs the pier reaches out over the water
 		PierWidth = 6, -- [ASSUMED]
 	},
-	Seed = 20261116, -- deterministic prop placement
+	-- [owner] 19 Nov 2026: a winding water channel around the village, from the
+	-- river round to the river again. It exists only in matches where the
+	-- monster is The Lurker (its passive), but its course is decided at every
+	-- server start, together with the forest: no two matches look the same,
+	-- and no tree ever stands in it.
+	Moat = {
+		Width = 12, -- [ASSUMED] studs: too wide to jump across
+		Radius = 146, -- [ASSUMED] average distance from the plaza
+		MinRadius = 114, -- keeps clear of the fence (96)
+		MaxRadius = 182, -- keeps clear of the invisible wall (200)
+		Wiggle = { 22, 9 }, -- [ASSUMED] how much it winds (two waves)
+		Step = math.rad(3), -- points along it
+		TreeMargin = 7, -- studs between the water's edge and a tree trunk
+		WadeSpeed = 8, -- [ASSUMED] people wading through it (normal 16)
+	},
+	Seed = 20261116, -- deterministic prop placement (houses, outer forest)
+	-- [owner] 19 Nov 2026: task trees, bushes and rocks are placed at random at
+	-- every server start (ForestService); the outer forest stays fixed.
+	BushCount = 34,
+	RockCount = 22,
 }
 
 --------------------------------------------------------------------------------
@@ -798,6 +832,13 @@ Config.EyesClosed = {
 	Seconds = 3, -- [owner] about 3 s in all
 	FadeIn = 0.15, -- [ASSUMED] art
 	FadeOut = 0.6, -- [ASSUMED] art
+}
+
+-- [owner] 23 Nov 2026: anyone alive (the monster too) can knock on the door of
+-- a house that is not their own; nearby players hear it.
+Config.Knock = {
+	Cooldown = 1.5, -- [ASSUMED] seconds between knocks per player
+	HearRadius = 60, -- [ASSUMED] studs
 }
 
 Config.Lighting = {
@@ -920,6 +961,8 @@ Config.Sounds = {
 	Cuff = 0, -- the Police locks someone in
 	Inspect = 0, -- the Detective's magnifying glass
 	OilPour = 0, -- the Fire Maniac pours oil on a house
+	DoorKnock = 0, -- someone knocks on a door
+	WaterBolt = 0, -- The Lurker spits water
 	Steal = 0, -- the Thief takes something
 	WaterFetch = 0, -- filling the bucket at the stream
 	FishCatch = 0, -- a fish bites
@@ -987,6 +1030,7 @@ Config.Products = {
 		RoleDetective = 0,
 		RoleLover = 0,
 		RoleFireManiac = 0,
+		MonsterLurker = 0,
 		RoleKiller = 0,
 		RoleFool = 0,
 		SkinGunGold = 0,
@@ -1008,19 +1052,61 @@ Config.Products = {
 -- Level 3 = the GDD's werewolf; Attack Power 5 = 100 damage (one hit kills).
 Config.MonsterStatValues = {
 	RunSpeed = { 16, 18, 20, 22, 24 }, -- [ASSUMED] walk speed (people: 16); level 3 = 20 [GDD]
-	AttackPower = { 20, 40, 60, 80, 100 }, -- [ASSUMED] damage per hit (people: 100 HP); level 5 = 100 [owner]
+	AttackPower = { 20, 35, 50, 75, 100 }, -- [owner] 19 Nov 2026: damage per hit (people: 100 HP); 3 = 50, 5 = 100
 	AttackSpeed = { 3, 2.5, 2, 1.5, 1 }, -- [owner] 18 Nov 2026: seconds between attacks
 	Vision = { 90, 120, 150, 180, 210 }, -- [ASSUMED] studs seen at night; level 3 = 150 (same as people)
 } :: { [string]: { number } }
 
+-- Free = everyone has it; otherwise bought (coins, or Robux / the same number
+-- of Diamonds). The monster a player picks on the Monster page is the one
+-- they play when they are dealt the wolf (owner, 19 Nov 2026).
 Config.Monsters = {
 	{
 		Id = "Werewolf",
 		Stats = { RunSpeed = 3, AttackPower = 5, AttackSpeed = 3, Vision = 3 }, -- [owner] 18 Nov 2026
 		Image = 0,
+		Free = true,
+		CoinPrice = 0,
+		RobuxPrice = 0,
+	},
+	{
+		Id = "Lurker", -- "The Lurker" (owner, 19 Nov 2026), inspired by river-guardian legends
+		Stats = { RunSpeed = 4, AttackPower = 3, AttackSpeed = 5, Vision = 4 }, -- [owner]
+		Image = 0,
+		Free = false,
+		CoinPrice = 9999, -- [owner]
+		RobuxPrice = 699, -- [owner] (or 699 Diamonds)
 	},
 }
-Config.MonsterLockedSlots = 2
+Config.MonsterLockedSlots = 1
+
+-- [owner] 19 Nov 2026: The Lurker.
+Config.Lurker = {
+	WaterSpeedBonus = 5, -- [owner] faster in the water channel (+5)
+	DoorDamage = 20, -- [owner] like the werewolf: 5 hits break a door
+	Bullet = {
+		Range = 60, -- [ASSUMED] studs
+		Speed = 110, -- [ASSUMED] studs per second (the visible shot)
+		-- damage = its Attack Power; cooldown shared with the normal attack [owner]
+	},
+	-- [owner] 23 Nov 2026: Ability 2 is invisibility (it was a disguise). It ends
+	-- at once when The Lurker attacks, spits or goes into the water; knocking on
+	-- a door does not end it.
+	Vanish = {
+		Cooldown = 30, -- [owner] seconds, counted from when it is used
+		MaxDuration = 0, -- [ASSUMED] 0 = no time limit (ends only by acting)
+	},
+	SubmergeDepth = 3.2, -- art: how far the body sinks in the water (head and back fins show)
+}
+
+function Config.monsterDef(monsterId: string): any
+	for _, monster in Config.Monsters do
+		if monster.Id == monsterId then
+			return monster
+		end
+	end
+	return nil
+end
 
 Config.Places = {
 	LobbyPlaceId = 0,
@@ -1064,6 +1150,8 @@ Config.Debug = {
 	ForceRoleUserId = nil, -- nil = the first player in the server
 	ForceRoles = nil, -- several at once: { [UserId] = "Sheriff", ... } (bots: -1004 .. -1012)
 	TimerScale = 1, -- e.g. 0.1 makes every timer 10x shorter
+	ForestSeed = nil,
+	ForceMonster = nil,
 	SkipRoleSelect = false,
 } :: DebugConfig
 

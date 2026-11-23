@@ -97,14 +97,45 @@ test("one-way windows and gardens: one per house", function()
 	end
 end)
 
-test("task trees stand in the walkable forest", function()
-	local trees = tagged("TaskTree")
-	expect(#trees).toBe(MapCfg.TaskTreeCount)
-	for _, tree in trees do
-		local radius = flatRadius(tree.PrimaryPart.CFrame.Position)
-		expect(radius > MapCfg.FenceRadius and radius < MapCfg.ForestOuterRadius).toBe(true)
-		for _, name in { "PromptAnchor", "AppleSpot", "CrateSpot" } do
-			expect(tree.PrimaryPart:FindFirstChild(name) ~= nil).toBe(true)
+test("forest: new every match; trees in the walkable forest, never in the moat, the river or the way to the pier", function()
+	local ForestLayout = require(game.ServerScriptService.Logic.ForestLayout)
+	local Rng = require(game.ReplicatedStorage.Shared.Rng)
+	local moatCfg = MapCfg.Moat
+	local first = ForestLayout.generate(Rng.seeded(1))
+	local second = ForestLayout.generate(Rng.seeded(2))
+	expect((first.Trees[1] - second.Trees[1]).Magnitude > 0.01).toBe(true) -- not the same forest
+	expect((first.Moat[10] - second.Moat[10]).Magnitude > 0.01).toBe(true) -- nor the same channel
+	for seed = 1, 25 do
+		local layout = ForestLayout.generate(Rng.seeded(seed))
+		local moat = layout.Moat
+		-- The channel starts and ends in the river and winds round the village.
+		expect(#moat > 60).toBe(true)
+		expect(ForestLayout.inRiver(moat[1])).toBe(true)
+		expect(ForestLayout.inRiver(moat[#moat])).toBe(true)
+		local swept = 0
+		for index = 2, #moat - 1 do
+			local radius = flatRadius(moat[index])
+			expect(radius >= moatCfg.MinRadius - 0.01 and radius <= moatCfg.MaxRadius + 0.01).toBe(true)
+			swept += 1
+		end
+		expect(swept * math.deg(moatCfg.Step) > 270).toBe(true)
+		-- The way from the fence to the pier never crosses it.
+		for radius = MapCfg.FenceRadius, MapCfg.River.ShoreDistance, 2 do
+			local point = Vector3.new(math.sin(MapCfg.River.Angle) * radius, 0, -math.cos(MapCfg.River.Angle) * radius)
+			expect(ForestLayout.inMoat(point, moat)).toBe(false)
+		end
+		expect(#layout.Trees).toBe(MapCfg.TaskTreeCount)
+		for _, tree in layout.Trees do
+			local radius = flatRadius(tree)
+			expect(radius > MapCfg.FenceRadius and radius < MapCfg.ForestOuterRadius).toBe(true)
+			expect(ForestLayout.inRiver(tree, 6)).toBe(false)
+			expect(ForestLayout.distanceToPath(tree, moat) > moatCfg.Width / 2 + moatCfg.TreeMargin).toBe(true)
+		end
+		for _, list in { layout.Bushes, layout.Rocks } do
+			for _, point in list do
+				expect(ForestLayout.inMoat(point, moat)).toBe(false)
+				expect(ForestLayout.inRiver(point)).toBe(false)
+			end
 		end
 	end
 end)

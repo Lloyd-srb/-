@@ -97,6 +97,7 @@ test("wolf night: transform, attack rules, pup, door, abilities, highlights, mor
 	local cfg = server.Config
 	cfg.Wolf.AttackCooldown = 0.05
 	cfg.Pup.AttackCooldown = 0.05
+	cfg.Wolf.ForestRevealSeconds = 1e6 -- keep the forest glow on for this test (normally 10 s)
 	cfg.Wolf.Sprint.MaulDuration = 0.25
 	local roster = svc.Match.Roster
 

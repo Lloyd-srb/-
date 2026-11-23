@@ -116,6 +116,38 @@ local function flyingAxe(from: Vector3, to: Vector3, speed: number)
 	end)
 end
 
+-- The Lurker's water bolt: a blue ball flying from its mouth to where it hit.
+local function waterBolt(from: Vector3, to: Vector3, speed: number)
+	local distance = (to - from).Magnitude
+	if distance < 0.1 then
+		return
+	end
+	local ball = Instance.new("Part")
+	ball.Name = "WaterBolt"
+	ball.Shape = Enum.PartType.Ball
+	ball.Size = Vector3.new(1.2, 1.2, 1.2)
+	ball.Color = Color3.fromRGB(90, 200, 255)
+	ball.Material = Enum.Material.Neon
+	ball.Transparency = 0.2
+	ball.Anchored = true
+	ball.CanCollide = false
+	ball.CanQuery = false
+	ball.CanTouch = false
+	ball.CastShadow = false
+	ball.Parent = workspace
+	local duration = distance / speed
+	local started = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.Heartbeat:Connect(function()
+		local alpha = math.min(1, (os.clock() - started) / duration)
+		ball.CFrame = CFrame.new(from:Lerp(to, alpha))
+		if alpha >= 1 then
+			connection:Disconnect()
+			ball:Destroy()
+		end
+	end)
+end
+
 local function setStars(body: Instance, stunned: boolean)
 	local existing = body:FindFirstChild(STUN_TAG)
 	if not stunned then
@@ -175,6 +207,8 @@ local function onEffect(data: any)
 		showToast(Loc.format("Effect.Blocked"))
 	elseif data.Kind == "Blessed" and type(data.Name) == "string" then
 		showToast(Loc.format("Effect.Blessed", { name = data.Name }))
+	elseif data.Kind == "WaterBolt" and typeof(data.From) == "Vector3" and typeof(data.To) == "Vector3" then
+		waterBolt(data.From, data.To, if type(data.Speed) == "number" then data.Speed else 110)
 	elseif data.Kind == "Throw" and typeof(data.From) == "Vector3" and typeof(data.To) == "Vector3" then
 		flyingAxe(data.From, data.To, if type(data.Speed) == "number" then data.Speed else 90)
 	elseif data.Kind == "Gained" and type(data.Item) == "string" and Loc.has("Item." .. data.Item .. ".Name") then

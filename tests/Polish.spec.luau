@@ -17,6 +17,7 @@ local lobby = loadLobby()
 local LATIN_IN_THAI = {
 	["Menu.Pass"] = true,
 	["Menu.Price"] = true,
+	["Monster.Price"] = true,
 	["Wallet.Coins"] = true,
 	["Wallet.Diamonds"] = true,
 	["Buy.Coins"] = true,
