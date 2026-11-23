@@ -166,9 +166,11 @@ test("knocking: anyone alive on a door that is not their own house; nearby playe
 	server.waitForPhase("GameOver", 10)
 end)
 
-test("a werewolf match: no channel; forest glow only at the start of the night; no names at night", function()
+test("a werewolf match: no channel; forest glow only at the start of the night; bait all night; no names at night", function()
 	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Sheriff" })
 	waitFor(server, "Day", 1)
+	place(svc, 2, Vector3.new(60, 3, 0))
+	svc.Inventory.PlaceBait(2) -- a fish on the ground
 	expect(server.game.Workspace.Map:FindFirstChild("Moat")).toBeNil()
 	local humanoid = svc.Match.CharacterOf(2):FindFirstChildOfClass("Humanoid")
 	expect(humanoid.DisplayDistanceType).toBe(Enum.HumanoidDisplayDistanceType.Viewer)
@@ -196,6 +198,15 @@ test("a werewolf match: no channel; forest glow only at the start of the night; 
 		local ids = forestIds()
 		return ids ~= nil and #ids == 0
 	end, 3)
+	-- ...but the fish keeps glowing all night (owner, 23 Nov 2026).
+	task.wait(0.3)
+	local bait = nil
+	for _, args in server.sent("Highlight", 1) do
+		if args[1].Kind == "Bait" then
+			bait = args[1]
+		end
+	end
+	expect(bait ~= nil and #bait.Spots == 1).toBe(true)
 	waitFor(server, "Day", 2)
 	expect(humanoid.DisplayDistanceType).toBe(Enum.HumanoidDisplayDistanceType.Viewer)
 	svc.Match.Exile(1)
@@ -237,4 +248,35 @@ test("monsters for sale: The Lurker 9,999 coins / 699 R$; owned ones can be pick
 	expect(after.Coins).toBe(1)
 	lobby.fireServer("SelectMonster", 1, "Lurker")
 	expect(view().Monster).toBe("Lurker")
+end)
+
+test("monster skills sit in the hotbar; a number press uses them; items are put away until morning", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Sheriff" }, "Lurker")
+	waitFor(server, "Day", 1)
+	svc.Inventory.Give(1, "Apple")
+	local player = server.player(1)
+	local function tools()
+		local list = {}
+		for _, tool in player.Backpack:GetChildren() do
+			table.insert(list, tool:GetAttribute("MonsterSkill") or ("item:" .. tool.Name))
+		end
+		table.sort(list)
+		return list
+	end
+	expect(#tools()).toBe(1) -- the apple
+	waitFor(server, "Night", 1)
+	server.waitFor("skills", function()
+		return #tools() == 2 and table.find(tools(), "Vanish") ~= nil
+	end, 3)
+	expect(tools()).toEqual({ "Vanish", "WaterBolt" }) -- the apple is put away
+	-- Pressing the number equips the tool; the server uses the skill at once.
+	svc.Wolf.UseSkill(player, "Vanish")
+	expect(svc.Match.CharacterOf(1):GetAttribute("Vanished")).toBe(true)
+	waitFor(server, "Day", 2)
+	server.waitFor("items back", function()
+		local list = tools()
+		return #list == 1 and list[1]:sub(1, 5) == "item:"
+	end, 3)
+	svc.Match.Exile(1)
+	server.waitForPhase("GameOver", 10)
 end)

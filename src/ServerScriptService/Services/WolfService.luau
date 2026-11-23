@@ -28,6 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Strings = require(ReplicatedStorage.Shared.Strings)
 local Signal = require(ReplicatedStorage.Shared.Signal)
 local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
 local Zones = require(ReplicatedStorage.Shared.Zones)
@@ -383,12 +384,18 @@ local function startForestLoop()
 	local window = Config.Wolf.ForestRevealSeconds * (if Config.Debug.Enabled then Config.Debug.TimerScale else 1)
 	task.spawn(function()
 		while token == forestLoopToken and RoundService.IsNight() and not MatchService.Winner do
-			if os.clock() - started >= window then
-				-- Only the first moments of the night (owner, 23 Nov 2026).
-				stopForestLoop()
-				return
+			if os.clock() - started < window then
+				scanForest()
+			else
+				-- People in the forest glow only in the first moments of the
+				-- night (owner, 23 Nov 2026); fish baits glow all night (owner,
+				-- 23 Nov 2026: on purpose).
+				if #forestIds > 0 then
+					forestIds = {}
+					sendHighlight(wolfSidePlayers(), "Forest", {}, nil)
+				end
+				scanBaits()
 			end
-			scanForest()
 			task.wait(Config.Wolf.ForestScanInterval)
 		end
 	end)
@@ -642,6 +649,109 @@ local function onAbility(player: Player, ability: any, aim: any)
 end
 
 --------------------------------------------------------------------------------
+-- Skills on the hotbar (owner, 23 Nov 2026): while transformed, the monster's
+-- skills are Tools in the Roblox hotbar; pressing the number uses the skill at
+-- once (the tool never stays in hand). Items are put away meanwhile and come
+-- back in the morning. The water bolt flies where the monster faces (its
+-- camera is in shift lock, so that is where the camera looks).
+--------------------------------------------------------------------------------
+
+local SKILLS: { [string]: { string } } = {
+	Wolf = { "Sniff", "Sprint" },
+	Pup = { "Howl" },
+	Lurker = { "WaterBolt", "Vanish" },
+}
+local stashes: { [number]: Folder } = {}
+
+local function holders(player: Player): { Instance }
+	local list: { Instance } = {}
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if backpack then
+		table.insert(list, backpack)
+	end
+	if player.Character then
+		table.insert(list, player.Character)
+	end
+	return list
+end
+
+function WolfService.UseSkill(player: Player, skill: string)
+	local member = MatchService.MemberOf(player)
+	local root = if member then MatchService.RootOf(member.Id) else nil
+	onAbility(player, skill, if root then root.CFrame.LookVector else nil)
+end
+
+local function giveSkills(player: Player, form: string)
+	-- Items away (kept safe, not dropped).
+	local stash: Folder = stashes[player.UserId]
+	if not stash then
+		local folder = Instance.new("Folder")
+		folder.Name = "ItemStash" .. player.UserId
+		folder.Parent = ServerStorage
+		stashes[player.UserId] = folder
+		stash = folder
+	end
+	for _, holder in holders(player) do
+		for _, tool in holder:GetChildren() do
+			if tool:IsA("Tool") then
+				if tool:GetAttribute("MonsterSkill") then
+					tool:Destroy() -- an old set (a new body tonight)
+				else
+					tool.Parent = stash
+				end
+			end
+		end
+	end
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if not backpack then
+		return
+	end
+	local skills: { string } = SKILLS[form] or {}
+	for _, skill in skills do
+		local tool = Instance.new("Tool")
+		local name = Strings["Ability." .. skill]
+		tool.Name = if name then name.en else skill
+		tool.RequiresHandle = false
+		tool.CanBeDropped = false
+		tool:SetAttribute("MonsterSkill", skill)
+		tool.Parent = backpack
+		-- pcall: the offline test engine's tools have no events.
+		pcall(function()
+			tool.Equipped:Connect(function()
+				WolfService.UseSkill(player, skill)
+				task.defer(function()
+					local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+					if humanoid then
+						humanoid:UnequipTools()
+					end
+				end)
+			end)
+		end)
+	end
+end
+
+local function takeSkills(player: Player)
+	for _, holder in holders(player) do
+		for _, tool in holder:GetChildren() do
+			if tool:IsA("Tool") and tool:GetAttribute("MonsterSkill") then
+				tool:Destroy()
+			end
+		end
+	end
+	local stash = stashes[player.UserId]
+	stashes[player.UserId] = nil
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if stash then
+		for _, tool in stash:GetChildren() do
+			if backpack then
+				tool.Parent = backpack
+			end
+		end
+		stash:Destroy()
+	end
+end
+
+--------------------------------------------------------------------------------
 -- The water channel (The Lurker's matches, owner 19 Nov 2026)
 --------------------------------------------------------------------------------
 
@@ -731,6 +841,17 @@ function WolfService.Start()
 			setNightNames(true)
 		elseif phase.Phase == "Day" then
 			setNightNames(false)
+		end
+	end)
+
+	WolfService.FormChanged:Connect(function(memberId: number, form: string)
+		local player = MatchService.PlayerOf(memberId)
+		if player then
+			if form == "Human" then
+				takeSkills(player)
+			else
+				giveSkills(player, form)
+			end
 		end
 	end)
 
