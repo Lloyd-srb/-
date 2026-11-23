@@ -24,6 +24,7 @@
 ]]
 
 local CollectionService = game:GetService("CollectionService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
@@ -663,6 +664,12 @@ local SKILLS: { [string]: { string } } = {
 }
 local stashes: { [number]: Folder } = {}
 
+-- Where a monster's items wait for the morning (InventoryService looks here
+-- too, so a death, a theft or a leave at night still finds them).
+function WolfService.StashOf(player: Player): Folder?
+	return stashes[player.UserId]
+end
+
 local function holders(player: Player): { Instance }
 	local list: { Instance } = {}
 	local backpack = player:FindFirstChildOfClass("Backpack")
@@ -741,6 +748,11 @@ local function takeSkills(player: Player)
 	local stash = stashes[player.UserId]
 	stashes[player.UserId] = nil
 	local backpack = player:FindFirstChildOfClass("Backpack")
+	local member = MatchService.MemberOf(player)
+	if stash and not (member and member.Alive) then
+		stash:Destroy() -- a dead monster's items were dropped where it fell
+		return
+	end
 	if stash then
 		for _, tool in stash:GetChildren() do
 			if backpack then
@@ -844,6 +856,15 @@ function WolfService.Start()
 		end
 	end)
 
+	Players.PlayerRemoving:Connect(function(player: Player)
+		local stash = stashes[player.UserId]
+		stashes[player.UserId] = nil
+		if stash then
+			task.defer(function() -- after InventoryService has dropped the items
+				stash:Destroy()
+			end)
+		end
+	end)
 	WolfService.FormChanged:Connect(function(memberId: number, form: string)
 		local player = MatchService.PlayerOf(memberId)
 		if player then

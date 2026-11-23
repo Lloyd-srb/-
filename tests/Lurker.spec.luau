@@ -280,3 +280,29 @@ test("monster skills sit in the hotbar; a number press uses them; items are put 
 	svc.Match.Exile(1)
 	server.waitForPhase("GameOver", 10)
 end)
+
+test("a monster that dies at night drops the items it had put away; nothing comes back to the ghost", function()
+	local server, svc = start(0.02, { [1] = "Wolf", [2] = "Villager", [3] = "Sheriff" }, "Lurker")
+	waitFor(server, "Day", 1)
+	svc.Inventory.Give(1, "Apple")
+	local player = server.player(1)
+	waitFor(server, "Night", 1)
+	server.waitFor("put away", function()
+		return svc.Wolf.StashOf(player) ~= nil and #svc.Wolf.StashOf(player):GetChildren() == 1
+	end, 3)
+	place(svc, 1, Vector3.new(40, 3, 40))
+	expect(svc.Combat.Damage(1, 1000, "Poison", nil)).toBe("Killed")
+	-- The apple lies where the monster fell; its tool is gone from the stash.
+	local dropped = false
+	for _, model in server.game.Workspace.Items:GetChildren() do
+		if model:GetAttribute("Kind") == "Apple" then
+			dropped = true
+		end
+	end
+	expect(dropped).toBe(true)
+	expect(#svc.Wolf.StashOf(player):GetChildren()).toBe(0)
+	server.waitForPhase("GameOver", 10)
+	for _, tool in player.Backpack:GetChildren() do
+		expect(tool:GetAttribute("ItemId")).toBeNil()
+	end
+end)

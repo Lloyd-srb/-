@@ -333,7 +333,9 @@ local function onKnockPrompt(player: Player, house: House)
 	if not member or not member.Alive or not MatchService.Started or MatchService.Winner then
 		return
 	end
-	if HouseService.Assigned[member.Id] == house.Id or HouseService.IsHidden(member.Id) then
+	-- The wolf side gets a house only as its morning spot: it never lives there.
+	local own = HouseService.Assigned[member.Id] == house.Id and not Roster.isWolfSide(member)
+	if own or HouseService.IsHidden(member.Id) then
 		return
 	end
 	local root = MatchService.RootOf(member.Id)

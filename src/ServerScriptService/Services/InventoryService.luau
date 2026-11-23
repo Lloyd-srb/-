@@ -152,6 +152,10 @@ local function findTool(id: number, itemId: string): Tool?
 	if player.Character then
 		table.insert(holders, player.Character) -- an equipped tool lives in the character
 	end
+	local stash = WolfService.StashOf(player)
+	if stash then
+		table.insert(holders, stash) -- put away while its owner is a monster
+	end
 	for _, holder in holders do
 		do
 			for _, child in holder:GetChildren() do
