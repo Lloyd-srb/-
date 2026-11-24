@@ -10,7 +10,9 @@
 	          skill in the backpack as a Tool; pressing its number uses it at
 	          once. Cooldowns show on the hotbar (the tool's name, locally).
 	Camera: always shift lock while a monster (owner, 23 Nov 2026): the mouse
-	is locked to the centre and the body turns with the camera.
+	is locked to the centre and the body turns with the camera. While typing
+	in the chat (after pressing "/") the mouse is free, so a chat tab (the
+	village chat / the wolf chat) can be clicked (owner, 24 Nov 2026).
 	Gamepad X is left to the "hold" prompts (searching hiding spots).
 	Touch buttons use Roblox's own layout around the jump button.
 	Vision (owner, 18 Nov 2026): in werewolf form the night fog on this
@@ -21,6 +23,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -158,7 +161,10 @@ local function setShiftLock(on: boolean)
 		if not humanoid or not (root and root:IsA("BasePart")) or not camera then
 			return
 		end
-		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+		-- Typing in the chat: the mouse is free to click a chat tab.
+		local inputBar = TextChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
+		local typing = inputBar ~= nil and inputBar.IsFocused
+		UserInputService.MouseBehavior = if typing then Enum.MouseBehavior.Default else Enum.MouseBehavior.LockCenter
 		humanoid.AutoRotate = false
 		humanoid.CameraOffset = SHIFT_LOCK_OFFSET
 		local look = camera.CFrame.LookVector
