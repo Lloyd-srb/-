@@ -36,6 +36,7 @@ Remotes.Names = {
 	"FormChanged", -- "Human" | "Wolf" | "Pup" (own form)
 	"PackChanged", -- wolf side only: ids of the pack
 	"Highlight", -- allowed viewers only: who to outline
+	"Unhighlight", -- everyone: take every outline off this member (the Ninja's smoke bomb)
 	"AbilityState", -- own cooldowns
 	"HideChanged", -- own hiding spot
 	"DashStart", -- own dash (the client moves its own character)

@@ -17,6 +17,9 @@
 	  Flashlight  light on / off
 	  Potion      the Plague Doctor's role item (owner, 18 Nov 2026), 3 uses
 	              at night: a body gets up, a living person dies next morning
+	  SmokeBomb   the Ninja's role item: invisible 6 s, 20 s cooldown
+	  BearTrap    the Hunter's role item: a trap on the ground (max 3), 50 s
+	              cooldown (both owner, 24 Nov 2026; see GearService)
 	  Fish        put on the ground: at night the monster side sees a red
 	              aura there, as if a person stood on that spot
 
@@ -42,6 +45,7 @@ local Roster = require(Logic.Roster)
 
 local CombatService = require(script.Parent.CombatService)
 local Flashlight = require(script.Parent.Flashlight)
+local GearService = require(script.Parent.GearService)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local AudioService = require(script.Parent.AudioService)
@@ -103,6 +107,8 @@ local ROLE_ITEMS: { [string]: string } = {
 	Handcuffs = "Police",
 	Magnifier = "Detective",
 	OilCan = "FireManiac",
+	SmokeBomb = "Ninja",
+	BearTrap = "Hunter",
 }
 
 function InventoryService.CanTake(id: number, kind: string): boolean
@@ -478,6 +484,18 @@ local function onUse(player: Player, itemId: any, aim: any)
 		return
 	end
 	local kind = item.Kind
+	-- Using anything but the smoke bomb itself shows the Ninja again.
+	if kind ~= "SmokeBomb" then
+		GearService.Acted(id)
+	end
+	if kind == "SmokeBomb" or kind == "BearTrap" then
+		local ok = if kind == "SmokeBomb" then GearService.UseSmokeBomb(id) else GearService.PlaceTrap(id)
+		local tool = findTool(id, item.Id)
+		if ok and tool then
+			tool:SetAttribute("ReadyAt", GearService.ReadyAt(id, kind)) -- the hotbar countdown
+		end
+		return
+	end
 	if kind == "Apple" then
 		eatApple(id, item)
 		AudioService.To(player, "AppleEat")

@@ -29,10 +29,11 @@ local COLOR_KEYS: { [string]: string } = {
 	StayedHome = "StayedHome", -- Detective: white = was home last night
 	WasOut = "WasOut", -- Detective: yellow = was out last night
 	Lover = "Lover", -- each Lover sees the other, always
+	Trapped = "Trapped", -- the Hunter: someone stepped on a trap (red)
 }
 
 -- Not wolf-side outlines: they stay when the wolf side turns back into people.
-local KEEP_ON_HUMAN: { [string]: boolean } = { Lover = true, StayedHome = true, WasOut = true }
+local KEEP_ON_HUMAN: { [string]: boolean } = { Lover = true, StayedHome = true, WasOut = true, Trapped = true }
 
 -- A person-shaped decoy (local to this client) for a bait: torso, head, arms, legs.
 local DECOY_PARTS: { { Size: Vector3, Offset: Vector3 } } = {
@@ -134,7 +135,29 @@ local function show(kind: string, ids: { any }, duration: number?, spots: { any 
 	end
 end
 
+-- The Ninja's smoke bomb: every outline on that member goes at once.
+local function unhighlight(id: number)
+	local body = bodyOf(id)
+	if not body then
+		return
+	end
+	for _, list in active do
+		for index = #list, 1, -1 do
+			local highlight = list[index]
+			if highlight:IsA("Highlight") and highlight.Adornee == body then
+				highlight:Destroy()
+				table.remove(list, index)
+			end
+		end
+	end
+end
+
 function HighlightController.Start()
+	Remotes.get("Unhighlight").OnClientEvent:Connect(function(data: any)
+		if type(data) == "table" and type(data.Id) == "number" then
+			unhighlight(data.Id)
+		end
+	end)
 	Remotes.get("Highlight").OnClientEvent:Connect(function(data: any)
 		if type(data) ~= "table" or type(data.Kind) ~= "string" or type(data.Ids) ~= "table" then
 			return

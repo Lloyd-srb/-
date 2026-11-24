@@ -283,6 +283,36 @@ RoleIcons.Designs = {
 		{ X = 66, Y = 66, W = 9, H = 6, R = 0.5, T = 0.1, Color = rgb(255, 120, 150) },
 	}),
 
+	-- Ninja: black hood and mask, only the eyes show; red headband tails; a smoke bomb.
+	Ninja = join({ background(rgb(45, 55, 85)) }, face(rgb(25, 25, 32), { NoEyes = true, NoCheeks = true, NoMouth = true }), {
+		{ X = 50, Y = 50, W = 60, H = 60, R = 0.45, Color = rgb(28, 28, 36) },
+		{ X = 50, Y = 56, W = 44, H = 12, R = 0.45, Color = Palette.Skin },
+		{ X = 41, Y = 56, W = 7, H = 5, R = 0.5, Color = Palette.Ink },
+		{ X = 59, Y = 56, W = 7, H = 5, R = 0.5, Color = Palette.Ink },
+		{ X = 40, Y = 51, W = 9, H = 2, R = 0.5, Rot = 12, Color = Palette.Ink },
+		{ X = 60, Y = 51, W = 9, H = 2, R = 0.5, Rot = -12, Color = Palette.Ink },
+		{ X = 50, Y = 40, W = 60, H = 6, R = 0.3, Color = rgb(210, 40, 50) },
+		{ X = 81, Y = 44, W = 14, H = 4, R = 0.5, Rot = 25, Color = rgb(210, 40, 50) },
+		{ X = 82, Y = 50, W = 12, H = 4, R = 0.5, Rot = 45, Color = rgb(210, 40, 50) },
+		{ X = 22, Y = 86, W = 16, H = 16, R = 0.5, Color = rgb(40, 40, 48), Stroke = { Color = rgb(120, 120, 130), Width = 1 } },
+		{ X = 25, Y = 76, W = 3, H = 6, R = 0.3, Rot = 20, Color = rgb(230, 170, 60) },
+		{ X = 30, Y = 72, W = 10, H = 7, R = 0.5, T = 0.35, Color = rgb(190, 190, 200) },
+	}),
+
+	-- Hunter: green hat with a feather, beard, brown jacket, a bear trap.
+	Hunter = join({ background(rgb(85, 120, 70)) }, face(rgb(120, 80, 45)), {
+		{ X = 50, Y = 76, W = 34, H = 14, R = 0.45, Color = rgb(120, 75, 40) },
+		{ X = 50, Y = 71, W = 10, H = 3, R = 0.5, Color = Palette.Ink },
+		{ X = 50, Y = 39, W = 70, H = 7, R = 0.5, Color = rgb(55, 85, 45) },
+		{ X = 50, Y = 29, W = 44, H = 18, R = 0.35, Color = rgb(65, 100, 55) },
+		{ X = 50, Y = 35, W = 44, H = 3, R = 0, Color = rgb(150, 100, 50) },
+		{ X = 70, Y = 22, W = 5, H = 20, R = 0.5, Rot = 30, Color = rgb(215, 70, 50) },
+		{ X = 78, Y = 88, W = 22, H = 10, R = 0.3, Color = rgb(150, 150, 160), Stroke = { Color = rgb(70, 70, 78), Width = 1 } },
+		{ X = 72, Y = 83, W = 3, H = 6, R = 0, Color = rgb(70, 70, 78) },
+		{ X = 78, Y = 83, W = 3, H = 6, R = 0, Color = rgb(70, 70, 78) },
+		{ X = 84, Y = 83, W = 3, H = 6, R = 0, Color = rgb(70, 70, 78) },
+	}),
+
 	-- Fire Maniac: flames behind, wide eyes, a wild grin, a red oil can.
 	FireManiac = join({
 		background(rgb(95, 30, 22)),

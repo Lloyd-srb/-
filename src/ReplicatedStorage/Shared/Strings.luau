@@ -432,6 +432,16 @@ local Strings: { [string]: Entry } = {
 		en = "There are two Lovers. You always see your partner glowing white, wherever they are.",
 		th = "มีคู่รัก 2 คน คุณจะเห็นคู่ของคุณเป็นออร่าสีขาวตลอดเวลา ไม่ว่าเขาจะอยู่ที่ไหน",
 	},
+	["Role.Ninja.Name"] = { en = "Ninja", th = "นินจา" },
+	["Role.Ninja.Desc"] = {
+		en = "You carry a smoke bomb: vanish for 6 seconds, by day or by night (20 s cooldown). Throw it while someone has you outlined and every outline on you is gone. Doing anything but knocking on a door shows you again.",
+		th = "มีระเบิดควัน กดแล้วหายตัว 6 วินาที ใช้ได้ทั้งกลางวันและกลางคืน (คูลดาวน์ 20 วินาที) ถ้ากดตอนที่มีคนเห็นออร่ารอบตัวคุณ ออร่าจะหายไปทันที ทำอย่างอื่นนอกจากเคาะประตูเมื่อไหร่ จะกลับมาให้เห็นทันที",
+	},
+	["Role.Hunter.Name"] = { en = "Hunter", th = "นายพราน" },
+	["Role.Hunter.Desc"] = {
+		en = "You carry bear traps: put one on the ground (up to 3 at once, 50 s cooldown). Anyone who steps on one, person or monster, is stunned for 2 seconds and glows red for you.",
+		th = "มีกับดักหมี วางบนพื้นได้สูงสุด 3 อัน (คูลดาวน์ 50 วินาที) ใครเหยียบ ไม่ว่าคนหรือมอนสเตอร์ จะติดสตั้น 2 วินาที และคุณจะเห็นเขาเป็นออร่าสีแดง",
+	},
 	["Role.FireManiac.Name"] = { en = "Fire Maniac", th = "คนคลั่งไฟ" },
 	["Role.FireManiac.Desc"] = {
 		en = "You work alone. Pour oil on every house (hold E right next to a wall): once by day, once by night. Oil them all and you win the next morning. Remember which ones you did!",
@@ -474,6 +484,10 @@ local Strings: { [string]: Entry } = {
 	["Item.Magnifier.Name"] = { en = "Magnifying glass", th = "แว่นขยาย" },
 	["Item.Magnifier.Desc"] = { en = "Each morning, on someone in front of you: were they out last night?", th = "ทุกเช้า ใช้กับคนตรงหน้า: เมื่อคืนเขาออกจากบ้านไหม?" },
 	["Item.OilCan.Name"] = { en = "Oil can", th = "ถังน้ำมัน" },
+	["Item.SmokeBomb.Name"] = { en = "Smoke bomb", th = "ระเบิดควัน" },
+	["Item.SmokeBomb.Desc"] = { en = "Vanish for 6 seconds. Takes every outline off you.", th = "หายตัว 6 วินาที และลบออร่าที่คนอื่นเห็นรอบตัวคุณ" },
+	["Item.BearTrap.Name"] = { en = "Bear trap", th = "กับดักหมี" },
+	["Item.BearTrap.Desc"] = { en = "Put a trap on the ground (up to 3). Only you can see it.", th = "วางกับดักบนพื้น (สูงสุด 3 อัน) เห็นได้แค่คุณ" },
 	["Item.OilCan.Desc"] = { en = "Hold E right next to a house wall to pour oil on it.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
 	["Item.Fish.Name"] = { en = "Fish", th = "ปลา" },
 	["Item.Fish.Desc"] = {
@@ -516,6 +530,10 @@ local Strings: { [string]: Entry } = {
 	["Effect.NoNightYet"] = { en = "Cannot be used on the first day.", th = "ใช้ไม่ได้ในวันแรก" },
 	["Effect.StayedHome"] = { en = "{name} stayed home last night.", th = "{name} ไม่ได้ออกจากบ้านเมื่อคืน" },
 	["Effect.WasOut"] = { en = "{name} was not home last night!", th = "{name} ไม่อยู่บ้านเมื่อคืน!" },
+	["Effect.Cooldown"] = { en = "Not ready yet.", th = "ยังใช้ไม่ได้ รอคูลดาวน์" },
+	["Effect.TrapsFull"] = { en = "You already have 3 traps on the ground.", th = "วางกับดักครบ 3 อันแล้ว" },
+	["Effect.Trapped"] = { en = "You stepped on a bear trap!", th = "คุณเหยียบกับดักหมี!" },
+	["Effect.TrapSprung"] = { en = "Someone stepped on your trap!", th = "มีคนเหยียบกับดักของคุณ!" },
 	["Effect.OilInfo"] = { en = "Hold E right next to a house wall to pour oil.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
 	["Effect.OilPoured"] = { en = "Oil poured.", th = "ราดน้ำมันแล้ว" },
 	["Effect.OilUsed"] = { en = "Once by day and once by night.", th = "ราดได้กลางวัน 1 ครั้ง กลางคืน 1 ครั้ง" },

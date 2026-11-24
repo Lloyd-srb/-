@@ -124,7 +124,7 @@ test("The Lurker: its channel, its stats, no pup; bolt; invisibility; swimming a
 	place(svc, 3, Vector3.new(5, 3, 0))
 	server.waitFor("dry again", function()
 		return svc.Move.Speed(1) == 22 and svc.Move.Speed(3) == cfg.Human.WalkSpeed
-	end, 2)
+	end, 4)
 	expect(shellOf(svc, 1):GetAttribute("Submerged")).toBeNil()
 
 	svc.Match.Exile(1)

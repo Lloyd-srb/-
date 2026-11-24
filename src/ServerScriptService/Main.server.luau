@@ -22,6 +22,7 @@ local ordered: { Service } = {
 	require(Services.CombatService),
 	require(Services.HouseService),
 	require(Services.HidingService),
+	require(Services.GearService), -- the Ninja's smoke bomb, the Hunter's traps
 	require(Services.VoteService),
 	require(Services.WolfService),
 	require(Services.RoleService),

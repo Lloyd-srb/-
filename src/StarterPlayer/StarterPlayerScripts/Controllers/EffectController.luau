@@ -5,7 +5,11 @@
 	    shooter's gun skin colour) and the Killer's slash (knife skin colour);
 	  - stars over anyone who is stunned (the server sets the body's
 	    "Stunned" attribute);
-	  - private toasts: "You blessed ...", "The attack was blocked!", "Stunned!".
+	  - private toasts: "You blessed ...", "The attack was blocked!", "Stunned!";
+	  - the Ninja's smoke puff, and the Ninja seeing their own invisible body
+	    faintly (owner, 24 Nov 2026);
+	  - the Hunter's bear traps: the server keeps them see-through, and only
+	    the Hunter's own client shows them.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -22,6 +26,9 @@ local TRACER_COLOR = Color3.fromRGB(120, 210, 255)
 local TOAST_SECONDS = 2.5
 local SLASH_SECONDS = 0.35
 local STUN_TAG = "StunStars"
+local SMOKE_SECONDS = 0.8
+local OWN_SMOKE_TRANSPARENCY = 0.75 -- how the Ninja sees their own invisible body
+local TRAP_TRANSPARENCY = 0.15 -- how the Hunter sees their traps
 
 local EffectController = {}
 
@@ -176,6 +183,55 @@ local function setStars(body: Instance, stunned: boolean)
 	gui.Parent = body
 end
 
+-- A puff of grey smoke where the Ninja vanished.
+local function smokePuff(at: Vector3)
+	for index = 1, 5 do
+		local puff = Instance.new("Part")
+		puff.Name = "SmokePuff"
+		puff.Shape = Enum.PartType.Ball
+		puff.Size = Vector3.new(2, 2, 2)
+		puff.Color = Color3.fromRGB(150, 150, 158)
+		puff.Material = Enum.Material.SmoothPlastic
+		puff.Transparency = 0.3
+		puff.Anchored = true
+		puff.CanCollide = false
+		puff.CanQuery = false
+		puff.CanTouch = false
+		puff.CastShadow = false
+		local angle = index * math.pi * 2 / 5
+		puff.CFrame = CFrame.new(at + Vector3.new(math.cos(angle) * 1.2, (index % 2) * 1.5, math.sin(angle) * 1.2))
+		puff.Parent = workspace
+		TweenService:Create(puff, TweenInfo.new(SMOKE_SECONDS), { Size = Vector3.new(6, 6, 6), Transparency = 1 }):Play()
+		task.delay(SMOKE_SECONDS, function()
+			puff:Destroy()
+		end)
+	end
+end
+
+-- The Ninja sees their own invisible body faintly (only on this screen; the
+-- server puts the real values back when the smoke ends).
+local function showOwnSmoke(body: Instance)
+	if body ~= Players.LocalPlayer.Character or body:GetAttribute("Vanished") ~= true then
+		return
+	end
+	for _, part in body:GetDescendants() do
+		local before = part:GetAttribute("SmokeTransparency")
+		if type(before) == "number" and before < 1 then
+			if part:IsA("BasePart") then
+				part.Transparency = OWN_SMOKE_TRANSPARENCY
+			elseif part:IsA("Decal") then
+				part.Transparency = OWN_SMOKE_TRANSPARENCY
+			end
+		end
+	end
+end
+
+local function watchTrap(trap: Instance)
+	if trap:IsA("BasePart") and trap:GetAttribute("OwnerId") == Players.LocalPlayer.UserId then
+		trap.Transparency = TRAP_TRANSPARENCY -- only on the Hunter's screen
+	end
+end
+
 local function watch(body: Instance)
 	if watched[body] then
 		return
@@ -183,12 +239,17 @@ local function watch(body: Instance)
 	watched[body] = true
 	local function update()
 		local stunned = body:GetAttribute("Stunned") == true
-		setStars(body, stunned)
+		-- No stars over someone nobody can see.
+		setStars(body, stunned and body:GetAttribute("Vanished") ~= true)
 		if stunned and body == Players.LocalPlayer.Character then
 			showToast(Loc.format("Effect.Stunned"))
 		end
 	end
 	body:GetAttributeChangedSignal("Stunned"):Connect(update)
+	body:GetAttributeChangedSignal("Vanished"):Connect(function()
+		update()
+		task.defer(showOwnSmoke, body)
+	end)
 	body.Destroying:Connect(function()
 		watched[body] = nil
 	end)
@@ -203,6 +264,8 @@ local function onEffect(data: any)
 		tracer(data.From, data.To, if typeof(data.Color) == "Color3" then data.Color else nil)
 	elseif data.Kind == "Slash" and typeof(data.At) == "Vector3" and typeof(data.Color) == "Color3" then
 		slash(data.At, data.Color)
+	elseif data.Kind == "Smoke" and typeof(data.At) == "Vector3" then
+		smokePuff(data.At)
 	elseif data.Kind == "Blocked" then
 		showToast(Loc.format("Effect.Blocked"))
 	elseif data.Kind == "Blessed" and type(data.Name) == "string" then
@@ -236,6 +299,10 @@ function EffectController.Start()
 	CollectionService:GetInstanceAddedSignal("MemberBody"):Connect(watch)
 	for _, body in CollectionService:GetTagged("MemberBody") do
 		watch(body)
+	end
+	CollectionService:GetInstanceAddedSignal("BearTrap"):Connect(watchTrap)
+	for _, trap in CollectionService:GetTagged("BearTrap") do
+		watchTrap(trap)
 	end
 end
 

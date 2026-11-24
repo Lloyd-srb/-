@@ -47,6 +47,7 @@ local Roster = require(Logic.Roster)
 
 local CombatService = require(script.Parent.CombatService)
 local Flashlight = require(script.Parent.Flashlight)
+local GearService = require(script.Parent.GearService)
 local HidingService = require(script.Parent.HidingService)
 local HouseService = require(script.Parent.HouseService)
 local AudioService = require(script.Parent.AudioService)
@@ -265,7 +266,10 @@ local function see(player: Player)
 	-- Every survivor, white, bodies only: no names, no roles.
 	local ids: { number } = {}
 	for _, other in Roster.alive(MatchService.Roster) do
-		if other.Id ~= member.Id and not HidingService.IsHidden(other.Id) and MatchService.RootOf(other.Id) then
+		-- An invisible Lurker still shows ([owner] 23 Nov 2026); a Ninja in
+		-- smoke does not ([ASSUMED] 24 Nov 2026).
+		local smoked = GearService.IsSmoked(other.Id)
+		if other.Id ~= member.Id and not HidingService.IsHidden(other.Id) and not smoked and MatchService.RootOf(other.Id) then
 			table.insert(ids, other.Id)
 		end
 	end
@@ -803,6 +807,10 @@ local HANDLERS: { [string]: (Player, any) -> () } = {
 local function onAbility(player: Player, ability: any, argument: any)
 	local handler = if type(ability) == "string" then HANDLERS[ability] else nil
 	if handler then
+		local member = MatchService.MemberOf(player)
+		if member then
+			GearService.Acted(member.Id) -- any ability shows the Ninja again
+		end
 		handler(player, argument)
 	end
 end

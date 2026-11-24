@@ -5,7 +5,7 @@ test("every role in RoleOrder is defined and Wolf is not pickable", function()
 		expect(Config.Roles[roleId] ~= nil).toBe(true)
 		expect(roleId ~= "Wolf").toBe(true)
 	end
-	expect(#Config.RoleOrder).toBe(16)
+	expect(#Config.RoleOrder).toBe(18)
 end)
 
 test("starter roles are free", function()
@@ -23,7 +23,7 @@ test("every paid role costs the same: the old top price; no level gates (owner, 
 			expect(def.RobuxPrice).toBe(399)
 		end
 	end
-	expect(paid).toBe(13)
+	expect(paid).toBe(15)
 	for _, def in Config.Roles do
 		expect(def.RequiredLevel).toBe(1)
 	end

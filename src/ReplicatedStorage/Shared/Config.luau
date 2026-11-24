@@ -16,7 +16,7 @@ local RunService = game:GetService("RunService")
 
 -- Role ids: "Wolf", "Villager", "Sheriff", "Doctor", "Seer", "Chief",
 -- "Bodyguard", "Priest", "Engineer", "PlagueDoctor", "Thief", "Police",
--- "Detective", "Lover", "Killer", "Fool", "FireManiac"
+-- "Detective", "Lover", "Ninja", "Hunter", "Killer", "Fool", "FireManiac"
 -- (keys of Config.Roles).
 export type RoleId = string
 
@@ -126,6 +126,9 @@ Config.Roles = {
 	-- Two players share this role (Copies = 2); a lone Lover gets a partner
 	-- from the players who would have been Villagers.
 	Lover = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false, Copies = 2 },
+	-- [owner] 24 Nov 2026 new roles (village side [ASSUMED]).
+	Ninja = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
+	Hunter = { Faction = "Village", Kind = "Special", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
 	FireManiac = { Faction = "FireManiac", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
 	Killer = { Faction = "Killer", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
 	Fool = { Faction = "Fool", Kind = "Solo", CoinPrice = 5000, RobuxPrice = 399, RequiredLevel = 1, Free = false },
@@ -146,6 +149,8 @@ Config.RoleOrder = {
 	"Police",
 	"Detective",
 	"Lover",
+	"Ninja",
+	"Hunter",
 	"Killer",
 	"Fool",
 	"FireManiac",
@@ -468,6 +473,24 @@ Config.Abilities = {
 		WallReach = 4, -- [ASSUMED] studs from the wall for the prompt to show
 		PromptSpacing = 7, -- [ASSUMED] studs between prompts along a wall
 	},
+	-- [owner] 24 Nov 2026: smoke bomb. Press: invisible for 6 s, by day and by
+	-- night; 20 s cooldown from the press. Pressed while outlined, every
+	-- outline on the Ninja goes at once. Any action except knocking ends it.
+	Ninja = {
+		Duration = 6, -- [owner]
+		Cooldown = 20, -- [owner] counted from the press
+	},
+	-- [owner] 24 Nov 2026: bear traps. Put one on the ground (at most 3 at once);
+	-- it stays until someone steps on it, a person or a monster: 2 s stun and
+	-- a red outline only the Hunter sees. 50 s cooldown.
+	Hunter = {
+		MaxTraps = 3, -- [owner]
+		Cooldown = 50, -- [owner] counted from putting a trap down
+		StunDuration = 2, -- [owner]
+		HighlightSeconds = 5, -- [ASSUMED] how long the Hunter sees the red outline
+		TriggerRadius = 2.5, -- [ASSUMED] studs from the trap's centre
+		ScanInterval = 0.1, -- [ASSUMED] how often traps look for feet
+	},
 	Killer = {
 		KillsPerDay = 1, -- [GDD]
 		KillsPerNight = 1, -- [GDD]
@@ -512,6 +535,10 @@ Config.Items = {
 	Handcuffs = { RoleItem = true },
 	Magnifier = { RoleItem = true },
 	OilCan = { RoleItem = true },
+	-- [owner] 24 Nov 2026: the Ninja's smoke bomb and the Hunter's bear traps
+	-- (never run out; a cooldown instead, Config.Abilities).
+	SmokeBomb = { RoleItem = true },
+	BearTrap = { RoleItem = true },
 	-- [owner] 18 Nov 2026: from fishing. Put it on the ground: at night the monster
 	-- side sees a red aura there, as if a person were standing on that spot.
 	Fish = { Uses = 1 },
@@ -533,7 +560,15 @@ Config.ItemLook = {
 	Handcuffs = { Color = Color3.fromRGB(190, 195, 205), Size = Vector3.new(0.9, 0.2, 0.5) },
 	Magnifier = { Color = Color3.fromRGB(150, 110, 60), Size = Vector3.new(0.3, 1.2, 0.3) },
 	OilCan = { Color = Color3.fromRGB(200, 60, 40), Size = Vector3.new(0.9, 1.1, 0.6) },
+	SmokeBomb = { Color = Color3.fromRGB(40, 40, 48), Size = Vector3.new(0.7, 0.7, 0.7) },
+	BearTrap = { Color = Color3.fromRGB(110, 110, 118), Size = Vector3.new(1, 0.3, 1) },
 	Fish = { Color = Color3.fromRGB(120, 170, 210), Size = Vector3.new(0.5, 0.4, 1.4) },
+}
+
+-- A bear trap on the ground (a flat cylinder: X is its height). Only the Hunter sees it.
+Config.TrapLook = {
+	Color = Color3.fromRGB(95, 95, 102),
+	Size = Vector3.new(0.4, 2.6, 2.6),
 }
 
 -- Crates sit under a forest tree until someone opens them (GDD §6.1).
@@ -883,6 +918,7 @@ Config.Highlights = {
 	StayedHome = Color3.fromRGB(255, 255, 255), -- [owner] Detective: was home last night
 	WasOut = Color3.fromRGB(255, 220, 40), -- [owner] Detective: was out last night
 	Lover = Color3.fromRGB(255, 255, 255), -- [owner] each Lover sees the other
+	Trapped = Color3.fromRGB(255, 40, 40), -- [owner] the Hunter: someone stepped on a trap
 }
 
 --------------------------------------------------------------------------------
@@ -961,6 +997,9 @@ Config.Sounds = {
 	Cuff = 0, -- the Police locks someone in
 	Inspect = 0, -- the Detective's magnifying glass
 	OilPour = 0, -- the Fire Maniac pours oil on a house
+	SmokeBomb = 0, -- the Ninja vanishes in a puff
+	TrapSet = 0, -- the Hunter puts a trap down (only they hear it)
+	TrapSnap = 0, -- a bear trap snaps shut
 	DoorKnock = 0, -- someone knocks on a door
 	WaterBolt = 0, -- The Lurker spits water
 	Steal = 0, -- the Thief takes something
@@ -1030,6 +1069,8 @@ Config.Products = {
 		RoleDetective = 0,
 		RoleLover = 0,
 		RoleFireManiac = 0,
+		RoleNinja = 0,
+		RoleHunter = 0,
 		MonsterLurker = 0,
 		RoleKiller = 0,
 		RoleFool = 0,

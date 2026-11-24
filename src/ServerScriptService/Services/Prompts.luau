@@ -19,6 +19,14 @@ function Prompts.onTriggered(handler: (Player) -> ())
 	table.insert(triggeredHandlers, handler)
 end
 
+local actionHandlers: { (Player, ProximityPrompt) -> () } = {}
+
+-- Called with the player and the prompt whenever any "hold" prompt is
+-- completed (the Ninja's smoke ends on any action except knocking).
+function Prompts.onAction(handler: (Player, ProximityPrompt) -> ())
+	table.insert(actionHandlers, handler)
+end
+
 function Prompts.create(parent: Instance, name: string, locKey: string, holdDuration: number): ProximityPrompt
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = name
@@ -32,6 +40,9 @@ function Prompts.create(parent: Instance, name: string, locKey: string, holdDura
 	prompt.Triggered:Connect(function(player: Player)
 		for _, notify in triggeredHandlers do
 			notify(player)
+		end
+		for _, notify in actionHandlers do
+			notify(player, prompt)
 		end
 	end)
 	prompt.Parent = parent

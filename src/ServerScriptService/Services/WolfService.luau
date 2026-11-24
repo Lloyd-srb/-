@@ -108,7 +108,10 @@ end
 local function prey(): { Roster.Member }
 	local list = {}
 	for _, member in Roster.alive(MatchService.Roster) do
-		if not Roster.isWolfSide(member) and not HidingService.IsHidden(member.Id) and MatchService.RootOf(member.Id) then
+		local body = MatchService.CharacterOf(member.Id)
+		-- A Ninja in smoke is not outlined ([ASSUMED], owner 24 Nov 2026).
+		local smoked = body ~= nil and body:GetAttribute("Vanished") == true
+		if not Roster.isWolfSide(member) and not HidingService.IsHidden(member.Id) and not smoked and MatchService.RootOf(member.Id) then
 			table.insert(list, member)
 		end
 	end

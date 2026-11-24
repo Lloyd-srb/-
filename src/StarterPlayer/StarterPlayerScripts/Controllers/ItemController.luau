@@ -50,6 +50,23 @@ local function hook(tool: Instance)
 	end)
 end
 
+-- Gear with a cooldown (smoke bomb, bear trap): the seconds left after the name.
+local function refreshCooldowns()
+	local now = workspace:GetServerTimeNow()
+	for tool in hooked do
+		local kind = tool:GetAttribute("Kind")
+		local readyAt = tool:GetAttribute("ReadyAt")
+		if type(kind) == "string" and type(readyAt) == "number" then
+			local text = Loc.format("Item." .. kind .. ".Name")
+			local left = readyAt - now
+			local wanted = if left > 0 then string.format("%s %d", text, math.ceil(left)) else text
+			if tool.Name ~= wanted then
+				tool.Name = wanted -- only on this screen
+			end
+		end
+	end
+end
+
 local function watch(container: Instance)
 	container.ChildAdded:Connect(hook)
 	for _, child in container:GetChildren() do
@@ -85,6 +102,12 @@ function ItemController.Start()
 	end
 	ClientState.Changed:Connect(refreshHotbar)
 	refreshHotbar()
+	task.spawn(function()
+		while true do
+			refreshCooldowns()
+			task.wait(0.25)
+		end
+	end)
 end
 
 return ItemController
