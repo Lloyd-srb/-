@@ -78,6 +78,8 @@ local baits: { [number]: Model } = {} -- fish on the ground (bait id -> model)
 local nextBait = 0
 local nextId = 0
 local appleTokens: { [number]: number } = {}
+-- Role items of the dead, given back if they are brought back to life.
+local keptRoleItems: { [number]: { { Kind: string, Uses: number } } } = {}
 local uses = AbilityUses.new() -- gun shots per day / night
 local rng = Rng.wrap(Random.new())
 local worldFolder: Folder
@@ -183,6 +185,10 @@ local function makeTool(item: Item, ownerId: number): Tool
 	tool:SetAttribute("ItemId", item.Id)
 	tool:SetAttribute("Kind", item.Kind)
 	tool:SetAttribute("Uses", item.Uses)
+	if item.Kind == "SmokeBomb" or item.Kind == "BearTrap" then
+		-- A rebuilt hotbar keeps the countdown.
+		tool:SetAttribute("ReadyAt", GearService.ReadyAt(ownerId, item.Kind))
+	end
 	local handle = Instance.new("Part")
 	handle.Name = "Handle"
 	handle.Size = if look then look.Size else Vector3.new(0.6, 0.6, 0.6)
@@ -385,7 +391,11 @@ function InventoryService.DropAll(id: number, how: string, where: Vector3?)
 			tool:Destroy()
 		end
 		if InventoryService.IsRoleItem(item.Kind) then
-			continue -- items that came with a role never drop (GDD §11)
+			-- Items that came with a role never drop (GDD §11); a revive gives them back.
+			local kept = keptRoleItems[id] or {}
+			keptRoleItems[id] = kept
+			table.insert(kept, { Kind = item.Kind, Uses = item.Uses })
+			continue
 		end
 		local position = if how == "Exile" then forestPoint() else spread(centre, index, #list)
 		InventoryService.SpawnWorldItem(item.Kind, item.Uses, position)
@@ -482,6 +492,9 @@ local function onUse(player: Player, itemId: any, aim: any)
 	local item = find(id, itemId)
 	if not item then
 		return
+	end
+	if member.IsPup and InventoryService.IsRoleItem(item.Kind) then
+		return -- the pup has left its old role behind
 	end
 	local kind = item.Kind
 	-- Using anything but the smoke bomb itself shows the Ninja again.
@@ -743,6 +756,30 @@ function InventoryService.Start()
 				makeTool(item, member.Id).Parent = backpack
 			end
 		end
+	end)
+
+	-- Brought back to life (Doctor, potion): the role's items come back too.
+	MatchService.MemberRevived:Connect(function(member: Roster.Member)
+		local kept = keptRoleItems[member.Id]
+		keptRoleItems[member.Id] = nil
+		if kept and not member.IsPup then
+			for _, entry in kept do
+				InventoryService.Give(member.Id, entry.Kind, entry.Uses)
+			end
+		end
+	end)
+
+	-- Turned into the pup: the old role's items are gone (like its abilities).
+	MatchService.MemberConverted:Connect(function(member: Roster.Member)
+		for _, item in table.clone(InventoryService.Items(member.Id)) do
+			if InventoryService.IsRoleItem(item.Kind) then
+				InventoryService.Remove(member.Id, item.Id)
+			end
+		end
+	end)
+
+	MatchService.MatchStarted:Connect(function()
+		table.clear(keptRoleItems)
 	end)
 
 	MatchService.MemberDied:Connect(function(member: Roster.Member, cause: Roster.DeathCause)

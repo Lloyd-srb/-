@@ -65,8 +65,8 @@ end
 
 local function fireManiac(): Roster.Member?
 	for _, member in Roster.list(MatchService.Roster) do
-		if member.Role == "FireManiac" then
-			return member
+		if member.Role == "FireManiac" and not member.IsPup then
+			return member -- (turned into the pup: no longer the Fire Maniac)
 		end
 	end
 	return nil
@@ -95,7 +95,7 @@ end
 
 local function onPrompt(player: Player, houseId: number, prompt: ProximityPrompt)
 	local member = MatchService.MemberOf(player)
-	if not member or not member.Alive or member.Role ~= "FireManiac" or MatchService.Winner or not MatchService.Started then
+	if not member or not member.Alive or member.Role ~= "FireManiac" or member.IsPup or MatchService.Winner or not MatchService.Started then
 		return
 	end
 	if HidingService.IsHidden(member.Id) or CombatService.IsStunned(member.Id) or oiled[houseId] then

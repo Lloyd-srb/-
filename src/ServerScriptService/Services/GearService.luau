@@ -50,6 +50,8 @@ local GearService = {}
 
 -- Fired with (memberId) when a Ninja appears again (time up or an action).
 GearService.Revealed = Signal.new()
+-- Fired with (memberId) when a Ninja vanishes.
+GearService.Smoked = Signal.new()
 
 type Smoke = { Token: number, Character: Model, Added: RBXScriptConnection? }
 
@@ -151,8 +153,11 @@ local function setBodyHidden(character: Model, hidden: boolean)
 		else
 			local name = humanoid:GetAttribute("SmokeName")
 			humanoid:SetAttribute("SmokeName", nil)
-			-- Night hides names anyway (WolfService); by day they come back.
-			if type(name) == "string" and not humanoid:GetAttribute("NightName") then
+			-- Nobody has a name at night (WolfService gives it back in the
+			-- morning); by day it comes back now.
+			if RoundService.State.Phase == "Night" then
+				humanoid:SetAttribute("NightName", true)
+			elseif type(name) == "string" and not humanoid:GetAttribute("NightName") then
 				humanoid.DisplayDistanceType = (Enum.HumanoidDisplayDistanceType :: any)[name]
 			end
 		end
@@ -213,6 +218,7 @@ function GearService.UseSmokeBomb(id: number): boolean
 		AudioService.At("SmokeBomb", root.CFrame.Position)
 		Net.fireAll("Effect", { Kind = "Smoke", At = root.CFrame.Position })
 	end
+	GearService.Smoked:Fire(id)
 	task.delay(cfg.Duration, function()
 		local current = smokes[id]
 		if current and current.Token == token then
@@ -375,6 +381,12 @@ function GearService.Start()
 	end)
 	MatchService.MemberConverted:Connect(function(member: Roster.Member)
 		GearService.Reveal(member.Id)
+	end)
+	-- A new phase (people are moved, wolves change shape): the smoke is over.
+	RoundService.PhaseStarted:Connect(function()
+		for id in table.clone(smokes) do
+			GearService.Reveal(id)
+		end
 	end)
 	task.spawn(function()
 		while true do

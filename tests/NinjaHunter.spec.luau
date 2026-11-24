@@ -95,6 +95,10 @@ test("Ninja: smoke bomb hides for a while, takes outlines off, cooldown, any act
 	end
 	expect(type(tool:GetAttribute("ReadyAt"))).toBe("number")
 
+	-- No "steal" prompt floats over an invisible Ninja.
+	local steal = svc.Match.RootOf(1):FindFirstChild("StealPrompt")
+	expect(steal.Enabled).toBe(false)
+
 	-- Cooldown: a second press does nothing yet.
 	useItem(server, svc, 1, "SmokeBomb")
 	expect(lastEffect(server, 1).Kind).toBe("Cooldown")
@@ -104,6 +108,7 @@ test("Ninja: smoke bomb hides for a while, takes outlines off, cooldown, any act
 	expect(body:GetAttribute("Vanished")).toBeNil()
 	expect(part.Transparency).toBe(before)
 	expect(faceDecal.Transparency).toBe(0)
+	expect(steal.Enabled).toBe(true)
 
 	-- Any action (here: eating an apple) shows the Ninja at once.
 	task.wait(0.2) -- (the cooldown is over)
@@ -136,6 +141,15 @@ test("Ninja: smoke bomb hides for a while, takes outlines off, cooldown, any act
 	expect(table.find(seen.Ids, 1) ~= nil).toBe(true) -- like the monster: still outlined
 	server.trigger(houses[string.format("House%02d", own)].Door.PromptAnchor.OpenPrompt, 1)
 	expect(svc.Gear.IsSmoked(1)).toBe(false)
+	-- Shown again at night: still no name over the head; it is back in the morning.
+	local humanoid = svc.Match.CharacterOf(1):FindFirstChildOfClass("Humanoid")
+	expect(humanoid.DisplayDistanceType.Name).toBe("None")
+	-- A new phase ends the smoke.
+	useItem(server, svc, 1, "SmokeBomb")
+	expect(svc.Gear.IsSmoked(1)).toBe(true)
+	waitFor(server, "Day", 2)
+	expect(svc.Gear.IsSmoked(1)).toBe(false)
+	expect(humanoid.DisplayDistanceType.Name).toBe("Viewer")
 	svc.Match.Exile(-1004)
 	server.waitForPhase("GameOver", 10)
 end)
@@ -199,5 +213,40 @@ test("Hunter: up to 3 traps; whoever steps on one is stunned 2 s and outlined re
 	end, 2)
 	expect(svc.Combat.IsStunned(-1004)).toBe(true)
 	svc.Match.Exile(-1004)
+	server.waitForPhase("GameOver", 10)
+end)
+
+test("role items come back with a revive; the pup loses them (audit, 24 Nov 2026)", function()
+	local server, svc = start(0.02, { [1] = "PlagueDoctor", [2] = "Ninja", [3] = "Hunter", [-1004] = "Wolf" })
+	waitFor(server, "Day", 1)
+	expect(itemOf(svc, 2, "SmokeBomb") ~= nil).toBe(true)
+
+	-- The Ninja dies: the smoke bomb does not drop ...
+	place(svc, 2, Vector3.new(-40, 3, -40))
+	expect(svc.Combat.Damage(2, 1000, "Killer", 3)).toBe("Killed")
+	expect(itemOf(svc, 2, "SmokeBomb")).toBeNil()
+	for _, model in server.game.Workspace.Items:GetChildren() do
+		expect(model:GetAttribute("Kind") ~= "SmokeBomb").toBe(true)
+	end
+	-- ... and comes back when the Plague Doctor raises the body.
+	place(svc, 1, Vector3.new(-40, 3, -36))
+	useItem(server, svc, 1, "Potion")
+	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
+	expect(itemOf(svc, 2, "SmokeBomb") ~= nil).toBe(true)
+
+	-- The Hunter becomes the pup: the traps are gone and cannot be used.
+	waitFor(server, "Night", 1)
+	task.wait(0.1)
+	place(svc, 3, Vector3.new(150, 3, 0))
+	expect(svc.Combat.Damage(3, 100, "Wolf", -1004)).toBe("Converted")
+	expect(itemOf(svc, 3, "BearTrap")).toBeNil()
+	expect(svc.Inventory.CanTake(3, "BearTrap")).toBe(true) -- (the role is still written down ...)
+	svc.Inventory.Give(3, "BearTrap") -- ... but even if one came back, it does nothing
+	waitFor(server, "Day", 2)
+	place(svc, 3, Vector3.new(150, 3, 0))
+	useItem(server, svc, 3, "BearTrap")
+	expect(#svc.Gear.TrapsOf(3)).toBe(0)
+	svc.Match.Exile(-1004)
+	svc.Match.Exile(3)
 	server.waitForPhase("GameOver", 10)
 end)

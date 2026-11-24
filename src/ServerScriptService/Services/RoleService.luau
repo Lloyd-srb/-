@@ -606,7 +606,8 @@ local function addStealPrompt(member: Roster.Member)
 	prompt:SetAttribute("OwnerId", member.Id) -- the Thief's own body: not shown to them
 	prompt.UIOffset = Vector2.new(0, 40)
 	local _, kind = scope()
-	setStealActive(prompt, kind == "Day")
+	-- (A prompt floating over an invisible Ninja would give them away.)
+	setStealActive(prompt, kind == "Day" and not GearService.IsSmoked(member.Id))
 	prompt.Triggered:Connect(function(player: Player)
 		onStealPrompt(player, member.Id, prompt)
 	end)
@@ -847,12 +848,27 @@ function RoleService.Start()
 			poisonTakesEffect()
 		end
 		local _, kind = scope()
-		for _, prompt in stealPrompts do
-			setStealActive(prompt, kind == "Day")
+		for memberId, prompt in stealPrompts do
+			setStealActive(prompt, kind == "Day" and not GearService.IsSmoked(memberId))
 		end
 		sendLovers()
 		refreshReinforcePrompts()
 		sendAllStates()
+	end)
+
+	-- No "steal" prompt over a Ninja nobody can see.
+	GearService.Smoked:Connect(function(memberId: number)
+		local prompt = stealPrompts[memberId]
+		if prompt then
+			setStealActive(prompt, false)
+		end
+	end)
+	GearService.Revealed:Connect(function(memberId: number)
+		local prompt = stealPrompts[memberId]
+		local _, kind = scope()
+		if prompt then
+			setStealActive(prompt, kind == "Day")
+		end
 	end)
 
 	MatchService.MatchStarted:Connect(function()
