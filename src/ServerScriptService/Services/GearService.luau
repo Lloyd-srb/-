@@ -13,7 +13,8 @@
 	  - Any action except knocking on a door ends it early, like the
 	    monster's invisibility: using an item or an ability, finishing a
 	    "hold E" prompt.
-	  - While invisible, new outlines skip the Ninja ([ASSUMED]).
+	  - [owner] 24 Nov 2026: works like the monster's invisibility: an
+	    outline put on afterwards (e.g. the Seer) still shows the Ninja.
 
 	Hunter (bear traps)
 	  - Press: a trap is put on the ground at the Hunter's feet. At most 3 on
@@ -21,8 +22,7 @@
 	  - A trap stays until someone steps on it: a person or a monster (not
 	    the Hunter who set it, [ASSUMED]). That one is stunned for 2 s and the
 	    Hunter sees them outlined in red. The trap is used up.
-	  - Only the Hunter sees their traps ([ASSUMED]); the server keeps them
-	    see-through and the Hunter's client shows them.
+	  - [owner] 24 Nov 2026: everyone can see the traps on the ground.
 
 	Invisibility here hides a person's body; the monster's own invisibility
 	is WolfService's. Both put "Vanished" on the character, which is what the
@@ -296,7 +296,6 @@ function GearService.PlaceTrap(id: number): boolean
 	trap.CastShadow = false
 	-- A cylinder lies along X: turn it flat on the ground.
 	trap.CFrame = CFrame.new(at + Vector3.new(0, look.Size.X / 2, 0)) * CFrame.Angles(0, 0, math.rad(90))
-	trap.Transparency = 1 -- the Hunter's client shows it
 	trap:SetAttribute("OwnerId", id)
 	trap:AddTag("BearTrap")
 	trap.Parent = trapFolder

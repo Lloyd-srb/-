@@ -266,10 +266,8 @@ local function see(player: Player)
 	-- Every survivor, white, bodies only: no names, no roles.
 	local ids: { number } = {}
 	for _, other in Roster.alive(MatchService.Roster) do
-		-- An invisible Lurker still shows ([owner] 23 Nov 2026); a Ninja in
-		-- smoke does not ([ASSUMED] 24 Nov 2026).
-		local smoked = GearService.IsSmoked(other.Id)
-		if other.Id ~= member.Id and not HidingService.IsHidden(other.Id) and not smoked and MatchService.RootOf(other.Id) then
+		-- An invisible Lurker or Ninja still shows ([owner] 23 / 24 Nov 2026).
+		if other.Id ~= member.Id and not HidingService.IsHidden(other.Id) and MatchService.RootOf(other.Id) then
 			table.insert(ids, other.Id)
 		end
 	end

@@ -565,7 +565,7 @@ Config.ItemLook = {
 	Fish = { Color = Color3.fromRGB(120, 170, 210), Size = Vector3.new(0.5, 0.4, 1.4) },
 }
 
--- A bear trap on the ground (a flat cylinder: X is its height). Only the Hunter sees it.
+-- A bear trap on the ground (a flat cylinder: X is its height). Everyone sees it ([owner] 24 Nov 2026).
 Config.TrapLook = {
 	Color = Color3.fromRGB(95, 95, 102),
 	Size = Vector3.new(0.4, 2.6, 2.6),

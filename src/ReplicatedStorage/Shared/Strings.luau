@@ -487,7 +487,7 @@ local Strings: { [string]: Entry } = {
 	["Item.SmokeBomb.Name"] = { en = "Smoke bomb", th = "ระเบิดควัน" },
 	["Item.SmokeBomb.Desc"] = { en = "Vanish for 6 seconds. Takes every outline off you.", th = "หายตัว 6 วินาที และลบออร่าที่คนอื่นเห็นรอบตัวคุณ" },
 	["Item.BearTrap.Name"] = { en = "Bear trap", th = "กับดักหมี" },
-	["Item.BearTrap.Desc"] = { en = "Put a trap on the ground (up to 3). Only you can see it.", th = "วางกับดักบนพื้น (สูงสุด 3 อัน) เห็นได้แค่คุณ" },
+	["Item.BearTrap.Desc"] = { en = "Put a trap on the ground (up to 3).", th = "วางกับดักบนพื้น (สูงสุด 3 อัน)" },
 	["Item.OilCan.Desc"] = { en = "Hold E right next to a house wall to pour oil on it.", th = "ยืนชิดกำแพงบ้านแล้วกด E ค้างเพื่อราดน้ำมัน" },
 	["Item.Fish.Name"] = { en = "Fish", th = "ปลา" },
 	["Item.Fish.Desc"] = {

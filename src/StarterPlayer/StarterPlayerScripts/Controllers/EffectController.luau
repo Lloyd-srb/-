@@ -7,9 +7,7 @@
 	    "Stunned" attribute);
 	  - private toasts: "You blessed ...", "The attack was blocked!", "Stunned!";
 	  - the Ninja's smoke puff, and the Ninja seeing their own invisible body
-	    faintly (owner, 24 Nov 2026);
-	  - the Hunter's bear traps: the server keeps them see-through, and only
-	    the Hunter's own client shows them.
+	    faintly (owner, 24 Nov 2026).
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -28,7 +26,6 @@ local SLASH_SECONDS = 0.35
 local STUN_TAG = "StunStars"
 local SMOKE_SECONDS = 0.8
 local OWN_SMOKE_TRANSPARENCY = 0.75 -- how the Ninja sees their own invisible body
-local TRAP_TRANSPARENCY = 0.15 -- how the Hunter sees their traps
 
 local EffectController = {}
 
@@ -226,12 +223,6 @@ local function showOwnSmoke(body: Instance)
 	end
 end
 
-local function watchTrap(trap: Instance)
-	if trap:IsA("BasePart") and trap:GetAttribute("OwnerId") == Players.LocalPlayer.UserId then
-		trap.Transparency = TRAP_TRANSPARENCY -- only on the Hunter's screen
-	end
-end
-
 local function watch(body: Instance)
 	if watched[body] then
 		return
@@ -300,10 +291,7 @@ function EffectController.Start()
 	for _, body in CollectionService:GetTagged("MemberBody") do
 		watch(body)
 	end
-	CollectionService:GetInstanceAddedSignal("BearTrap"):Connect(watchTrap)
-	for _, trap in CollectionService:GetTagged("BearTrap") do
-		watchTrap(trap)
-	end
+
 end
 
 return EffectController

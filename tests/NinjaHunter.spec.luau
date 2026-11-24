@@ -133,7 +133,7 @@ test("Ninja: smoke bomb hides for a while, takes outlines off, cooldown, any act
 	task.wait(0.05)
 	local seen = server.last("Highlight", 2)[1]
 	expect(seen.Kind).toBe("Seer")
-	expect(table.find(seen.Ids, 1)).toBeNil()
+	expect(table.find(seen.Ids, 1) ~= nil).toBe(true) -- like the monster: still outlined
 	server.trigger(houses[string.format("House%02d", own)].Door.PromptAnchor.OpenPrompt, 1)
 	expect(svc.Gear.IsSmoked(1)).toBe(false)
 	svc.Match.Exile(-1004)
@@ -151,7 +151,7 @@ test("Hunter: up to 3 traps; whoever steps on one is stunned 2 s and outlined re
 	useItem(server, svc, 1, "BearTrap")
 	local traps = svc.Gear.TrapsOf(1)
 	expect(#traps).toBe(1)
-	expect(traps[1].Transparency).toBe(1) -- only the Hunter's client shows it
+	expect(traps[1].Transparency).toBe(0) -- everyone sees it ([owner] 24 Nov 2026)
 	expect(traps[1]:GetAttribute("OwnerId")).toBe(1)
 
 	-- Cooldown, then the limit of 3.
