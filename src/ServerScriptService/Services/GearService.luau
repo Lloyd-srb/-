@@ -33,6 +33,7 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local PhaseMachine = require(ReplicatedStorage.Shared.Logic.PhaseMachine)
 local Signal = require(ReplicatedStorage.Shared.Signal)
 
 local Logic = script.Parent.Parent.Logic
@@ -381,11 +382,20 @@ function GearService.Start()
 	end)
 	MatchService.MemberConverted:Connect(function(member: Roster.Member)
 		GearService.Reveal(member.Id)
+		-- A Hunter who became the pup has left the role behind: their traps
+		-- stay on the ground but belong to nobody (no red outline for the
+		-- wolf side, and the pup can step on them like anyone else).
+		for _, trap in trapsOf(member.Id) do
+			trap:SetAttribute("OwnerId", 0)
+		end
 	end)
-	-- A new phase (people are moved, wolves change shape): the smoke is over.
-	RoundService.PhaseStarted:Connect(function()
-		for id in table.clone(smokes) do
-			GearService.Reveal(id)
+	-- A new phase that moves people or changes wolves (night, morning, the
+	-- meeting itself): the smoke is over. Calling the meeting moves nobody.
+	RoundService.PhaseStarted:Connect(function(state: PhaseMachine.PhaseState)
+		if state.Phase ~= "MeetingCountdown" then
+			for id in table.clone(smokes) do
+				GearService.Reveal(id)
+			end
 		end
 	end)
 	task.spawn(function()

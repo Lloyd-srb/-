@@ -3,7 +3,9 @@
 	ItemController — using items (GDD §11). Each item is a Tool in the Backpack
 	(made by the server), so the hotbar works on PC, mobile and console.
 	Activating a tool only sends "use item X, aimed here"; the server decides.
-	The hotbar is hidden while in wolf form, hiding, or dead.
+	The hotbar is hidden while hiding or dead. In monster form it stays: the
+	server has put the items away and the monster's skills are on it
+	(owner, 23 Nov 2026; WolfService / WolfController).
 ]]
 
 local Players = game:GetService("Players")
@@ -75,7 +77,7 @@ local function watch(container: Instance)
 end
 
 local function refreshHotbar()
-	local usable = ClientState.Form == "Human" and ClientState.Alive and not ClientState.Hidden
+	local usable = ClientState.Alive and not ClientState.Hidden
 	pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.Backpack, usable)
 	if not usable then
 		local character = localPlayer.Character

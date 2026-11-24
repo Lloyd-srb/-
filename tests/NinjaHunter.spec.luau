@@ -234,12 +234,39 @@ test("role items come back with a revive; the pup loses them (audit, 24 Nov 2026
 	expect(svc.Match.Roster.Members[2].Alive).toBe(true)
 	expect(itemOf(svc, 2, "SmokeBomb") ~= nil).toBe(true)
 
+	-- A trap of the Hunter's on the ground (put down by day).
+	place(svc, 3, Vector3.new(180, 3, 0))
+	useItem(server, svc, 3, "BearTrap")
+	expect(#svc.Gear.TrapsOf(3)).toBe(1)
+	local oldTrap = svc.Gear.TrapsOf(3)[1]
+	place(svc, 3, Vector3.new(150, 3, 0))
+
 	-- The Hunter becomes the pup: the traps are gone and cannot be used.
 	waitFor(server, "Night", 1)
 	task.wait(0.1)
 	place(svc, 3, Vector3.new(150, 3, 0))
 	expect(svc.Combat.Damage(3, 100, "Wolf", -1004)).toBe("Converted")
 	expect(itemOf(svc, 3, "BearTrap")).toBeNil()
+	-- The trap on the ground stays but belongs to nobody: the pup is caught too,
+	-- and nobody gets a red outline.
+	expect(oldTrap.Parent ~= nil).toBe(true)
+	expect(#svc.Gear.TrapsOf(3)).toBe(0)
+	local function trappedOutlines()
+		local count = 0
+		for _, args in server.sent("Highlight", 3) do
+			if args[1].Kind == "Trapped" then
+				count += 1
+			end
+		end
+		return count
+	end
+	local outlines = trappedOutlines()
+	place(svc, 3, Vector3.new(180, 3, 0))
+	server.waitFor("pup caught", function()
+		return oldTrap.Parent == nil
+	end, 2)
+	expect(trappedOutlines()).toBe(outlines)
+	place(svc, 3, Vector3.new(150, 3, 0))
 	expect(svc.Inventory.CanTake(3, "BearTrap")).toBe(true) -- (the role is still written down ...)
 	svc.Inventory.Give(3, "BearTrap") -- ... but even if one came back, it does nothing
 	waitFor(server, "Day", 2)
