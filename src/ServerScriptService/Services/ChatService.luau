@@ -2,8 +2,10 @@
 --[[
 	ChatService — text chat channels (GDD §6.2, §12) on TextChatService.
 
-	Three TextChannels (General, Wolf, Ghost). Who is in which channel, who may
-	type, and which messages reach whom follow Logic.ChatRules. Everything
+	Two TextChannels: General, and "Ghost", the ghost / wolf chat (one room,
+	owner 18 Nov 2026). Who is in which channel, who may type, and which
+	messages reach whom follow Logic.ChatRules. Bubbles over heads are drawn
+	by the clients (ChatController, Logic.ChatBubbles). Everything
 	typed goes through Roblox's own text filtering (TextChatService does that
 	for every TextChannel message).
 

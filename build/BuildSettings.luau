@@ -23,10 +23,11 @@ Players.CharacterAutoLoads = false
 -- away) and the far-away players that sniff / Seer / forest outlines show.
 workspace.StreamingEnabled = false
 
--- Chat (GDD §6.2, §12): only the game's own channels (General / Wolf / Ghost,
--- made by ChatService). Roblox's default channels would let ghosts talk to
--- the living, so they are switched off. Channel tabs show General / Wolf /
--- Ghost to the players who may read them.
+-- Chat (GDD §6.2, §12): only the game's own channels (General and the
+-- ghost / wolf chat "Ghost", made by ChatService). Roblox's default channels
+-- would let ghosts talk to the living, so they are switched off. Channel tabs
+-- show both to the players who may read them. Roblox's own bubbles are off:
+-- ChatController draws the game's bubbles (never for the ghost / wolf chat).
 local TextChatService = game:GetService("TextChatService")
 TextChatService.ChatVersion = Enum.ChatVersion.TextChatService
 TextChatService.CreateDefaultTextChannels = false
@@ -36,6 +37,12 @@ if tabs then
 	tabs.Enabled = true
 else
 	warn("[BuildSettings] TextChatService.ChannelTabsConfiguration is missing: enable channel tabs by hand")
+end
+local bubbles = TextChatService:FindFirstChildOfClass("BubbleChatConfiguration")
+if bubbles then
+	bubbles.Enabled = false
+else
+	warn("[BuildSettings] TextChatService.BubbleChatConfiguration is missing: turn bubble chat off by hand")
 end
 
 StarterPlayer.CharacterWalkSpeed = Config.Human.WalkSpeed
